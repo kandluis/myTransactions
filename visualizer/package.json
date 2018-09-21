@@ -1,0 +1,19 @@
+{
+  "name": "my-transactions-tracker",
+  "version": "1.0.0",
+  "description": "A simple web-app to track and visualize transactions",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.16.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "tracking",
+    "finance"
+  ],
+  "author": "nautilik",
+  "license": "ISC"
+}

@@ -2,6 +2,7 @@ import mintapi
 import os
 import pandas as pd
 import pygsheets
+import pdb
 
 from typing import NamedTuple
 
@@ -17,6 +18,10 @@ _RAW_SHEET_TITLE = "Raw - All Transactions"
 _KEYS_FILE = 'keys.json'
 
 
+class ScraperError(Exception):
+  pass
+
+
 class Credentials(NamedTuple):
   email: str
   password: str
@@ -30,9 +35,13 @@ def _GetCredentials() -> Credentials:
   Returns:
     The retrieved crendentials
   """
-  return Credentials(
-      email=os.environ.get('MINT_EMAIL'),
-      password=os.environ.get('MINT_PASSWORD'))
+  email = os.environ.get('MINT_EMAIL')
+  if not email:
+    raise ScraperError("Unable to find email from var %s!" % 'MINT_EMAIL')
+  password = os.environ.get('MINT_PASSWORD')
+  if not password:
+    raise ScraperError("Unable to find pass from var %s!" % 'MINT_PASSWORD')
+  return Credentials(email=email, password=password)
 
 
 def _RetrieveTransactions(creds: Credentials) -> pd.DataFrame:
@@ -68,7 +77,8 @@ def _RetrieveTransactions(creds: Credentials) -> pd.DataFrame:
   return spend_transactions.sort_values('Date', ascending=True)
 
 
-def _UpdateGoogleSheet(sheet: pygsheets.Sheet, data: pd.DataFrame) -> None:
+def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,
+                       data: pd.DataFrame) -> None:
   """Updates the given transactions sheet with the transactions data
 
   Args:
@@ -80,13 +90,23 @@ def _UpdateGoogleSheet(sheet: pygsheets.Sheet, data: pd.DataFrame) -> None:
   all_data_ws.sync()
 
 
+def _LoadEnv() -> None:
+  if os.path.isfile(".env"):
+    with open(".env") as env_file:
+      for lin in env_file.readlines():
+        name, value = tuple(lin.split("="))
+        os.environ[name] = value
+
+
 def main():
   creds: Credentials = _GetCredentials()
   latestTransactions: pd.DataFrame = _RetrieveTransactions(creds=creds)
 
   sheet = pygsheets.authorize(service_file=_KEYS_FILE)
-  UpdateGoogleSheet(sheet=sheet, data=latestTransactions)
+  _UpdateGoogleSheet(sheet=sheet, data=latestTransactions)
 
 
-if __name___ == '__main__':
+if __name__ == '__main__':
+  pdb.set_trace()
+  _LoadEnv()
   main()

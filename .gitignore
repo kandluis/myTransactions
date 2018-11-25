@@ -100,3 +100,5 @@ htmlcov/
 # ipython notebook
 .ipynb_checkpoints/*
 *.ipynb
+
+.mypy_cache/*

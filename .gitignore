@@ -96,3 +96,7 @@ htmlcov/
 .coverage
 .coverage.*
 *,cover
+
+# ipython notebook
+.ipynb_checkpoints/*
+*.ipynb

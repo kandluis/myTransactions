@@ -2,7 +2,6 @@ import mintapi
 import os
 import pandas as pd
 import pygsheets
-import pdb
 
 from typing import NamedTuple
 
@@ -16,6 +15,7 @@ _COLUMN_NAMES = ['Date', 'Description', 'Amount', 'Category']
 
 _RAW_SHEET_TITLE = "Raw - All Transactions"
 _KEYS_FILE = 'keys.json'
+_WORKSHEET_TITLE = "Transactions Worksheet"
 
 
 class ScraperError(Exception):
@@ -102,11 +102,11 @@ def main():
   creds: Credentials = _GetCredentials()
   latestTransactions: pd.DataFrame = _RetrieveTransactions(creds=creds)
 
-  sheet = pygsheets.authorize(service_file=_KEYS_FILE)
+  client = pygsheets.authorize(service_file=_KEYS_FILE)
+  sheet = client.open(_WORKSHEE_TITLE)
   _UpdateGoogleSheet(sheet=sheet, data=latestTransactions)
 
 
 if __name__ == '__main__':
-  pdb.set_trace()
   _LoadEnv()
   main()

@@ -103,7 +103,7 @@ def main():
   latestTransactions: pd.DataFrame = _RetrieveTransactions(creds=creds)
 
   client = pygsheets.authorize(service_file=_KEYS_FILE)
-  sheet = client.open(_WORKSHEE_TITLE)
+  sheet = client.open(_WORKSHEET_TITLE)
   _UpdateGoogleSheet(sheet=sheet, data=latestTransactions)
 
 

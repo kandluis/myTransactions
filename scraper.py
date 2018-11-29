@@ -28,7 +28,7 @@ class Credentials(NamedTuple):
 
 
 def _GetCredentials() -> Credentials:
-  """Retrieves the crendentials for logging into Mint. 
+  """Retrieves the crendentials for logging into Mint.
 
   This is necessary because they do not currently provide an API.
 
@@ -87,7 +87,6 @@ def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,
   """
   all_data_ws = sheet.worksheet_by_title(title=_RAW_SHEET_TITLE)
   all_data_ws.set_dataframe(data, 'A1', fit=True)
-  all_data_ws.sync()
 
 
 def _LoadEnv() -> None:

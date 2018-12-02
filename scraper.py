@@ -11,11 +11,16 @@ _JOINT_SPENDING_ACCOUNTS = [
     'Freedom Unlimited - Belinda', 'Freedom', 'Amazon Store Card'
 ]
 _COLUMNS = ['odate', 'mmerchant', 'amount', 'category']
-_COLUMN_NAMES = ['Date', 'Description', 'Amount', 'Category']
+_COLUMN_NAMES = ['Date', 'Merchant', 'Amount', 'Category']
 
 _RAW_SHEET_TITLE = "Raw - All Transactions"
 _KEYS_FILE = 'keys.json'
 _WORKSHEET_TITLE = "Transactions Worksheet"
+
+# Paid for Luis' Family's phones are not counted.
+_IGNORED_MERCHANTS = ['Project Fi']
+# Credit card payments are redundant.
+_IGNORED_CATEGORIES = ['Credit Card Payment']
 
 
 class ScraperError(Exception):
@@ -69,9 +74,9 @@ def _RetrieveTransactions(creds: Credentials) -> pd.DataFrame:
   spend_transactions = spend_transactions[_COLUMNS]
   spend_transactions.columns = _COLUMN_NAMES
 
-  # Credit card payments are redundant.
-  spend_transactions = spend_transactions[
-      spend_transactions.Category != 'Credit Card Payment']
+  spend_transactions = spend_transactions[~(
+      spend_transactions.Category.isin(_IGNORED_CATEGORIES)
+      | spend_transactions.Merchant.isin(_IGNORED_MERCHANTS))]
   # Flip expenditures so they're negative.
   spend_transactions.Amount = -1 * spend_transactions.Amount
   return spend_transactions.sort_values('Date', ascending=True)

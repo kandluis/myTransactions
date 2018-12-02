@@ -104,3 +104,6 @@ htmlcov/
 .mypy_cache/*
 
 .anaconda
+
+# Ignore keys.
+keys.json

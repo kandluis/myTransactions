@@ -50,7 +50,7 @@ def _GetCredentials() -> Credentials:
 
 
 def _Normalize(value: str) -> str:
-  ''.join(ch for ch in value if ch.isalnum() or ch.isspace()).title()
+  return ''.join(ch for ch in value if ch.isalnum() or ch.isspace()).title()
 
 
 def _RetrieveTransactions(creds: Credentials) -> pd.DataFrame:

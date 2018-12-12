@@ -49,6 +49,10 @@ def _GetCredentials() -> Credentials:
   return Credentials(email=email, password=password)
 
 
+def _Normalize(value: str) -> str:
+  ''.join(ch for ch in value if ch.isalnum() or ch.isspace()).title()
+
+
 def _RetrieveTransactions(creds: Credentials) -> pd.DataFrame:
   """Retrieves all Mint transactions using the given credentials.
 
@@ -73,6 +77,8 @@ def _RetrieveTransactions(creds: Credentials) -> pd.DataFrame:
       _JOINT_SPENDING_ACCOUNTS) & transactions.isSpending]
   spend_transactions = spend_transactions[_COLUMNS]
   spend_transactions.columns = _COLUMN_NAMES
+  spend_transactions.Category = spend_transactions.Category.map(_Normalize)
+  spend_transactions.Merchant = spend_transactions.Merchant.map(_Normalize)
 
   spend_transactions = spend_transactions[~(
       spend_transactions.Category.isin(_IGNORED_CATEGORIES)

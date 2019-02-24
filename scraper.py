@@ -18,7 +18,8 @@ _KEYS_FILE = 'keys.json'
 _WORKSHEET_TITLE = "Transactions Worksheet"
 
 # Paid for Luis' Family's phones are not counted.
-_IGNORED_MERCHANTS = ['Project Fi']
+# Ignore SCPD Payments.
+_IGNORED_MERCHANTS = ['Project Fi', 'Stanford Scpd Ca']
 # Credit card payments are redundant.
 _IGNORED_CATEGORIES = ['Credit Card Payment']
 

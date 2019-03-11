@@ -111,11 +111,14 @@ def _LoadEnv() -> None:
 
 def main():
   creds: Credentials = _GetCredentials()
+  print("Retrieving transactions from mint...")
   latestTransactions: pd.DataFrame = _RetrieveTransactions(creds=creds)
+  print("Retrieval complete. Uploaded to sheets...")
 
   client = pygsheets.authorize(service_file=_KEYS_FILE)
   sheet = client.open(_WORKSHEET_TITLE)
   _UpdateGoogleSheet(sheet=sheet, data=latestTransactions)
+  print("Sheets update complate!")
 
 
 if __name__ == '__main__':

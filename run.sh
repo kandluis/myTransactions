@@ -1,9 +1,9 @@
-#!/bin/zsh
+#!/bin/sh
 
 # Defines the environment variables.
 source /Users/nautilik/.zshrc
 
 # Execute the script.
 workon myTransactions
-python /home/luis_perez_live/development/myTransactions/scraper.py
+python scraper.py
 deactivate

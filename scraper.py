@@ -83,7 +83,7 @@ class ScraperOptions:
       self.showBrowser = showBrowser
 
   @classmethod
-  def fromArgs(cls, args: argparse.Namespace) -> ScraperOptions:
+  def fromArgs(cls, args: argparse.Namespace) -> 'ScraperOptions':
     """Initializes an options object from the given commandline arguments.showBrowser
 
     Args:

@@ -112,7 +112,7 @@ def _RetrieveTransactions(creds: Credentials,
       creds.email,
       creds.password,
       mfa_method='sms',
-      headless=options.showBrowser,
+      headless=not options.showBrowser,
       mfa_input_callback=None)
   transactions = mint.get_detailed_transactions(
       skip_duplicates=True, remove_pending=True)

@@ -1,9 +1,10 @@
+import argparse
 import mintapi
 import os
 import pandas as pd
 import pygsheets
 
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 _JOINT_SPENDING_ACCOUNTS = [
     'Spark Visa Signature Business', 'Amazon Card - Luis', 'TOTAL_CHECKING',
@@ -54,7 +55,49 @@ def _Normalize(value: str) -> str:
   return ''.join(ch for ch in value if ch.isalnum() or ch.isspace()).title()
 
 
-def _RetrieveTransactions(creds: Credentials) -> pd.DataFrame:
+def _ConstructArgumentParser() -> argparse.ArgumentParser:
+  parser = argparse.ArgumentParser(
+      description=
+      'Scrape mint for transaction data and upload to visualization.')
+  parser.add_argument('--debug', action='store_true')
+  return parser
+
+
+class ScraperOptions:
+  """Options on how to scrape mint
+
+  Properties:
+    showBrowser: bool, property specifying whether to show the brownser
+    when logging into mint.
+  """
+
+  def __init__(self, showBrowser: Optional[bool] = None) -> None:
+    """Initialize an options object
+
+    Args:
+      showBrowser: If given, specifies whether to show the browser or not. 
+        the default is to show the browser.
+    """
+    self.showBrowser: bool = False
+    if showBrowser is not None:
+      self.showBrowser = showBrowser
+
+  @classmethod
+  def fromArgs(cls, args: argparse.Namespace) -> ScraperOptions:
+    """Initializes an options object from the given commandline arguments.showBrowser
+
+    Args:
+      args: The parsed arguments from the commandline from which to construct
+      these options.
+    """
+    if args.debug:
+      return ScraperOptions(showBrowser=True)
+    else:
+      return ScraperOptions()
+
+
+def _RetrieveTransactions(creds: Credentials,
+                          options: ScraperOptions) -> pd.DataFrame:
   """Retrieves all Mint transactions using the given credentials.
 
   The functions also cleans and prepares the transactions to match
@@ -69,7 +112,7 @@ def _RetrieveTransactions(creds: Credentials) -> pd.DataFrame:
       creds.email,
       creds.password,
       mfa_method='sms',
-      headless=True,
+      headless=options.showBrowser,
       mfa_input_callback=None)
   transactions = mint.get_detailed_transactions(
       skip_duplicates=True, remove_pending=True)
@@ -110,9 +153,13 @@ def _LoadEnv() -> None:
 
 
 def main():
+  parser: argparse.ArgumentParser = _ConstructArgumentParser()
+  args: argparse.Namespace = parser.parse_args()
+  options = ScraperOptions.fromArgs(args)
   creds: Credentials = _GetCredentials()
   print("Retrieving transactions from mint...")
-  latestTransactions: pd.DataFrame = _RetrieveTransactions(creds=creds)
+  latestTransactions: pd.DataFrame = _RetrieveTransactions(
+      creds=creds, options=options)
   print("Retrieval complete. Uploaded to sheets...")
 
   client = pygsheets.authorize(service_file=_KEYS_FILE)

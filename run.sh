@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/bin/zsh
 
-# Defines the environment variables.
-# source /Users/nautilik/.zshrc
+# Defines the environment variables
+source /Users/nautilik/.zshrc
 
 # Execute the script.
 workon myTransactions

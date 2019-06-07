@@ -20,7 +20,10 @@ _WORKSHEET_TITLE = "Transactions Worksheet"
 
 # Paid for Luis' Family's phones are not counted.
 # Ignore SCPD Payments.
-_IGNORED_MERCHANTS = ['Project Fi', 'Stanford Scpd Ca']
+_IGNORED_MERCHANTS = [
+    'Project Fi', 'Stanford Scpd Ca', 'Stanford Scpd 6507253016 Ca',
+    'Anita Borg Institute', 'Graves Bail Bonds'
+]
 # Credit card payments are redundant.
 _IGNORED_CATEGORIES = ['Credit Card Payment']
 

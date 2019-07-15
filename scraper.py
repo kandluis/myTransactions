@@ -1,33 +1,14 @@
 import argparse
-import mintapi
+import mintapi  # type: ignore
 import os
-import pandas as pd
-import pygsheets
+import pandas as pd  # type: ignore
+import pygsheets  # type: ignore
+
+import config
 
 from typing import NamedTuple, Optional
 
-_JOINT_SPENDING_ACCOUNTS = [
-    'Spark Visa Signature Business', 'Amazon Card - Luis', 'TOTAL_CHECKING',
-    'Citi - Personal', 'Preferred', 'Freedom - Belinda', 'Mariott Rewards',
-    'Freedom Unlimited - Belinda', 'Freedom', 'Amazon Store Card'
-]
-_COLUMNS = ['odate', 'mmerchant', 'amount', 'category']
-_COLUMN_NAMES = ['Date', 'Merchant', 'Amount', 'Category']
-
-_RAW_SHEET_TITLE = "Raw - All Transactions"
-_KEYS_FILE = 'keys.json'
-_WORKSHEET_TITLE = "Transactions Worksheet"
-
-# Paid for Luis' Family's phones are not counted.
-# Ignore SCPD Payments.
-_IGNORED_MERCHANTS = [
-    'Project Fi', 'Stanford Scpd Ca', 'Stanford Scpd 6507253016 Ca',
-    'Anita Borg Institute', 'Graves Bail Bonds'
-]
-# Credit card payments are redundant.
-_IGNORED_CATEGORIES = ['Credit Card Payment']
-_SESSION_PATH = os.path.join(os.path.expanduser('~'), ".mintapi", "session")
-_IMAP_SERVER = "imap.gmail.com"
+_GLOBAL_CONFIG: config.Config = config.getConfig()
 
 
 class ScraperError(Exception):
@@ -59,7 +40,7 @@ def _GetCredentials() -> Credentials:
     raise ScraperError("Unable to find pass from var %s!" % 'MINT_PASSWORD')
   emailPassword = os.environ.get('EMAIL_PASSWORD')
   if not emailPassword:
-    password = os.environ.get('EMAIL_PASSWORD')
+    raise ScraperError("Unable to find pass from var %s!" % 'EMAIL_PASSWORD')
   return Credentials(email=email,
                      mintPassword=mintPassword,
                      emailPassword=emailPassword)
@@ -127,25 +108,25 @@ def _RetrieveTransactions(creds: Credentials,
                       mfa_method='email',
                       headless=not options.showBrowser,
                       mfa_input_callback=None,
-                      session_path=_SESSION_PATH,
+                      session_path=_GLOBAL_CONFIG.SESSION_PATH,
                       imap_account=creds.email,
                       imap_password=creds.emailPassword,
-                      imap_server=_IMAP_SERVER,
+                      imap_server=_GLOBAL_CONFIG.IMAP_SERVER,
                       imap_folder='Inbox')
   transactions = mint.get_detailed_transactions(skip_duplicates=True,
                                                 remove_pending=True)
 
   spend_transactions = transactions[
-      transactions.account.isin(_JOINT_SPENDING_ACCOUNTS)
+      transactions.account.isin(_GLOBAL_CONFIG.JOINT_SPENDING_ACCOUNTS)
       & transactions.isSpending]
-  spend_transactions = spend_transactions[_COLUMNS]
-  spend_transactions.columns = _COLUMN_NAMES
+  spend_transactions = spend_transactions[_GLOBAL_CONFIG.COLUMNS]
+  spend_transactions.columns = _GLOBAL_CONFIG.COLUMN_NAMES
   spend_transactions.Category = spend_transactions.Category.map(_Normalize)
   spend_transactions.Merchant = spend_transactions.Merchant.map(_Normalize)
 
   spend_transactions = spend_transactions[~(
-      spend_transactions.Category.isin(_IGNORED_CATEGORIES)
-      | spend_transactions.Merchant.isin(_IGNORED_MERCHANTS))]
+      spend_transactions.Category.isin(_GLOBAL_CONFIG.IGNORED_CATEGORIES)
+      | spend_transactions.Merchant.isin(_GLOBAL_CONFIG.IGNORED_MERCHANTS))]
   # Flip expenditures so they're negative.
   spend_transactions.Amount = -1 * spend_transactions.Amount
   return spend_transactions.sort_values('Date', ascending=True)
@@ -159,7 +140,7 @@ def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,
     sheet: The sheet containing our transaction analysis and visualization.
     data: The new, cleaned, raw transaction data to analyze.
   """
-  all_data_ws = sheet.worksheet_by_title(title=_RAW_SHEET_TITLE)
+  all_data_ws = sheet.worksheet_by_title(title=_GLOBAL_CONFIG.RAW_SHEET_TITLE)
   all_data_ws.set_dataframe(data, 'A1', fit=True)
 
 
@@ -171,7 +152,7 @@ def _LoadEnv() -> None:
         os.environ[name] = value
 
 
-def main():
+def main() -> None:
   parser: argparse.ArgumentParser = _ConstructArgumentParser()
   args: argparse.Namespace = parser.parse_args()
   options = ScraperOptions.fromArgs(args)
@@ -181,8 +162,8 @@ def main():
                                                            options=options)
   print("Retrieval complete. Uploaded to sheets...")
 
-  client = pygsheets.authorize(service_file=_KEYS_FILE)
-  sheet = client.open(_WORKSHEET_TITLE)
+  client = pygsheets.authorize(service_file=_GLOBAL_CONFIG.KEYS_FILE)
+  sheet = client.open(_GLOBAL_CONFIG.WORKSHEET_TITLE)
   _UpdateGoogleSheet(sheet=sheet, data=latestTransactions)
   print("Sheets update complate!")
 

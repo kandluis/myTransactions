@@ -5,5 +5,5 @@ source /Users/nautilik/.zshrc
 
 # Execute the script.
 workon myTransactions
-python scraper.py --debug
+python scraper.py
 deactivate

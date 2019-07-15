@@ -9,7 +9,7 @@ google-auth-httplib2==0.0.3
 google-auth-oauthlib==0.4.0
 httplib2==0.13.0
 idna==2.8
-git+https://github.com/mrooney/mintapi.git#egg=mintapi
+-e git+https://github.com/mrooney/mintapi.git#egg=mintapi
 mock==3.0.5
 mypy==0.720
 mypy-extensions==0.4.1

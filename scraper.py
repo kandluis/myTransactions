@@ -26,6 +26,8 @@ _IGNORED_MERCHANTS = [
 ]
 # Credit card payments are redundant.
 _IGNORED_CATEGORIES = ['Credit Card Payment']
+_SESSION_PATH = os.path.join(os.path.expanduser('~'), ".mintapi", "session")
+_IMAP_SERVER = "imap.gmail.com"
 
 
 class ScraperError(Exception):
@@ -33,8 +35,12 @@ class ScraperError(Exception):
 
 
 class Credentials(NamedTuple):
+  # The email address associated with the Mint account.
   email: str
-  password: str
+  # The password for the Mint account.
+  mintPassword: str
+  # The password for the email account.
+  emailPassword: str
 
 
 def _GetCredentials() -> Credentials:
@@ -48,10 +54,15 @@ def _GetCredentials() -> Credentials:
   email = os.environ.get('MINT_EMAIL')
   if not email:
     raise ScraperError("Unable to find email from var %s!" % 'MINT_EMAIL')
-  password = os.environ.get('MINT_PASSWORD')
-  if not password:
+  mintPassword = os.environ.get('MINT_PASSWORD')
+  if not mintPassword:
     raise ScraperError("Unable to find pass from var %s!" % 'MINT_PASSWORD')
-  return Credentials(email=email, password=password)
+  emailPassword = os.environ.get('EMAIL_PASSWORD')
+  if not emailPassword:
+    password = os.environ.get('EMAIL_PASSWORD')
+  return Credentials(email=email,
+                     mintPassword=mintPassword,
+                     emailPassword=emailPassword)
 
 
 def _Normalize(value: str) -> str:
@@ -111,17 +122,22 @@ def _RetrieveTransactions(creds: Credentials,
 
   Returns:
     A data frame of all mint transactions"""
-  mint = mintapi.Mint(
-      creds.email,
-      creds.password,
-      mfa_method='sms',
-      headless=not options.showBrowser,
-      mfa_input_callback=None)
-  transactions = mint.get_detailed_transactions(
-      skip_duplicates=True, remove_pending=True)
+  mint = mintapi.Mint(creds.email,
+                      creds.mintPassword,
+                      mfa_method='email',
+                      headless=not options.showBrowser,
+                      mfa_input_callback=None,
+                      session_path=_SESSION_PATH,
+                      imap_account=creds.email,
+                      imap_password=creds.emailPassword,
+                      imap_server=_IMAP_SERVER,
+                      imap_folder='Inbox')
+  transactions = mint.get_detailed_transactions(skip_duplicates=True,
+                                                remove_pending=True)
 
-  spend_transactions = transactions[transactions.account.isin(
-      _JOINT_SPENDING_ACCOUNTS) & transactions.isSpending]
+  spend_transactions = transactions[
+      transactions.account.isin(_JOINT_SPENDING_ACCOUNTS)
+      & transactions.isSpending]
   spend_transactions = spend_transactions[_COLUMNS]
   spend_transactions.columns = _COLUMN_NAMES
   spend_transactions.Category = spend_transactions.Category.map(_Normalize)
@@ -161,8 +177,8 @@ def main():
   options = ScraperOptions.fromArgs(args)
   creds: Credentials = _GetCredentials()
   print("Retrieving transactions from mint...")
-  latestTransactions: pd.DataFrame = _RetrieveTransactions(
-      creds=creds, options=options)
+  latestTransactions: pd.DataFrame = _RetrieveTransactions(creds=creds,
+                                                           options=options)
   print("Retrieval complete. Uploaded to sheets...")
 
   client = pygsheets.authorize(service_file=_KEYS_FILE)

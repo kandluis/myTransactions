@@ -6,7 +6,7 @@ import pygsheets  # type: ignore
 
 import config
 
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Text, Optional
 
 _GLOBAL_CONFIG: config.Config = config.getConfig()
 
@@ -17,11 +17,11 @@ class ScraperError(Exception):
 
 class Credentials(NamedTuple):
   # The email address associated with the Mint account.
-  email: str
+  email: Text
   # The password for the Mint account.
-  mintPassword: str
+  mintPassword: Text
   # The password for the email account.
-  emailPassword: str
+  emailPassword: Text
 
 
 def _GetCredentials() -> Credentials:
@@ -46,7 +46,7 @@ def _GetCredentials() -> Credentials:
                      emailPassword=emailPassword)
 
 
-def _Normalize(value: str) -> str:
+def _Normalize(value: Text) -> Text:
   return ''.join(ch for ch in value if ch.isalnum() or ch.isspace()).title()
 
 

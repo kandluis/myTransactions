@@ -20,6 +20,7 @@ class Config:
       COLUMN_NAMES: COLUMN_NAMES[i] is the column name in the Google sheet
         of the corresponding COLUMNs[i]
       RAW_SHEET_TITLE: The name of the sheet which contains the raw transactions.
+      SETTINGS_SHEET_TITLE: The name of the sheet containing the setting page.
       KEYS_FILE: The file path (relative) of the keys to use when using the
         Google Sheets API
       WORKSHEET_TITLE: The title of the worksheet in Google Drive where
@@ -43,6 +44,7 @@ class Config:
     self.COLUMN_NAMES: List[Text] = ['Date', 'Merchant', 'Amount', 'Category']
 
     self.RAW_SHEET_TITLE: Text = "Raw - All Transactions"
+    self.SETTINGS_SHEET_TITLE: Text = 'Settings'
     self.KEYS_FILE: Text = 'keys.json'
     self.WORKSHEET_TITLE: Text = "Transactions Worksheet"
 

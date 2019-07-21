@@ -5,6 +5,7 @@ import pandas as pd  # type: ignore
 import pygsheets  # type: ignore
 
 import config
+from datetime import datetime
 
 from typing import NamedTuple, Text, Optional
 
@@ -142,6 +143,14 @@ def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,
   """
   all_data_ws = sheet.worksheet_by_title(title=_GLOBAL_CONFIG.RAW_SHEET_TITLE)
   all_data_ws.set_dataframe(data, 'A1', fit=True)
+
+  settings_ws = sheet.worksheet_by_title(
+      title=_GLOBAL_CONFIG.SETTINGS_SHEET_TITLE)
+  # Update with current time.
+  settings_ws.set_dataframe(
+      pd.DateFrame([datetime.today().strftime("%d-%B-%Y %H:%M:%S")]),
+      'D2',
+  )
 
 
 def _LoadEnv() -> None:

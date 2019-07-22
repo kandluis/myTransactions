@@ -114,7 +114,8 @@ def _RetrieveTransactions(creds: Credentials,
                       imap_account=creds.email,
                       imap_password=creds.emailPassword,
                       imap_server=_GLOBAL_CONFIG.IMAP_SERVER,
-                      imap_folder='Inbox')
+                      imap_folder='Inbox',
+                      wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC)
   transactions = mint.get_detailed_transactions(skip_duplicates=True,
                                                 remove_pending=True)
 
@@ -149,7 +150,7 @@ def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,
       title=_GLOBAL_CONFIG.SETTINGS_SHEET_TITLE)
   # Update with current time.
   today = datetime.today()
-  today_string = today.strftime('%d-%B-%Y %H:%M:%S')
+  today_string = today.strftime('%d-%B-%Y %H:%M:%S %Z')
   hostname = socket.gethostname()
   settings_ws.set_dataframe(pd.DataFrame([today_string, hostname]), 'D2')
 
@@ -170,7 +171,7 @@ def main() -> None:
   print("Retrieving transactions from mint...")
   latestTransactions: pd.DataFrame = _RetrieveTransactions(creds=creds,
                                                            options=options)
-  print("Retrieval complete. Uploaded to sheets...")
+  print("Retrieval complete. Uploading to sheets...")
 
   client = pygsheets.authorize(service_file=_GLOBAL_CONFIG.KEYS_FILE)
   sheet = client.open(_GLOBAL_CONFIG.WORKSHEET_TITLE)

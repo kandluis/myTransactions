@@ -32,6 +32,7 @@ class Config:
       SESSION_PATH: The full path to where Chrome session data can be stored and
         retrieved from.
       IMAP_SERVER: The IMAP server to use for MFA using email.
+      WAIT_FOR_ACCOUNT_SYNC: Whether or not to wait for account syncing.
 
     """
     self.JOINT_SPENDING_ACCOUNTS: List[Text] = [
@@ -59,6 +60,7 @@ class Config:
     self.SESSION_PATH: Optional[Text] = os.path.join(os.path.expanduser('~'),
                                                      ".mintapi", "session")
     self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
+    self.WAIT_FOR_ACCOUNT_SYNC: bool = False
 
 
 def getConfig() -> Config:

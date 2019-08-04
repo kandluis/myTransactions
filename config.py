@@ -72,7 +72,7 @@ class Config:
         'Ally': 'Cash',
         'Card': 'Credit',
         'Apple': 'Credit',
-        'Rewards*': 'Credit',
+        'Rewards': 'Credit',
         'Quicksilver': 'Credit',
         'Visa': 'Credit',
         'Checking': 'Cash',

@@ -155,7 +155,7 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
   accounts: List[Dict[Text, Any]] = mint.get_accounts(get_detail=False)
   return pd.DataFrame([{
       'Name': account['accountName'],
-      'Type': getAccountType(account['accountType']),
+      'Type': getAccountType(account['accountName']),
       'Balance': sign(account) * account['currentBalance']
   } for account in accounts if account['isActive']])
   accounts = accounts[_GLOBAL_CONFIG.ACCOUNT_COLUMN_NAMES]

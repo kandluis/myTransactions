@@ -145,8 +145,11 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
     return (-1 if acc['accountType'] == kCreditAccount else 1)
 
   def getAccountType(originalType: Text) -> Text:
-    for substring, accountType in _GLOBAL_CONFIG.ACCOUNT_NAME_TO_TYPE_MAP.items(
-    ):
+    # Process in sorted order from longest to shortest (more specific ones match first)
+    for substring, accountType in sorted(
+        _GLOBAL_CONFIG.ACCOUNT_NAME_TO_TYPE_MAP,
+        key=lambda x: len(x[0]),
+        reverse=True):
       if substring.lower() in originalType.lower():
         return accountType
     print("No account type for account with type: %s" % originalType)

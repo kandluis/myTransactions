@@ -43,6 +43,7 @@ class Config:
     ]
     self.COLUMNS: List[Text] = ['odate', 'mmerchant', 'amount', 'category']
     self.COLUMN_NAMES: List[Text] = ['Date', 'Merchant', 'Amount', 'Category']
+    self.ACCOUNT_COLUMN_NAMES: List[Text] = ['Name', 'Type', 'Balance']
 
     self.RAW_TRANSACTIONS_TITLE: Text = "Raw - All Transactions"
     self.RAW_ACCOUNTS_TITLE = 'Raw - All Accounts'
@@ -64,6 +65,9 @@ class Config:
     self.WAIT_FOR_ACCOUNT_SYNC: bool = False
     # substring to account type string mapping.
     self.ACCOUNT_NAME_TO_TYPE_MAP = {
+        'Bank': 'Cash',
+        'Other Property': 'Cash',
+        'Property': 'Real Estate',
         'Acorns': 'Investment',
         'Ally': 'Cash',
         'Card': 'Credit',

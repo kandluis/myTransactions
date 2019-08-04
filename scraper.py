@@ -4,6 +4,7 @@ import os
 import pandas as pd  # type: ignore
 import pygsheets  # type: ignore
 import socket
+import sys
 
 import config
 from datetime import datetime
@@ -146,10 +147,10 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
   def getAccountType(originalType: Text) -> Text:
     for substring, accountType in _GLOBAL_CONFIG.ACCOUNT_NAME_TO_TYPE_MAP.items(
     ):
-      if substring in originalType:
+      if substring.lower() in originalType.lower():
         return accountType
-    raise ScraperError("No account type for account with type: %s" %
-                       originalType)
+    print("No account type for account with type: %s" % originalType)
+    return 'Unknown - %s' % (originalType)
 
   accounts: List[Dict[Text, Any]] = mint.get_accounts(get_detail=False)
   return pd.DataFrame([{
@@ -157,6 +158,7 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
       'Type': getAccountType(account['accountType']),
       'Balance': sign(account) * account['currentBalance']
   } for account in accounts if account['isActive']])
+  accounts = accounts[_GLOBAL_CONFIG.ACCOUNT_COLUMN_NAMES]
   return accounts
 
 
@@ -239,6 +241,7 @@ def main() -> None:
 
   def messageWrapper(msg: Text, f: Callable[[], pd.DataFrame]) -> pd.DataFrame:
     print(msg)
+    sys.stdout.flush()
     return f()
 
   latestAccounts: pd.DataFrame = (messageWrapper(

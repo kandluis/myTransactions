@@ -44,7 +44,8 @@ class Config:
     self.COLUMNS: List[Text] = ['odate', 'mmerchant', 'amount', 'category']
     self.COLUMN_NAMES: List[Text] = ['Date', 'Merchant', 'Amount', 'Category']
 
-    self.RAW_SHEET_TITLE: Text = "Raw - All Transactions"
+    self.RAW_TRANSACTIONS_TITLE: Text = "Raw - All Transactions"
+    self.RAW_ACCOUNTS_TITLE = 'Raw - All Accounts'
     self.SETTINGS_SHEET_TITLE: Text = 'Settings'
     self.KEYS_FILE: Text = 'keys.json'
     self.WORKSHEET_TITLE: Text = "Transactions Worksheet"
@@ -61,6 +62,39 @@ class Config:
                                                      ".mintapi", "session")
     self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
     self.WAIT_FOR_ACCOUNT_SYNC: bool = False
+    # substring to account type string mapping.
+    self.ACCOUNT_NAME_TO_TYPE_MAP = {
+        'Acorns': 'Investment',
+        'Ally': 'Cash',
+        'Card': 'Credit',
+        'Apple': 'Credit',
+        'Rewards*': 'Credit',
+        'Quicksilver': 'Credit',
+        'Visa': 'Credit',
+        'Checking': 'Cash',
+        'Savings': 'Cash',
+        'Freedom': 'Credit',
+        'LemonBunny': 'Credit',
+        'Marriott': 'Credit',
+        'Preferred': 'Credit',
+        'TOTAL CHECKING': 'Cash',
+        'Citi': 'Credit',
+        'Wallet': 'Crypto',
+        'Discover': 'Credit',
+        'Investment': 'Stock',
+        'Roth IRA': 'Stock',
+        'Traditional IRA': 'Restricted Stock',
+        'LPFSA': 'Restricted Cash',
+        'Health Savings': 'Restricted Cash',
+        'HSA Investment': 'Restricted Stock',
+        'LendingClub': 'Loan',
+        'GSU': 'GOOG',
+        'Cash': 'Cash',
+        '401(K)': 'Restricted Stock',
+        'Brokerage': 'Stock',
+        'Credit': 'Credit',
+        'Investments': 'Stock',
+    }
 
 
 def getConfig() -> Config:

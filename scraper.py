@@ -8,7 +8,7 @@ import socket
 import config
 from datetime import datetime
 
-from typing import NamedTuple, Text, Optional
+from typing import Any, Callable, Dict, NamedTuple, List, Text, Optional
 
 _GLOBAL_CONFIG: config.Config = config.getConfig()
 
@@ -57,6 +57,12 @@ def _ConstructArgumentParser() -> argparse.ArgumentParser:
       description=
       'Scrape mint for transaction data and upload to visualization.')
   parser.add_argument('--debug', action='store_true')
+  parser.add_argument(
+      '--types',
+      type=str,
+      help=
+      'One of "all", "transactions", or "accounts" to specify what to scrape',
+      default='all')
   return parser
 
 
@@ -68,16 +74,22 @@ class ScraperOptions:
     when logging into mint.
   """
 
-  def __init__(self, showBrowser: Optional[bool] = None) -> None:
+  def __init__(self, types: Text, showBrowser: bool = False) -> None:
     """Initialize an options object
 
     Args:
       showBrowser: If given, specifies whether to show the browser or not. 
         the default is to show the browser.
     """
-    self.showBrowser: bool = False
-    if showBrowser is not None:
-      self.showBrowser = showBrowser
+    if types.lower() not in ['all', 'accounts', 'transactions']:
+      raise ScraperError("Type %s is not valid." % (types))
+
+    self.showBrowser: bool = showBrowser
+    self.scrapeTransactions: bool = (True if types.lower() == 'all'
+                                     or types.lower() == 'transactions' else
+                                     False)
+    self.scrapeAccounts: bool = (True if types.lower() == 'all'
+                                 or types.lower() == 'accounts' else False)
 
   @classmethod
   def fromArgs(cls, args: argparse.Namespace) -> 'ScraperOptions':
@@ -88,23 +100,21 @@ class ScraperOptions:
       these options.
     """
     if args.debug:
-      return ScraperOptions(showBrowser=True)
+      return ScraperOptions(args.types, showBrowser=args.debug)
     else:
-      return ScraperOptions()
+      return ScraperOptions(args.types)
 
 
-def _RetrieveTransactions(creds: Credentials,
-                          options: ScraperOptions) -> pd.DataFrame:
-  """Retrieves all Mint transactions using the given credentials.
-
-  The functions also cleans and prepares the transactions to match
-  the format expected by Google sheets.
+def _LogIntoMint(creds: Credentials, options: ScraperOptions) -> mintapi.Mint:
+  """Logs into mint and retrieves an active connection.
 
   Args:
-    creds: The Credentials object to use for loging into Mint
+    creds: The credentials for the account to log into.
+    options: Options for how to connect.
 
   Returns:
-    A data frame of all mint transactions"""
+    The mint connection object.
+  """
   mint = mintapi.Mint(creds.email,
                       creds.mintPassword,
                       mfa_method='email',
@@ -116,6 +126,51 @@ def _RetrieveTransactions(creds: Credentials,
                       imap_server=_GLOBAL_CONFIG.IMAP_SERVER,
                       imap_folder='Inbox',
                       wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC)
+  return mint
+
+
+def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
+  """Retrieves the latest account information.
+
+  Args:
+    mint: The mint account from which to retrieve account info.
+
+  Returns:
+    DataFrame containing cleaned account information.
+  """
+
+  def sign(acc: Dict[Text, Any]) -> int:
+    kCreditAccount = 'credit'
+    return (-1 if acc['accountType'] == kCreditAccount else 1)
+
+  def getAccountType(originalType: Text) -> Text:
+    for substring, accountType in _GLOBAL_CONFIG.ACCOUNT_NAME_TO_TYPE_MAP.items(
+    ):
+      if substring in originalType:
+        return accountType
+    raise ScraperError("No account type for account with type: %s" %
+                       originalType)
+
+  accounts: List[Dict[Text, Any]] = mint.get_accounts(get_detail=False)
+  return pd.DataFrame([{
+      'Name': account['accountName'],
+      'Type': getAccountType(account['accountType']),
+      'Balance': sign(account) * account['currentBalance']
+  } for account in accounts if account['isActive']])
+  return accounts
+
+
+def _RetrieveTransactions(mint: mintapi.Mint) -> pd.DataFrame:
+  """Retrieves all Mint transactions using the given credentials.
+
+  The functions also cleans and prepares the transactions to match
+  the format expected by Google sheets.
+
+  Args:
+    mint: The mint connection object to the active session.
+
+  Returns:
+    A data frame of all mint transactions"""
   transactions = mint.get_detailed_transactions(skip_duplicates=True,
                                                 remove_pending=True)
 
@@ -136,15 +191,23 @@ def _RetrieveTransactions(creds: Credentials,
 
 
 def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,
-                       data: pd.DataFrame) -> None:
+                       transactions: Optional[pd.DataFrame],
+                       accounts: Optional[pd.DataFrame]) -> None:
   """Updates the given transactions sheet with the transactions data
 
   Args:
     sheet: The sheet containing our transaction analysis and visualization.
     data: The new, cleaned, raw transaction data to analyze.
   """
-  all_data_ws = sheet.worksheet_by_title(title=_GLOBAL_CONFIG.RAW_SHEET_TITLE)
-  all_data_ws.set_dataframe(data, 'A1', fit=True)
+  if transactions is not None:
+    all_transactions_ws = sheet.worksheet_by_title(
+        title=_GLOBAL_CONFIG.RAW_TRANSACTIONS_TITLE)
+    all_transactions_ws.set_dataframe(transactions, 'A1', fit=True)
+
+  if accounts is not None:
+    all_accounts_ws = sheet.worksheet_by_title(
+        title=_GLOBAL_CONFIG.RAW_ACCOUNTS_TITLE)
+    all_accounts_ws.set_dataframe(accounts, 'A1', fit=True)
 
   settings_ws = sheet.worksheet_by_title(
       title=_GLOBAL_CONFIG.SETTINGS_SHEET_TITLE)
@@ -168,14 +231,28 @@ def main() -> None:
   args: argparse.Namespace = parser.parse_args()
   options = ScraperOptions.fromArgs(args)
   creds: Credentials = _GetCredentials()
-  print("Retrieving transactions from mint...")
-  latestTransactions: pd.DataFrame = _RetrieveTransactions(creds=creds,
-                                                           options=options)
-  print("Retrieval complete. Uploading to sheets...")
-
+  print("Logging into mint")
+  mint: mintapi.Mint = _LogIntoMint(creds, options)
+  print("Connecting to sheets.")
   client = pygsheets.authorize(service_file=_GLOBAL_CONFIG.KEYS_FILE)
   sheet = client.open(_GLOBAL_CONFIG.WORKSHEET_TITLE)
-  _UpdateGoogleSheet(sheet=sheet, data=latestTransactions)
+
+  def messageWrapper(msg: Text, f: Callable[[], pd.DataFrame]) -> pd.DataFrame:
+    print(msg)
+    return f()
+
+  latestAccounts: pd.DataFrame = (messageWrapper(
+      "Retrieving accounts...", lambda: _RetrieveAccounts(mint))
+                                  if options.scrapeAccounts else None)
+  latestTransactions: pd.DataFrame = (messageWrapper(
+      "Retrieving transactions...", lambda: _RetrieveTransactions(mint))
+                                      if options.scrapeTransactions else None)
+
+  print("Retrieval complete. Uploading to sheets...")
+  _UpdateGoogleSheet(sheet=sheet,
+                     transactions=latestTransactions,
+                     accounts=latestAccounts)
+
   print("Sheets update complate!")
 
 

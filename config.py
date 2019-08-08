@@ -71,7 +71,7 @@ class Config:
         ('Bank', 'Cash'),
         ('Other Property', 'Cash'),
         ('Property', 'Real Estate'),
-        ('Acorns', 'Investment'),
+        ('Acorns', 'Stock'),
         ('Ally', 'Cash'),
         ('Card', 'Credit'),
         ('Apple', 'Credit'),

@@ -79,7 +79,7 @@ class ScraperOptions:
     """Initialize an options object
 
     Args:
-      showBrowser: If given, specifies whether to show the browser or not. 
+      showBrowser: If given, specifies whether to show the browser or not.
         the default is to show the browser.
     """
     if types.lower() not in ['all', 'accounts', 'transactions']:
@@ -94,7 +94,8 @@ class ScraperOptions:
 
   @classmethod
   def fromArgs(cls, args: argparse.Namespace) -> 'ScraperOptions':
-    """Initializes an options object from the given commandline arguments.showBrowser
+    """Initializes an options object from the given commandline
+    arguments.showBrowser
 
     Args:
       args: The parsed arguments from the commandline from which to construct
@@ -145,7 +146,8 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
     return (-1 if acc['accountType'] == kCreditAccount else 1)
 
   def getAccountType(originalType: Text) -> Text:
-    # Process in sorted order from longest to shortest (more specific ones match first)
+    # Process in sorted order from longest to shortest
+    # (more specific ones match first)
     for substring, accountType in sorted(
         _GLOBAL_CONFIG.ACCOUNT_NAME_TO_TYPE_MAP,
         key=lambda x: len(x[0]),

@@ -15,11 +15,12 @@ class Config:
         Only transactions from accounts matching these are uploaded to
         the Google Sheet.
 
-      COLUMNS: The column names of the retrieved dataframe return by the 
+      COLUMNS: The column names of the retrieved dataframe return by the
         mintapi library.
       COLUMN_NAMES: COLUMN_NAMES[i] is the column name in the Google sheet
         of the corresponding COLUMNs[i]
-      RAW_SHEET_TITLE: The name of the sheet which contains the raw transactions.
+      RAW_SHEET_TITLE: The name of the sheet which contains the raw
+        transactions.
       SETTINGS_SHEET_TITLE: The name of the sheet containing the setting page.
       KEYS_FILE: The file path (relative) of the keys to use when using the
         Google Sheets API
@@ -29,8 +30,8 @@ class Config:
         processing transactions.
       IGNORED_CATEGORIES: A list of categories which are filtered out when
         processing transactions.
-      SESSION_PATH: The full path to where Chrome session data can be stored and
-        retrieved from.
+      SESSION_PATH: The full path to where Chrome session data can be stored
+        and retrieved from.
       IMAP_SERVER: The IMAP server to use for MFA using email.
       WAIT_FOR_ACCOUNT_SYNC: Whether or not to wait for account syncing.
 

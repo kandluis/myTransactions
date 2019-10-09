@@ -101,6 +101,7 @@ class Config:
         ('Brokerage', 'Stock'),
         ('Credit', 'Credit'),
         ('Investments', 'Stock'),
+        ('Deferred Comp', 'Restricted Cash'),
     ]
 
 

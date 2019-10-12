@@ -107,3 +107,6 @@ htmlcov/
 
 # Ignore keys.
 keys.json
+
+# 
+*.txt

@@ -67,6 +67,7 @@ class Config:
     # substring to account type string mapping.
     self.ACCOUNT_NAME_TO_TYPE_MAP = [
         ('401(K) SAVINGS PLAN', 'Restricted Stock'),
+        ('JOINT WROS', 'Bonds'),
         ('Build Wealth', 'Stock'),
         ('Smart Saver', 'Stock'),
         ('Bank', 'Cash'),
@@ -86,6 +87,8 @@ class Config:
         ('Marriott', 'Credit'),
         ('Preferred', 'Credit'),
         ('TOTAL CHECKING', 'Cash'),
+        ('B. ZENG', 'Credit'),
+        ('L. MARTINEZ', 'Credit'),
         ('Citi', 'Credit'),
         ('Wallet', 'Crypto'),
         ('Discover', 'Credit'),

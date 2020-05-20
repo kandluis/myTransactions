@@ -7,7 +7,7 @@ google-api-python-client==1.7.9
 google-auth==1.6.3
 google-auth-httplib2==0.0.3
 google-auth-oauthlib==0.4.0
-httplib2==0.13.0
+httplib2==0.18.0
 idna==2.8
 -e git+https://github.com/mrooney/mintapi.git#egg=mintapi
 mock==3.0.5

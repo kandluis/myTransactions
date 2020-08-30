@@ -133,6 +133,11 @@ def _LogIntoMint(creds: Credentials, options: ScraperOptions) -> mintapi.Mint:
   Returns:
     The mint connection object.
   """
+  if os.getenv('CHROMEDRIVER_PATH'):
+    chromedriver_download_path = os.getenv('CHROMEDRIVER_PATH')
+  else:
+    chromedriver_download_path = os.getcwd()
+
   mint = mintapi.Mint(creds.email,
                       creds.mintPassword,
                       mfa_method='email',
@@ -143,7 +148,8 @@ def _LogIntoMint(creds: Credentials, options: ScraperOptions) -> mintapi.Mint:
                       imap_password=creds.emailPassword,
                       imap_server=_GLOBAL_CONFIG.IMAP_SERVER,
                       imap_folder='Inbox',
-                      wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC)
+                      wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC,
+                      chromedriver_download_path=chromedriver_download_path)
   return mint
 
 

@@ -105,9 +105,6 @@ htmlcov/
 
 .anaconda
 
-# Ignore keys.
-keys.json
-
 # 
 *.txt
 

@@ -4,38 +4,37 @@ from typing import List, Optional, Text
 
 
 class Config:
-  """A class capturing configurable settings for the mint scraper.
-        """
+  """A class capturing configurable settings for the mint scraper."""
 
   def __init__(self: 'Config') -> None:
-    """Initializes the config to the default values
+    """Initializes the config to the default values.
+      
+    Properties:
+      JOINT_SPENDING_ACCOUNTS: The account names which are held jointly.
+        Only transactions from accounts matching these are uploaded to
+        the Google Sheet.
 
-                Properties:
-                  JOINT_SPENDING_ACCOUNTS: The account names which are held jointly.
-                    Only transactions from accounts matching these are uploaded to
-                    the Google Sheet.
-
-                  COLUMNS: The column names of the retrieved dataframe return by the
-                    mintapi library.
-                  COLUMN_NAMES: COLUMN_NAMES[i] is the column name in the Google sheet
-                    of the corresponding COLUMNs[i]
-                  RAW_SHEET_TITLE: The name of the sheet which contains the raw
-                    transactions.
-                  SETTINGS_SHEET_TITLE: The name of the sheet containing the setting page.
-                  KEYS_FILE: The file path (relative) of the keys to use when using the
-                    Google Sheets API
-                  WORKSHEET_TITLE: The title of the worksheet in Google Drive where
-                    transactions are uploaded.
-                  IGNORED_MERCHANTS: A list of merchants which are filtered out when
-                    processing transactions.
-                  IGNORED_CATEGORIES: A list of categories which are filtered out when
-                    processing transactions.
-                  SESSION_PATH: The full path to where Chrome session data can be stored
-                    and retrieved from.
-                  IMAP_SERVER: The IMAP server to use for MFA using email.
-                  WAIT_FOR_ACCOUNT_SYNC: Whether or not to wait for account syncing.
-
-                """
+      COLUMNS: The column names of the retrieved dataframe return by the
+        mintapi library.
+      COLUMN_NAMES: COLUMN_NAMES[i] is the column name in the Google sheet
+        of the corresponding COLUMNs[i]
+      RAW_SHEET_TITLE: The name of the sheet which contains the raw
+        transactions.
+      SETTINGS_SHEET_TITLE: The name of the sheet containing the setting page.
+      KEYS_FILE: The file path (relative) of the keys to use when using the
+        Google Sheets API
+      WORKSHEET_TITLE: The title of the worksheet in Google Drive where
+        transactions are uploaded.
+      IGNORED_MERCHANTS: A list of merchants which are filtered out when
+        processing transactions.
+      IGNORED_CATEGORIES: A list of categories which are filtered out when
+        processing transactions.
+      SESSION_PATH: The full path to where Chrome session data can be stored
+        and retrieved from.
+      IMAP_SERVER: The IMAP server to use for MFA using email.
+      WAIT_FOR_ACCOUNT_SYNC: Whether or not to wait for account syncing.
+    """
+   
     self.JOINT_SPENDING_ACCOUNTS: List[Text] = [
         'Spark Visa Signature Business',
         'Amazon Card - Luis',
@@ -80,44 +79,55 @@ class Config:
     # substring to account type string mapping.
     self.ACCOUNT_NAME_TO_TYPE_MAP = [
         ('401(K) SAVINGS PLAN', 'Restricted Stock'),
-        ('JOINT WROS', 'Bonds'),
-        ('Build Wealth', 'Stock'),
-        ('Smart Saver', 'Stock'),
-        ('Bank', 'Cash'),
-        ('Other Property', 'Cash'),
-        ('Property', 'Real Estate'),
+        ('529 College Plan', 'Restricted Stock'),
         ('Acorns', 'Stock'),
         ('Ally', 'Cash'),
-        ('Card', 'Credit'),
         ('Apple', 'Credit'),
-        ('Rewards', 'Credit'),
-        ('Quicksilver', 'Credit'),
-        ('Visa', 'Credit'),
-        ('Checking', 'Cash'),
-        ('Savings', 'Cash'),
-        ('Freedom', 'Credit'),
-        ('LemonBunny', 'Credit'),
-        ('Marriott', 'Credit'),
-        ('Preferred', 'Credit'),
-        ('TOTAL CHECKING', 'Cash'),
         ('B. ZENG', 'Credit'),
-        ('L. MARTINEZ', 'Credit'),
+        ('Bank', 'Cash'),
+        ('Belinda and Luis', 'Stock'),
+        ('Brokerage', 'Stock'),
+        ('Build Wealth', 'Stock'),
+        ('C2012 RSU 10/05/2016 776.47 63 Class-C', 'Stock'),
+        ('Card', 'Credit'),
+        ('Cash', 'Cash'),
+        ('Chase Business Unlimited - Belinda', 'Credit'),
+        ('Chase Business Unlimited - Luis', 'Credit'),
+        ('Checking', 'Cash'),
         ('Citi', 'Credit'),
-        ('Wallet', 'Crypto'),
+        ('Credit', 'Credit'),
+        ('Deferred Comp', 'Restricted Cash'),
         ('Discover', 'Credit'),
-        ('Investment', 'Stock'),
-        ('Roth IRA', 'Stock'),
-        ('Traditional IRA', 'Restricted Stock'),
-        ('LPFSA', 'Restricted Cash'),
+        ('Equity Awards', 'Stock'),
+        ('ESPP_31003770405', 'Stock'),
+        ('FACEBOOK', 'Stock'),
+        ('Freedom', 'Credit'),
+        ('GSU', 'GOOG'),
         ('Health Savings', 'Restricted Cash'),
         ('HSA Investment', 'Restricted Stock'),
-        ('LendingClub', 'Loan'),
-        ('GSU', 'GOOG'),
-        ('Cash', 'Cash'),
-        ('Brokerage', 'Stock'),
-        ('Credit', 'Credit'),
+        ('Individual          ', 'Stock'),
+        ('Investment', 'Stock'),
         ('Investments', 'Stock'),
-        ('Deferred Comp', 'Restricted Cash'),
+        ('JOINT WROS', 'Bonds'),
+        ('L. MARTINEZ', 'Credit'),
+        ('LemonBunny', 'Credit'),
+        ('LendingClub', 'Loan'),
+        ('LPFSA', 'Restricted Cash'),
+        ('Marriott', 'Credit'),
+        ('Other Property', 'Cash'),
+        ('Preferred', 'Credit'),
+        ('Property', 'Real Estate'),
+        ('Quicksilver', 'Credit'),
+        ('Rewards', 'Credit'),
+        ('Roth IRA', 'Stock'),
+        ('Savings', 'Cash'),
+        ('Smart Saver', 'Stock'),
+        ('Southest Business - Belinda', 'Credit'),
+        ('Southwest Business - Luis', 'Credit'),
+        ('TOTAL CHECKING', 'Cash'),
+        ('Traditional IRA', 'Restricted Stock'),
+        ('Visa', 'Credit'),
+        ('Wallet', 'Crypto'),
     ]
 
 

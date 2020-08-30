@@ -15,15 +15,21 @@ _GLOBAL_CONFIG: config.Config = config.getConfig()
 
 
 class ScraperError(Exception):
+  """Error raised by the scraper when an exception is encountered."""
   pass
 
 
 class Credentials(NamedTuple):
-  # The email address associated with the Mint account.
+  """Holds credential information needed to successfully run the scraper.
+
+  Properties:
+    email: The email address associated with the Mint account.
+    mintPassword: The password for the Mint account.
+    emailPassword: The password for the email account.
+
+  """
   email: Text
-  # The password for the Mint account.
   mintPassword: Text
-  # The password for the email account.
   emailPassword: Text
 
 
@@ -50,10 +56,19 @@ def _GetCredentials() -> Credentials:
 
 
 def _Normalize(value: Text) -> Text:
+  """Normalizes the text value
+
+  Args:
+    value: The text to be normalized.
+
+  Returns:
+    The normalized test.
+  """
   return ''.join(ch for ch in value if ch.isalnum() or ch.isspace()).title()
 
 
 def _ConstructArgumentParser() -> argparse.ArgumentParser:
+  """Constructs the argument parser for the script."""
   parser = argparse.ArgumentParser(
       description=
       'Scrape mint for transaction data and upload to visualization.')
@@ -226,6 +241,7 @@ def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,
 
 
 def _LoadEnv() -> None:
+  """Loads the environmet file, which is required."""
   if os.path.isfile(".env"):
     with open(".env") as env_file:
       for lin in env_file.readlines():
@@ -234,6 +250,7 @@ def _LoadEnv() -> None:
 
 
 def main() -> None:
+  """Main function for the script."""
   parser: argparse.ArgumentParser = _ConstructArgumentParser()
   args: argparse.Namespace = parser.parse_args()
   options = ScraperOptions.fromArgs(args)

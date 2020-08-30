@@ -1,9 +1,10 @@
 #!/bin/zsh
 
 # Defines the environment variables
-source /Users/nautilik/.zshrc
+source ${HOME}/.zshrc
+cd ${HOME}/Documents/development/my-transactions
 
 # Execute the script.
-workon myTransactions
-python scraper.py --type='all'
+workon my-transactions
+python scraper.py --type='all' --debug
 deactivate

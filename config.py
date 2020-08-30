@@ -72,8 +72,6 @@ class Config:
     ]
     # Credit card payments are redundant.
     self.IGNORED_CATEGORIES: List[Text] = ['Credit Card Payment']
-    self.SESSION_PATH: Optional[Text] = os.path.join(os.path.expanduser('~'),
-                                                     ".mintapi", "session")
     self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
     self.WAIT_FOR_ACCOUNT_SYNC: bool = False
     # substring to account type string mapping.

@@ -36,3 +36,11 @@ The Chrome driver used is, by default, located in the current working directory 
 Update `run.sh` to match the right locations and setup (note that it currently works by relying on virtualenv). Note that the script *by default* must be run from the top-level directory, if you want to use the included chrome driver. 
 
 You might want to consider running the `scraper.py` file with `--debug` if something goes wrong.
+
+# Type Checking
+
+You should be able to type check by running:
+
+```
+mypy scraper.py
+```

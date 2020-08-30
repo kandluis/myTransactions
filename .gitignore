@@ -110,3 +110,7 @@ keys.json
 
 # 
 *.txt
+
+# Ignore session data
+.mintapi
+cookies.pkl

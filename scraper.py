@@ -2,13 +2,14 @@ import argparse
 import mintapi  # type: ignore
 import os
 import pandas as pd  # type: ignore
+import pickle
 import pygsheets  # type: ignore
 import socket
 import sys
 
 import config
 from datetime import datetime
-import dotenv
+import dotenv  # type: ignore
 
 from typing import Any, Callable, Dict, NamedTuple, List, Text, Optional
 
@@ -80,6 +81,12 @@ def _ConstructArgumentParser() -> argparse.ArgumentParser:
       help=
       'One of "all", "transactions", or "accounts" to specify what to scrape',
       default='all')
+  parser.add_argument(
+    '--cookies',
+    type=str,
+    default='cookies.pkl',
+    help=
+    'The location of the cookies file to load and also update.')
   return parser
 
 
@@ -122,34 +129,66 @@ class ScraperOptions:
     else:
       return ScraperOptions(args.types)
 
+def _fetchCookies(cookies_file: Text) -> Optional[List[Text]]:
+  """Fetches the cookies for Mint if available.
 
-def _LogIntoMint(creds: Credentials, options: ScraperOptions) -> mintapi.Mint:
+  Args:
+    cookies_file: The location of the cookies.
+
+  Returns:
+    The fetched cookies, if any.
+  """
+  if os.path.exists(cookies_file):
+    cookies: List[Text] = []
+    with open(cookies_file, 'rb') as f:
+      cookies = pickle.load(f)
+    return cookies
+  return None
+
+def _dumpCookies(mint: mintapi.Mint, cookies_file: Text) -> None:
+  """Dumps the cookies in the current session to the cookies file.
+
+  Args:
+    mint: The current mint session, already logged in.
+    cookies_file: The location of the cookies file.
+  """
+  with open(cookies_file, 'wb') as f:
+    pickle.dump(mint.driver.get_cookies(), f)
+
+def _LogIntoMint(creds: Credentials, options: ScraperOptions, 
+                 chromedriver_download_path: Text,
+                 cookies: Optional[List[Text]] = None) -> mintapi.Mint:
   """Logs into mint and retrieves an active connection.
 
   Args:
     creds: The credentials for the account to log into.
     options: Options for how to connect.
+    chromedriver_download_path: Location of chromedriver.
+    cookies: Cookies to attach to the session, when provided. 
 
   Returns:
     The mint connection object.
   """
-  if os.getenv('CHROMEDRIVER_PATH'):
-    chromedriver_download_path = os.getenv('CHROMEDRIVER_PATH')
+  if os.getenv('CHROME_SESSION_PATH'):
+    session_path = os.getenv('CHROME_SESSION_PATH')
   else:
-    chromedriver_download_path = os.getcwd()
+    session_path = os.path.join(os.getcwd(), '.mintapi', 'session')
 
   mint = mintapi.Mint(creds.email,
                       creds.mintPassword,
-                      mfa_method='email',
+                      chromedriver_download_path=chromedriver_download_path,
                       headless=not options.showBrowser,
-                      mfa_input_callback=None,
-                      session_path=_GLOBAL_CONFIG.SESSION_PATH,
                       imap_account=creds.email,
+                      imap_folder='Inbox',
                       imap_password=creds.emailPassword,
                       imap_server=_GLOBAL_CONFIG.IMAP_SERVER,
-                      imap_folder='Inbox',
+                      mfa_input_callback=None,
+                      mfa_method='email',
+                      session_path=session_path,
                       wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC,
-                      chromedriver_download_path=chromedriver_download_path)
+  )
+  # Load cookies if provided. These are cookies only for mint.com domain.
+  if cookies: [mint.driver.add_cookie(cookie) for cookie in cookies]
   return mint
 
 
@@ -253,9 +292,22 @@ def main() -> None:
   args: argparse.Namespace = parser.parse_args()
   options = ScraperOptions.fromArgs(args)
   creds: Credentials = _GetCredentials()
+  
   print("Logging into mint")
-  mint: mintapi.Mint = _LogIntoMint(creds, options)
+  if os.getenv('CHROMEDRIVER_PATH'):
+    chromedriver_download_path = os.getenv('CHROMEDRIVER_PATH')
+  else:
+    chromedriver_download_path = os.getcwd()
+  assert args.cookies
+  assert chromedriver_download_path
+
+  cookies_file = os.path.join(chromedriver_download_path, args.cookies)
+  cookies = _fetchCookies(cookies_file)
+  mint: mintapi.Mint = _LogIntoMint(creds, options, chromedriver_download_path,
+                                    cookies)
+  _dumpCookies(mint, cookies_file)
   print("Connecting to sheets.")
+  
   client = pygsheets.authorize(service_file=_GLOBAL_CONFIG.KEYS_FILE)
   sheet = client.open(_GLOBAL_CONFIG.WORKSHEET_TITLE)
 

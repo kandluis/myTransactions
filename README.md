@@ -12,6 +12,7 @@ MINT_PASSWORD=<TODO>
 EMAIL_PASSWORD=<TODO>
 CHROME_DRIVER_PATH=<TODO>  // Defaults to os.getcwd() if not provided.
 MFA_TOKEN=<TODO>
+GOOGLE_SHEETS_CREDENTIALS=<TODO> // The keys.json file for the Google sheets service, as a string.
 ```
 Note that MFA_TOKEN is needed for Mint accounts with 2-FA enabled, and corresponds to the token that Google Authenticator uses. With this token, the app can generate OTP on its own. If not provided, we will fall-back to text-based method and this will require user interaction.
 

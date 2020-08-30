@@ -57,7 +57,6 @@ class Config:
     self.RAW_TRANSACTIONS_TITLE: Text = "Raw - All Transactions"
     self.RAW_ACCOUNTS_TITLE = 'Raw - All Accounts'
     self.SETTINGS_SHEET_TITLE: Text = 'Settings'
-    self.KEYS_FILE: Text = 'keys.json'
     self.WORKSHEET_TITLE: Text = "Transactions Worksheet"
 
     # Paid for Luis' Family's phones are not counted.

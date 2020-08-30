@@ -1,5 +1,6 @@
 import argparse
 import mintapi  # type: ignore
+import json
 import os
 import pandas as pd  # type: ignore
 import pickle
@@ -10,8 +11,18 @@ import sys
 import config
 from datetime import datetime
 import dotenv  # type: ignore
+from google.oauth2 import service_account  # type: ignore
 
-from typing import Any, Callable, Dict, NamedTuple, List, Text, Optional
+from typing import (
+  Any,
+  Callable,
+  Dict,
+  List,
+  Mapping,
+  NamedTuple,
+  Optional,
+  Text,
+)
 
 _GLOBAL_CONFIG: config.Config = config.getConfig()
 
@@ -129,7 +140,7 @@ class ScraperOptions:
     else:
       return ScraperOptions(args.types)
 
-def _fetchCookies(cookies_file: Text) -> Optional[List[Text]]:
+def _fetchCookies(cookies_file: Text) -> List[Text]:
   """Fetches the cookies for Mint if available.
 
   Args:
@@ -138,12 +149,11 @@ def _fetchCookies(cookies_file: Text) -> Optional[List[Text]]:
   Returns:
     The fetched cookies, if any.
   """
+  cookies: List[Text] = []
   if os.path.exists(cookies_file):
-    cookies: List[Text] = []
     with open(cookies_file, 'rb') as f:
       cookies = pickle.load(f)
-    return cookies
-  return None
+  return cookies
 
 def _dumpCookies(mint: mintapi.Mint, cookies_file: Text) -> None:
   """Dumps the cookies in the current session to the cookies file.
@@ -157,7 +167,7 @@ def _dumpCookies(mint: mintapi.Mint, cookies_file: Text) -> None:
 
 def _LogIntoMint(creds: Credentials, options: ScraperOptions, 
                  chromedriver_download_path: Text,
-                 cookies: Optional[List[Text]] = None) -> mintapi.Mint:
+                 cookies: List[Text]) -> mintapi.Mint:
   """Logs into mint and retrieves an active connection.
 
   Args:
@@ -195,7 +205,7 @@ def _LogIntoMint(creds: Credentials, options: ScraperOptions,
                       wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC,
   )
   # Load cookies if provided. These are cookies only for mint.com domain.
-  if cookies: [mint.driver.add_cookie(cookie) for cookie in cookies]
+  [mint.driver.add_cookie(cookie) for cookie in cookies]
   return mint
 
 
@@ -293,6 +303,18 @@ def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,
   settings_ws.set_dataframe(pd.DataFrame([today_string, hostname]), 'D2')
 
 
+def _getGoogleCredentials() -> Optional[service_account.Credentials]:
+  """Loads the Google Account Service Credentials to access sheets."""
+  credentials_string = os.getenv('GOOGLE_SHEETS_CREDENTIALS')
+  if not credentials_string:
+    return None
+  service_info: Mapping[str, str] = json.loads(credentials_string)
+  _SCOPES = ('https://www.googleapis.com/auth/spreadsheets',
+             'https://www.googleapis.com/auth/drive')
+  return service_account.Credentials.from_service_account_info(
+    service_info, scopes=_SCOPES)
+
+
 def main() -> None:
   """Main function for the script."""
   parser: argparse.ArgumentParser = _ConstructArgumentParser()
@@ -307,7 +329,7 @@ def main() -> None:
     chromedriver_download_path = os.getcwd()
   assert chromedriver_download_path
 
-  cookies = []
+  cookies: List[Text] = []
   if args.cookies:
     cookies_file = os.path.join(chromedriver_download_path, args.cookies)
     cookies = _fetchCookies(cookies_file)
@@ -318,7 +340,7 @@ def main() -> None:
     _dumpCookies(mint, cookies_file)
   print("Connecting to sheets.")
   
-  client = pygsheets.authorize(service_file=_GLOBAL_CONFIG.KEYS_FILE)
+  client = pygsheets.authorize(custom_credentials=_getGoogleCredentials())
   sheet = client.open(_GLOBAL_CONFIG.WORKSHEET_TITLE)
 
   def messageWrapper(msg: Text, f: Callable[[], pd.DataFrame]) -> pd.DataFrame:

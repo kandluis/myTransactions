@@ -8,6 +8,7 @@ import sys
 
 import config
 from datetime import datetime
+import dotenv
 
 from typing import Any, Callable, Dict, NamedTuple, List, Text, Optional
 
@@ -41,13 +42,13 @@ def _GetCredentials() -> Credentials:
   Returns:
     The retrieved crendentials
   """
-  email = os.environ.get('MINT_EMAIL')
+  email = os.getenv('MINT_EMAIL')
   if not email:
     raise ScraperError("Unable to find email from var %s!" % 'MINT_EMAIL')
-  mintPassword = os.environ.get('MINT_PASSWORD')
+  mintPassword = os.getenv('MINT_PASSWORD')
   if not mintPassword:
     raise ScraperError("Unable to find pass from var %s!" % 'MINT_PASSWORD')
-  emailPassword = os.environ.get('EMAIL_PASSWORD')
+  emailPassword = os.getenv('EMAIL_PASSWORD')
   if not emailPassword:
     raise ScraperError("Unable to find pass from var %s!" % 'EMAIL_PASSWORD')
   return Credentials(email=email,
@@ -240,15 +241,6 @@ def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,
   settings_ws.set_dataframe(pd.DataFrame([today_string, hostname]), 'D2')
 
 
-def _LoadEnv() -> None:
-  """Loads the environmet file, which is required."""
-  if os.path.isfile(".env"):
-    with open(".env") as env_file:
-      for lin in env_file.readlines():
-        name, value = tuple(lin.split("="))
-        os.environ[name] = value
-
-
 def main() -> None:
   """Main function for the script."""
   parser: argparse.ArgumentParser = _ConstructArgumentParser()
@@ -282,5 +274,5 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-  _LoadEnv()
+  dotenv.load_dotenv()
   main()

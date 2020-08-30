@@ -6,5 +6,5 @@ cd ${HOME}/Documents/development/my-transactions
 
 # Execute the script.
 workon my-transactions
-python scraper.py --type='all' --debug
+python scraper.py --type='all'
 deactivate

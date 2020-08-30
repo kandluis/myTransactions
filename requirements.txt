@@ -11,7 +11,7 @@ google-auth-oauthlib==0.4.1
 googleapis-common-protos==1.52.0
 httplib2==0.18.1
 idna==2.10
--e git+https://github.com/mrooney/mintapi.git@cc0ca3796075794f0d5cdb629636b5cf85a9cc18#egg=mintapi
+-e git+https://github.com/chino/mintapi.git@add-soft-token-support#egg=mintapi
 mock==4.0.2
 mypy==0.782
 mypy-extensions==0.4.3

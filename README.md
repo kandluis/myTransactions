@@ -10,7 +10,11 @@ First, a `.env` file at the top-level directory needs to exists. It should look 
 MINT_EMAIL=<TODO>
 MINT_PASSWORD=<TODO>
 EMAIL_PASSWORD=<TODO>
+CHROME_DRIVER_PATH=<TODO>  // Defaults to os.getcwd() if not provided.
+MFA_TOKEN=<TODO>
 ```
+Note that MFA_TOKEN is needed for Mint accounts with 2-FA enabled, and corresponds to the token that Google Authenticator uses. With this token, the app can generate OTP on its own. If not provided, we will fall-back to text-based method and this will require user interaction.
+
 
 Additionally, you need a `keys.json` file containing valid keys to be used when accessing the Google Spreadsheet. This is just a JSON file that you should be able to download from the Google Cloud Console.
 

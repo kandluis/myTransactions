@@ -84,7 +84,7 @@ def _ConstructArgumentParser() -> argparse.ArgumentParser:
   parser.add_argument(
     '--cookies',
     type=str,
-    default='cookies.pkl',
+    default=None,
     help=
     'The location of the cookies file to load and also update.')
   return parser
@@ -173,6 +173,12 @@ def _LogIntoMint(creds: Credentials, options: ScraperOptions,
     session_path = os.getenv('CHROME_SESSION_PATH')
   else:
     session_path = os.path.join(os.getcwd(), '.mintapi', 'session')
+  if os.getenv('MFA_TOKEN'):
+    mfa_method = 'soft-token'
+    mfa_token = os.getenv('MFA_TOKEN')
+  else:
+    mfa_method = 'text'
+    mfa_token = None
 
   mint = mintapi.Mint(creds.email,
                       creds.mintPassword,
@@ -183,7 +189,8 @@ def _LogIntoMint(creds: Credentials, options: ScraperOptions,
                       imap_password=creds.emailPassword,
                       imap_server=_GLOBAL_CONFIG.IMAP_SERVER,
                       mfa_input_callback=None,
-                      mfa_method='email',
+                      mfa_method=mfa_method,
+                      mfa_token=mfa_token,
                       session_path=session_path,
                       wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC,
   )
@@ -298,14 +305,17 @@ def main() -> None:
     chromedriver_download_path = os.getenv('CHROMEDRIVER_PATH')
   else:
     chromedriver_download_path = os.getcwd()
-  assert args.cookies
   assert chromedriver_download_path
 
-  cookies_file = os.path.join(chromedriver_download_path, args.cookies)
-  cookies = _fetchCookies(cookies_file)
+  cookies = []
+  if args.cookies:
+    cookies_file = os.path.join(chromedriver_download_path, args.cookies)
+    cookies = _fetchCookies(cookies_file)
+
   mint: mintapi.Mint = _LogIntoMint(creds, options, chromedriver_download_path,
                                     cookies)
-  _dumpCookies(mint, cookies_file)
+  if args.cookies:
+    _dumpCookies(mint, cookies_file)
   print("Connecting to sheets.")
   
   client = pygsheets.authorize(service_file=_GLOBAL_CONFIG.KEYS_FILE)

@@ -36,19 +36,25 @@ class Config:
     """
    
     self.JOINT_SPENDING_ACCOUNTS: List[Text] = [
-        'Spark Visa Signature Business',
         'Amazon Card - Luis',
-        'TOTAL_CHECKING',
-        'Citi - Personal',
-        'Preferred',
-        'Freedom - Belinda',
-        'Mariott Rewards',
-        'Freedom Unlimited - Belinda',
-        'Freedom',
         'Amazon Store Card',
         'Bank of America Travel Rewards Signature',
+        'Bank of America Travel Rewards Visa Signature',
         'CapitalOne Venture Card',
+        'Citi - Personal',
+        'Citi Premier Card',
+        'CREDIT CARD', # Chase
+        'CREDITCARD Account', # CapitalOne Business Card
+        'Discover',
+        'Freedom - Belinda',
+        'Freedom Unlimited - Belinda',
+        'Freedom',
+        'Mariott Rewards',
         'Marriott Rewards',
+        'Preferred',
+        'Southwest Rapid Rewards',
+        'Spark Visa Signature Business',
+        'TOTAL CHECKING',
     ]
     self.COLUMNS: List[Text] = ['odate', 'mmerchant', 'amount', 'category']
     self.COLUMN_NAMES: List[Text] = ['Date', 'Merchant', 'Amount', 'Category']

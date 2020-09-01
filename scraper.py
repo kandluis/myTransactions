@@ -261,11 +261,12 @@ def _RetrieveTransactions(mint: mintapi.Mint) -> pd.DataFrame:
 
   spend_transactions = transactions[
       transactions.account.isin(_GLOBAL_CONFIG.JOINT_SPENDING_ACCOUNTS)
-      & transactions.isSpending]
+      & transactions.isSpending & ~transactions.isTransfer]
   spend_transactions = spend_transactions[_GLOBAL_CONFIG.COLUMNS]
   spend_transactions.columns = _GLOBAL_CONFIG.COLUMN_NAMES
   spend_transactions.Category = spend_transactions.Category.map(_Normalize)
   spend_transactions.Merchant = spend_transactions.Merchant.map(_Normalize)
+  spend_transactions.Account = spend_transactions.Account.map(_Normalize)
 
   spend_transactions = spend_transactions[~(
       spend_transactions.Category.isin(_GLOBAL_CONFIG.IGNORED_CATEGORIES)

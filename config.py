@@ -54,10 +54,9 @@ class Config:
         'Preferred',
         'Southwest Rapid Rewards',
         'Spark Visa Signature Business',
-        'TOTAL CHECKING',
     ]
-    self.COLUMNS: List[Text] = ['odate', 'mmerchant', 'amount', 'category']
-    self.COLUMN_NAMES: List[Text] = ['Date', 'Merchant', 'Amount', 'Category']
+    self.COLUMNS: List[Text] = ['odate', 'mmerchant', 'amount', 'category', 'account']
+    self.COLUMN_NAMES: List[Text] = ['Date', 'Merchant', 'Amount', 'Category', 'Account']
     self.ACCOUNT_COLUMN_NAMES: List[Text] = ['Name', 'Type', 'Balance']
 
     self.RAW_TRANSACTIONS_TITLE: Text = "Raw - All Transactions"
@@ -76,7 +75,12 @@ class Config:
         'Stanford Scpd',
     ]
     # Credit card payments are redundant.
-    self.IGNORED_CATEGORIES: List[Text] = ['Credit Card Payment']
+    self.IGNORED_CATEGORIES: List[Text] = [
+        'Credit Card Payment',
+        'Transfer',
+        'Paycheck',
+        'Income',
+    ]
     self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
     self.WAIT_FOR_ACCOUNT_SYNC: bool = False
     # substring to account type string mapping.

@@ -270,7 +270,8 @@ def _RetrieveTransactions(mint: mintapi.Mint) -> pd.DataFrame:
 
   spend_transactions = spend_transactions[~(
       spend_transactions.Category.isin(_GLOBAL_CONFIG.IGNORED_CATEGORIES)
-      | spend_transactions.Merchant.isin(_GLOBAL_CONFIG.IGNORED_MERCHANTS))]
+      | spend_transactions.Merchant.isin(_GLOBAL_CONFIG.IGNORED_MERCHANTS)
+      | spend_transactions.ID.isin(_GLOBAL_CONFIG.IGNORED_TXNS))]
   # Flip expenditures so they're negative.
   spend_transactions.Amount = -1 * spend_transactions.Amount
   return spend_transactions.sort_values('Date', ascending=True)

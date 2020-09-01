@@ -55,8 +55,8 @@ class Config:
         'Southwest Rapid Rewards',
         'Spark Visa Signature Business',
     ]
-    self.COLUMNS: List[Text] = ['odate', 'mmerchant', 'amount', 'category', 'account']
-    self.COLUMN_NAMES: List[Text] = ['Date', 'Merchant', 'Amount', 'Category', 'Account']
+    self.COLUMNS: List[Text] = ['odate', 'mmerchant', 'amount', 'category', 'account', 'id']
+    self.COLUMN_NAMES: List[Text] = ['Date', 'Merchant', 'Amount', 'Category', 'Account', 'ID']
     self.ACCOUNT_COLUMN_NAMES: List[Text] = ['Name', 'Type', 'Balance']
 
     self.RAW_TRANSACTIONS_TITLE: Text = "Raw - All Transactions"
@@ -80,6 +80,19 @@ class Config:
         'Transfer',
         'Paycheck',
         'Income',
+    ]
+    # Ignore specific transactions. 
+    self.IGNORED_TXNS: List[int] = [
+        2651591652,
+        2618759691,
+        2566235034,
+        2556300742,
+        2553593281,
+        2553593280,
+        2504269103,
+        2573036964,
+        2559139111,
+        2510726212,
     ]
     self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
     self.WAIT_FOR_ACCOUNT_SYNC: bool = False

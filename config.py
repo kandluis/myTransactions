@@ -83,16 +83,18 @@ class Config:
     ]
     # Ignore specific transactions. 
     self.IGNORED_TXNS: List[int] = [
-        2651591652,
-        2618759691,
-        2566235034,
-        2556300742,
-        2553593281,
-        2553593280,
+        2461681673,
+        2482214183,
         2504269103,
-        2573036964,
-        2559139111,
         2510726212,
+        2553593280,
+        2553593281,
+        2556300742,
+        2559139111,
+        2566235034,
+        2573036964,
+        2618759691,
+        2651591652,
     ]
     self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
     self.WAIT_FOR_ACCOUNT_SYNC: bool = False

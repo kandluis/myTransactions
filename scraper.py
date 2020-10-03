@@ -14,14 +14,14 @@ import dotenv  # type: ignore
 from google.oauth2 import service_account  # type: ignore
 
 from typing import (
-  Any,
-  Callable,
-  Dict,
-  List,
-  Mapping,
-  NamedTuple,
-  Optional,
-  Text,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    NamedTuple,
+    Optional,
+    Text,
 )
 
 _GLOBAL_CONFIG: config.Config = config.getConfig()
@@ -83,21 +83,20 @@ def _Normalize(value: Text) -> Text:
 def _ConstructArgumentParser() -> argparse.ArgumentParser:
   """Constructs the argument parser for the script."""
   parser = argparse.ArgumentParser(
-      description=
-      'Scrape mint for transaction data and upload to visualization.')
+      description='Scrape mint for transaction data and upload to '
+                  'visualization.')
   parser.add_argument('--debug', action='store_true')
   parser.add_argument(
       '--types',
       type=str,
-      help=
-      'One of "all", "transactions", or "accounts" to specify what to scrape',
+      help='One of "all", "transactions", or "accounts" to specify what to '
+           'scrape',
       default='all')
   parser.add_argument(
-    '--cookies',
-    type=str,
-    default=None,
-    help=
-    'The location of the cookies file to load and also update.')
+      '--cookies',
+      type=str,
+      default=None,
+      help='The location of the cookies file to load and also update.')
   return parser
 
 
@@ -120,11 +119,8 @@ class ScraperOptions:
       raise ScraperError("Type %s is not valid." % (types))
 
     self.showBrowser: bool = showBrowser
-    self.scrapeTransactions: bool = (True if types.lower() == 'all'
-                                     or types.lower() == 'transactions' else
-                                     False)
-    self.scrapeAccounts: bool = (True if types.lower() == 'all'
-                                 or types.lower() == 'accounts' else False)
+    self.scrapeTransactions = (True if types.lower() == 'all' or types.lower() == 'transactions' else False)
+    self.scrapeAccounts = (True if types.lower() == 'all' or types.lower() == 'accounts' else False)
 
   @classmethod
   def fromArgs(cls, args: argparse.Namespace) -> 'ScraperOptions':
@@ -139,6 +135,7 @@ class ScraperOptions:
       return ScraperOptions(args.types, showBrowser=args.debug)
     else:
       return ScraperOptions(args.types)
+
 
 def _fetchCookies(cookies_file: Text) -> List[Text]:
   """Fetches the cookies for Mint if available.
@@ -155,6 +152,7 @@ def _fetchCookies(cookies_file: Text) -> List[Text]:
       cookies = pickle.load(f)
   return cookies
 
+
 def _dumpCookies(mint: mintapi.Mint, cookies_file: Text) -> None:
   """Dumps the cookies in the current session to the cookies file.
 
@@ -165,7 +163,8 @@ def _dumpCookies(mint: mintapi.Mint, cookies_file: Text) -> None:
   with open(cookies_file, 'wb') as f:
     pickle.dump(mint.driver.get_cookies(), f)
 
-def _LogIntoMint(creds: Credentials, options: ScraperOptions, 
+
+def _LogIntoMint(creds: Credentials, options: ScraperOptions,
                  chromedriver_download_path: Text,
                  cookies: List[Text]) -> mintapi.Mint:
   """Logs into mint and retrieves an active connection.
@@ -174,7 +173,7 @@ def _LogIntoMint(creds: Credentials, options: ScraperOptions,
     creds: The credentials for the account to log into.
     options: Options for how to connect.
     chromedriver_download_path: Location of chromedriver.
-    cookies: Cookies to attach to the session, when provided. 
+    cookies: Cookies to attach to the session, when provided.
 
   Returns:
     The mint connection object.
@@ -203,7 +202,8 @@ def _LogIntoMint(creds: Credentials, options: ScraperOptions,
                       mfa_token=mfa_token,
                       session_path=session_path,
                       wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC,
-  )
+                      )
+
   # Load cookies if provided. These are cookies only for mint.com domain.
   [mint.driver.add_cookie(cookie) for cookie in cookies]
   return mint
@@ -227,9 +227,9 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
     # Process in sorted order from longest to shortest
     # (more specific ones match first)
     for substring, accountType in sorted(
-        _GLOBAL_CONFIG.ACCOUNT_NAME_TO_TYPE_MAP,
-        key=lambda x: len(x[0]),
-        reverse=True):
+            _GLOBAL_CONFIG.ACCOUNT_NAME_TO_TYPE_MAP,
+            key=lambda x: len(x[0]),
+            reverse=True):
       if substring.lower() in originalType.lower():
         return accountType
     print("No account type for account with type: %s" % originalType)
@@ -314,7 +314,7 @@ def _getGoogleCredentials() -> Optional[service_account.Credentials]:
   _SCOPES = ('https://www.googleapis.com/auth/spreadsheets',
              'https://www.googleapis.com/auth/drive')
   return service_account.Credentials.from_service_account_info(
-    service_info, scopes=_SCOPES)
+      service_info, scopes=_SCOPES)
 
 
 def main() -> None:
@@ -323,7 +323,7 @@ def main() -> None:
   args: argparse.Namespace = parser.parse_args()
   options = ScraperOptions.fromArgs(args)
   creds: Credentials = _GetCredentials()
-  
+
   print("Logging into mint")
   if os.getenv('CHROMEDRIVER_PATH'):
     chromedriver_download_path = os.getenv('CHROMEDRIVER_PATH')
@@ -341,7 +341,7 @@ def main() -> None:
   if args.cookies:
     _dumpCookies(mint, cookies_file)
   print("Connecting to sheets.")
-  
+
   client = pygsheets.authorize(custom_credentials=_getGoogleCredentials())
   sheet = client.open(_GLOBAL_CONFIG.WORKSHEET_TITLE)
 
@@ -352,10 +352,10 @@ def main() -> None:
 
   latestAccounts: pd.DataFrame = (messageWrapper(
       "Retrieving accounts...", lambda: _RetrieveAccounts(mint))
-                                  if options.scrapeAccounts else None)
+      if options.scrapeAccounts else None)
   latestTransactions: pd.DataFrame = (messageWrapper(
       "Retrieving transactions...", lambda: _RetrieveTransactions(mint))
-                                      if options.scrapeTransactions else None)
+      if options.scrapeTransactions else None)
 
   print("Retrieval complete. Uploading to sheets...")
   _UpdateGoogleSheet(sheet=sheet,

@@ -1,5 +1,3 @@
-import os
-
 from typing import List, Optional, Text
 
 
@@ -8,7 +6,7 @@ class Config:
 
   def __init__(self: 'Config') -> None:
     """Initializes the config to the default values.
-      
+
     Properties:
       JOINT_SPENDING_ACCOUNTS: The account names which are held jointly.
         Only transactions from accounts matching these are uploaded to
@@ -20,7 +18,8 @@ class Config:
         of the corresponding COLUMNs[i]
       RAW_SHEET_TITLE: The name of the sheet which contains the raw
         transactions.
-      SETTINGS_SHEET_TITLE: The name of the sheet containing the setting page.
+      SETTINGS_SHEET_TITLE: The name of the sheet containing the setting
+        page.
       KEYS_FILE: The file path (relative) of the keys to use when using the
         Google Sheets API
       WORKSHEET_TITLE: The title of the worksheet in Google Drive where
@@ -29,12 +28,12 @@ class Config:
         processing transactions.
       IGNORED_CATEGORIES: A list of categories which are filtered out when
         processing transactions.
-      SESSION_PATH: The full path to where Chrome session data can be stored
-        and retrieved from.
+      SESSION_PATH: The full path to where Chrome session data can be
+        stored and retrieved from.
       IMAP_SERVER: The IMAP server to use for MFA using email.
       WAIT_FOR_ACCOUNT_SYNC: Whether or not to wait for account syncing.
     """
-   
+
     self.JOINT_SPENDING_ACCOUNTS: List[Text] = [
         'Amazon Card - Luis',
         'Amazon Store Card',
@@ -43,8 +42,10 @@ class Config:
         'CapitalOne Venture Card',
         'Citi - Personal',
         'Citi Premier Card',
-        'CREDIT CARD', # Chase
-        'CREDITCARD Account', # CapitalOne Business Card
+        # Chase
+        'CREDIT CARD',
+        # CapitalOne Business Card
+        'CREDITCARD Account',
         'Discover',
         'Freedom - Belinda',
         'Freedom Unlimited - Belinda',
@@ -55,8 +56,10 @@ class Config:
         'Southwest Rapid Rewards',
         'Spark Visa Signature Business',
     ]
-    self.COLUMNS: List[Text] = ['odate', 'mmerchant', 'amount', 'category', 'account', 'id']
-    self.COLUMN_NAMES: List[Text] = ['Date', 'Merchant', 'Amount', 'Category', 'Account', 'ID']
+    self.COLUMNS: List[Text] = [
+        'odate', 'mmerchant', 'amount', 'category', 'account', 'id']
+    self.COLUMN_NAMES: List[Text] = [
+        'Date', 'Merchant', 'Amount', 'Category', 'Account', 'ID']
     self.ACCOUNT_COLUMN_NAMES: List[Text] = ['Name', 'Type', 'Balance']
 
     self.RAW_TRANSACTIONS_TITLE: Text = "Raw - All Transactions"
@@ -81,7 +84,7 @@ class Config:
         'Paycheck',
         'Income',
     ]
-    # Ignore specific transactions. 
+    # Ignore specific transactions.
     self.IGNORED_TXNS: List[int] = [
         2461681673,
         2482214183,
@@ -95,6 +98,12 @@ class Config:
         2573036964,
         2618759691,
         2651591652,
+        2683357551,
+        2683357555,
+        2683357558,
+        2699871142,
+        2700599726,
+        2701555871,
     ]
     self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
     self.WAIT_FOR_ACCOUNT_SYNC: bool = False

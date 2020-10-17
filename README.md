@@ -34,7 +34,12 @@ pip install -r requirements.txt
 This will install the required libraries.
 
 ## Chrome Driver
-The Chrome driver used is, by default, located in the current working directory of the script.
+The Chrome driver used is, by default, located in the current working directory of the script. However, for running in Heroku, install the heroku-buildpack-chromedriver and update the `GOOGLE_CHROME_BIN` environment variable to `GOOGLE_CHROME_BIN`.
+
+To update, run:
+```
+heroku buildpacks:publish heroku/chromedriver master
+```
 
 # Running the script.
 

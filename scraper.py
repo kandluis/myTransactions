@@ -112,6 +112,8 @@ class ScraperOptions:
     """Initialize an options object
 
     Args:
+      types: One of 'all', 'accounts', 'transactions' specifying what type of
+        data to scrape from Mint.
       showBrowser: If given, specifies whether to show the browser or not.
         the default is to show the browser.
     """

@@ -50,6 +50,7 @@ class Config:
         'Freedom - Belinda',
         'Freedom Unlimited - Belinda',
         'Freedom',
+        'Platinum Card',
         'LemonBunny',
         'Marriott Rewards',
         'Preferred',

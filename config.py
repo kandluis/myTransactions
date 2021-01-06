@@ -50,9 +50,9 @@ class Config:
         'Freedom - Belinda',
         'Freedom Unlimited - Belinda',
         'Freedom',
-        'Platinum Card',
         'LemonBunny',
         'Marriott Rewards',
+        'Platinum Card',
         'Preferred',
         'Southest Business - Belinda',
         'Southwest Business - Luis',
@@ -90,7 +90,7 @@ class Config:
     ]
     # Ignore specific transactions.
     self.IGNORED_TXNS: List[int] = [
-        2401500778,
+        2675570707,
         2461681673,
         2482214183,
         2504269103,

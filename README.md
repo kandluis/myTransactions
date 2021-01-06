@@ -54,3 +54,10 @@ You should be able to type check by running:
 ```
 mypy scraper.py
 ```
+
+# Deploy To Heroku
+
+To deploy to our heroku server, just run:
+```
+git push heroku master
+```

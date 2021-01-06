@@ -37,24 +37,27 @@ class Config:
     self.JOINT_SPENDING_ACCOUNTS: List[Text] = [
         'Amazon Card - Luis',
         'Amazon Store Card',
-        'Bank of America Travel Rewards Signature',
         'Bank of America Travel Rewards Visa Signature',
         'CapitalOne Venture Card',
+        'Chase Business Unlimited - Belinda',
+        'Chase Business Unlimited - Luis',
         'Citi - Personal',
+        'Citi Dividend Miles'
         'Citi Premier Card',
-        # Chase
         'CREDIT CARD',
-        # CapitalOne Business Card
         'CREDITCARD Account',
         'Discover',
         'Freedom - Belinda',
         'Freedom Unlimited - Belinda',
         'Freedom',
-        'Mariott Rewards',
+        'LemonBunny',
         'Marriott Rewards',
         'Preferred',
+        'Southest Business - Belinda',
+        'Southwest Business - Luis',
         'Southwest Rapid Rewards',
         'Spark Visa Signature Business',
+        'TOTAL CHECKING',
     ]
     self.COLUMNS: List[Text] = [
         'odate', 'mmerchant', 'amount', 'category', 'account', 'id']
@@ -86,6 +89,7 @@ class Config:
     ]
     # Ignore specific transactions.
     self.IGNORED_TXNS: List[int] = [
+        2401500778,
         2461681673,
         2482214183,
         2504269103,

@@ -58,7 +58,6 @@ class Config:
         'Southwest Business - Luis',
         'Southwest Rapid Rewards',
         'Spark Visa Signature Business',
-        'TOTAL CHECKING',
     ]
     self.COLUMNS: List[Text] = [
         'odate', 'mmerchant', 'amount', 'category', 'account', 'id']

@@ -163,6 +163,7 @@ class Config:
         ('Smart Saver', 'Stock'),
         ('Southest Business - Belinda', 'Credit'),
         ('Southwest Business - Luis', 'Credit'),
+        ('TAXABLE Account', 'Stock'),
         ('TOTAL CHECKING', 'Cash'),
         ('Traditional IRA', 'Restricted Stock'),
         ('Visa', 'Credit'),

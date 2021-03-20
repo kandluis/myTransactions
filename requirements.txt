@@ -10,10 +10,10 @@ google-auth==1.23.0
 google-auth-httplib2==0.0.4
 google-auth-oauthlib==0.4.2
 googleapis-common-protos==1.52.0
-httplib2==0.19.0
+httplib2==0.18.1
 idna==2.10
 importlib-resources==3.3.0
-mintapi==1.44
+mintapi @ git+https://github.com/mrooney/mintapi.git@master
 mock==4.0.2
 numpy==1.19.4
 oathtool==2.3.0
@@ -37,6 +37,6 @@ selenium-requests==1.3
 six==1.15.0
 tldextract==3.1.0
 uritemplate==3.0.1
-urllib3==1.26.3
+urllib3==1.26.2
 xmltodict==0.12.0
 zipp==3.4.0

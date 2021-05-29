@@ -45,7 +45,6 @@ class Config:
         'Citi Dividend Miles'
         'Citi Premier Card',
         'CREDIT CARD',
-        'CREDITCARD Account',
         'Discover',
         'Freedom - Belinda',
         'Freedom Unlimited - Belinda',

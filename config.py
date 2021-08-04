@@ -144,6 +144,7 @@ class Config:
         ('Health Savings', 'Restricted Cash'),
         ('HSA Investment', 'Restricted Stock'),
         ('Individual          ', 'Stock'),
+        ('Individual', 'Stock'),
         ('Investment', 'Stock'),
         ('Investments', 'Stock'),
         ('JOINT WROS', 'Bonds'),
@@ -167,6 +168,7 @@ class Config:
         ('Traditional IRA', 'Restricted Stock'),
         ('Visa', 'Credit'),
         ('Wallet', 'Crypto'),
+        ('XXXXXX2351', 'Loan'),
     ]
 
 

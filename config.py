@@ -153,6 +153,7 @@ class Config:
         ('LendingClub', 'Loan'),
         ('LPFSA', 'Restricted Cash'),
         ('Marriott', 'Credit'),
+        ('META PLATFORMS', 'Stock'),
         ('Other Property', 'Cash'),
         ('Preferred', 'Credit'),
         ('Property', 'Real Estate'),

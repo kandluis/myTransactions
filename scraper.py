@@ -260,10 +260,10 @@ def _RetrieveTransactions(mint: mintapi.Mint) -> pd.DataFrame:
     A data frame of all mint transactions"""
   transactions = mint.get_detailed_transactions(skip_duplicates=True,
                                                 remove_pending=False,
-                                                include_investments=True)
+                                                include_investment=True)
 
   spend_transactions = transactions[
-      transactions.account.isin(_GLOBAL_CONFIG.JOINT_SPENDING_ACCOUNTS)
+      ~transactions.account.isin(_GLOBAL_CONFIG.SKIPPED_ACCOUNTS)
       & transactions.isSpending & ~transactions.isTransfer]
   spend_transactions = spend_transactions[_GLOBAL_CONFIG.COLUMNS]
   spend_transactions.columns = _GLOBAL_CONFIG.COLUMN_NAMES

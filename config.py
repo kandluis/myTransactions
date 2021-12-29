@@ -8,10 +8,8 @@ class Config:
     """Initializes the config to the default values.
 
     Properties:
-      JOINT_SPENDING_ACCOUNTS: The account names which are held jointly.
-        Only transactions from accounts matching these are uploaded to
-        the Google Sheet.
-
+      SKIPPED_ACCOUNTS: The account names are to be skipped when uploading to
+        Google Sheets.
       COLUMNS: The column names of the retrieved dataframe return by the
         mintapi library.
       COLUMN_NAMES: COLUMN_NAMES[i] is the column name in the Google sheet
@@ -34,29 +32,8 @@ class Config:
       WAIT_FOR_ACCOUNT_SYNC: Whether or not to wait for account syncing.
     """
 
-    self.JOINT_SPENDING_ACCOUNTS: List[Text] = [
-        'Amazon Card - Luis',
-        'Amazon Store Card',
-        'Bank of America Travel Rewards Visa Signature',
-        'CapitalOne Venture Card',
-        'Chase Business Unlimited - Belinda',
-        'Chase Business Unlimited - Luis',
-        'Citi - Personal',
-        'Citi Dividend Miles'
-        'Citi Premier Card',
-        'CREDIT CARD',
-        'Discover',
-        'Freedom - Belinda',
-        'Freedom Unlimited - Belinda',
-        'Freedom',
-        'LemonBunny',
-        'Marriott Rewards',
-        'Platinum Card',
-        'Preferred',
-        'Southest Business - Belinda',
-        'Southwest Business - Luis',
-        'Southwest Rapid Rewards',
-        'Spark Visa Signature Business',
+    self.SKIPPED_ACCOUNTS: List[Text] = [
+      'Citi®\xa0Double Cash Card', # mom's account
     ]
     self.COLUMNS: List[Text] = [
         'odate', 'mmerchant', 'amount', 'category', 'account', 'id']

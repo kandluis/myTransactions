@@ -1,16 +1,18 @@
 import argparse
-import mintapi  # type: ignore
+import config
+import dotenv  # type: ignore
 import json
+import mintapi  # type: ignore
 import os
 import pandas as pd  # type: ignore
 import pickle
 import pygsheets  # type: ignore
 import socket
 import sys
+import time
 
-import config
 from datetime import datetime
-import dotenv  # type: ignore
+
 from google.oauth2 import service_account  # type: ignore
 
 from typing import (
@@ -205,6 +207,7 @@ def _LogIntoMint(creds: Credentials, options: ScraperOptions,
                       session_path=session_path,
                       wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC,
                       )
+  time.sleep(5)
 
   # Load cookies if provided. These are cookies only for mint.com domain.
   [mint.driver.add_cookie(cookie) for cookie in cookies]
@@ -260,10 +263,10 @@ def _RetrieveTransactions(mint: mintapi.Mint) -> pd.DataFrame:
     A data frame of all mint transactions"""
   transactions = mint.get_detailed_transactions(skip_duplicates=True,
                                                 remove_pending=False,
-                                                include_investment=True)
+                                                include_investment=False)
 
   spend_transactions = transactions[
-      ~transactions.account.isin(_GLOBAL_CONFIG.SKIPPED_ACCOUNTS)
+      (~transactions.account.isin(_GLOBAL_CONFIG.SKIPPED_ACCOUNTS))
       & transactions.isSpending & ~transactions.isTransfer]
   spend_transactions = spend_transactions[_GLOBAL_CONFIG.COLUMNS]
   spend_transactions.columns = _GLOBAL_CONFIG.COLUMN_NAMES

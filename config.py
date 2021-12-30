@@ -33,7 +33,11 @@ class Config:
     """
 
     self.SKIPPED_ACCOUNTS: List[Text] = [
-      'Citi®\xa0Double Cash Card', # mom's account
+      'Citi®\xa0Double Cash Card',
+      'Citi® Double Cash Card',
+      'Citi Double Cash Card',
+      'Wells Fargo College Checking',
+      'Total Checking',
     ]
     self.COLUMNS: List[Text] = [
         'odate', 'mmerchant', 'amount', 'category', 'account', 'id']
@@ -49,23 +53,42 @@ class Config:
     # Paid for Luis' Family's phones are not counted.
     # Ignore SCPD Payments.
     self.IGNORED_MERCHANTS: List[Text] = [
-        'Project Fi',
-        'Stanford Scpd Ca',
-        'Stanford Scpd 6507253016 Ca',
         'Anita Borg Institute',
+        'Fairway Independent Mortgage Corp',
+        'Federal Tax',
+        'Foremost',
         'Graves Bail Bonds',
+        'Internet Transfer From Interest Checking Account',
+        'Project Fi',
+        'Rental Income',
+        'Stanford Scpd 6507253016 Ca',
+        'Stanford Scpd Ca',
         'Stanford Scpd',
+        'State Tax',
+        'Treasury Direct Treas Drct',
+        'Usforex',
+        'Check',
     ]
     # Credit card payments are redundant.
     self.IGNORED_CATEGORIES: List[Text] = [
+        'Auto Payment',
         'Credit Card Payment',
-        'Transfer',
-        'Paycheck',
         'Income',
+        'Investments',
+        'Mortgage  Rent',
+        'Paycheck',
+        'Taxes',
+        'Transfer',
+        'Federal Tax',
+        'State Tax',
+        'Rental Income',
+        'Check',
+        'Interest Income',
+        'Financial',
     ]
     # Ignore specific transactions.
     self.IGNORED_TXNS: List[int] = [
-        2675570707,
+        966664871,
         2461681673,
         2482214183,
         2504269103,
@@ -78,6 +101,7 @@ class Config:
         2573036964,
         2618759691,
         2651591652,
+        2675570707,
         2683357551,
         2683357555,
         2683357558,
@@ -88,9 +112,17 @@ class Config:
         2702719675,
         2722631725,
         2728575778,
+        2902309919,
+        2910459335,
+        2917390750,
+        2920747715,
+        2926069610,
+        2926508879,
+        2926508937,
+        2920747716,
     ]
     self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
-    self.WAIT_FOR_ACCOUNT_SYNC: bool = False
+    self.WAIT_FOR_ACCOUNT_SYNC: bool = True
     # substring to account type string mapping.
     self.ACCOUNT_NAME_TO_TYPE_MAP = [
         ('401(K) SAVINGS PLAN', 'Restricted Stock'),
@@ -139,6 +171,7 @@ class Config:
         ('Roth IRA', 'Stock'),
         ('Savings', 'Cash'),
         ('Smart Saver', 'Stock'),
+        ('SpendAccount', 'Cash'),
         ('Southest Business - Belinda', 'Credit'),
         ('Southwest Business - Luis', 'Credit'),
         ('TAXABLE Account', 'Stock'),

@@ -78,3 +78,7 @@ To deploy to our heroku server, just run:
 ```
 git push heroku master
 ```
+
+# Version
+
+1.0.0

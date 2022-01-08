@@ -17,11 +17,28 @@ GOOGLE_SHEETS_CREDENTIALS=<TODO> // The keys.json file for the Google sheets ser
 Note that MFA_TOKEN is needed for Mint accounts with 2-FA enabled, and corresponds to the token that Google Authenticator uses. With this token, the app can generate OTP on its own. If not provided, we will fall-back to text-based method and this will require user interaction.
 
 
-Additionally, you need a `keys.json` file containing valid keys to be used when accessing the Google Spreadsheet. This is just a JSON file that you should be able to download from the Google Cloud Console.
+Additionally, you need a `keys.json` file containing valid keys to be used when accessing the Google Spreadsheet. This is just a JSON file that you should be able to download from the Google Cloud Console. You need to attach in the `GOOGLE_SHEETS_CREDENTIALS` section above as a single string.
+
 
 ## Python Requirements
 
-I recommend you make use of `virtualenv` and `virtualenvwrapper` to set this up appropriately. The provided `run.sh` script assumes these exist, but obviously you can install everything at the top-level Python environment if you so choose. This is probably a bad idea, though.
+### conda
+I recommend using `conda`, since it's quite easy to handle specific python versions.  You can use `miniconda` from the instructions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/macos.html).
+
+After install, you can create a new `conda` environment (with Python 3.10) which is the latest tested version, and activate it.
+
+```sh
+conda create -n txn python=3.10
+```
+
+On the first activation, install the required packages.
+
+```sh
+pip install -r requirements.txt
+```
+
+### virtualenv & virtualenvwrapper
+You can use of `virtualenv` and `virtualenvwrapper` to set this up appropriately. The provided `run.sh` script assumes these exist, but obviously you can install everything at the top-level Python environment if you so choose. This is probably a bad idea, though.
 
 Note: This package has only been tested on Python 3.7. In fact, it appears that installation of pandas in 3.8 fails due to compilation errors.
 

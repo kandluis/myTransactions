@@ -123,6 +123,7 @@ class Config:
         2940650110,
         2944077407,
         2945144150,
+        2947546107,
     ]
     self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
     self.WAIT_FOR_ACCOUNT_SYNC: bool = True

@@ -32,7 +32,7 @@ class Config:
       WAIT_FOR_ACCOUNT_SYNC: Whether or not to wait for account syncing.
       TXN_LIMIT: The limit for the number of transactions that we retrieve.
     """
-
+    self.TXN_LIMIT: int = 10_000
     self.SKIPPED_ACCOUNTS: List[Text] = [
         'Citi®\xa0Double Cash Card',
         'Citi® Double Cash Card',

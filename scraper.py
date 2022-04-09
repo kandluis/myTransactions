@@ -9,7 +9,6 @@ import pickle
 import pygsheets  # type: ignore
 import socket
 import sys
-import time
 
 from datetime import datetime
 
@@ -209,7 +208,6 @@ def _LogIntoMint(creds: Credentials, options: ScraperOptions,
                       session_path=session_path,
                       wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC,
                       )
-  time.sleep(5)
 
   # Load cookies if provided. These are cookies only for mint.com domain.
   [mint.driver.add_cookie(cookie) for cookie in cookies]
@@ -227,8 +225,8 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
   """
 
   def sign(acc: Dict[Text, Any]) -> int:
-    kCreditAccount = 'credit'
-    return (-1 if acc['accountType'] == kCreditAccount else 1)
+    kCreditAccount = 'CreditAccount'
+    return (-1 if acc['type'] == kCreditAccount else 1)
 
   def getAccountType(originalType: Text) -> Text:
     # Process in sorted order from longest to shortest
@@ -242,10 +240,14 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
     print("No account type for account with type: %s" % originalType)
     return 'Unknown - %s' % (originalType)
 
+  import pdb
+  pdb.set_trace()
   accounts: List[Dict[Text, Any]] = mint.get_account_data()
   return pd.DataFrame([{
-      'Name': account['accountName'],
-      'Type': getAccountType(account['accountName']),
+      'Name': account['name'],
+      'Finance Name': account['fiName'],
+      'Type': getAccountType(account['name']),
+      'Finance Type': account['type'],
       'Balance': sign(account) * account['currentBalance']
   } for account in accounts if account['isActive']])
   accounts = accounts[_GLOBAL_CONFIG.ACCOUNT_COLUMN_NAMES]
@@ -262,16 +264,21 @@ def _RetrieveTransactions(mint: mintapi.Mint) -> pd.DataFrame:
     mint: The mint connection object to the active session.
 
   Returns:
-    A data frame of all mint transactions"""
+    A data frame of all mint transactions
+  """
+  import pdb
+  pdb.set_trace()
   transactions = mint.get_transaction_data(
       limit=_GLOBAL_CONFIG.TXN_LIMIT,
-      skip_duplicates=True,
       remove_pending=False,
       include_investment=False)
+  transactions = pd.DataFrame([{
+      'account': transaction['accountRef']['name']
+      'isExpense': transaction['isExpense']
+  } for transaction in transactions])
 
-  spend_transactions = transactions[
-      (~transactions.account.isin(_GLOBAL_CONFIG.SKIPPED_ACCOUNTS))
-      & transactions.isSpending & ~transactions.isTransfer]
+  spend_transactions = transactions[(~transactions.account.isin(
+      _GLOBAL_CONFIG.SKIPPED_ACCOUNTS)) & transactions.isExpense]
   spend_transactions = spend_transactions[_GLOBAL_CONFIG.COLUMNS]
   spend_transactions.columns = _GLOBAL_CONFIG.COLUMN_NAMES
   spend_transactions.Category = spend_transactions.Category.map(_Normalize)

@@ -41,7 +41,7 @@ class Config:
         'Total Checking',
     ]
     self.COLUMNS: List[Text] = [
-        'odate', 'mmerchant', 'amount', 'category', 'account', 'id']
+        'date', 'mmerchant', 'amount', 'category', 'account', 'id']
     self.COLUMN_NAMES: List[Text] = [
         'Date', 'Merchant', 'Amount', 'Category', 'Account', 'ID']
     self.ACCOUNT_COLUMN_NAMES: List[Text] = ['Name', 'Type', 'Balance']

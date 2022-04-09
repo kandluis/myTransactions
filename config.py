@@ -33,11 +33,11 @@ class Config:
     """
 
     self.SKIPPED_ACCOUNTS: List[Text] = [
-      'Citi®\xa0Double Cash Card',
-      'Citi® Double Cash Card',
-      'Citi Double Cash Card',
-      'Wells Fargo College Checking',
-      'Total Checking',
+        'Citi®\xa0Double Cash Card',
+        'Citi® Double Cash Card',
+        'Citi Double Cash Card',
+        'Wells Fargo College Checking',
+        'Total Checking',
     ]
     self.COLUMNS: List[Text] = [
         'odate', 'mmerchant', 'amount', 'category', 'account', 'id']
@@ -86,6 +86,25 @@ class Config:
         'Interest Income',
         'Financial',
     ]
+    BUSINESS_EXPENSES: List[int] = [
+        2972706829,  # Dinner
+        2972196882,  # NoMo Soho
+        2970848199,  # Sheraton
+        2966857485,  # Taxes for Merced/Etc.
+        2960566088,  # Home Depot
+        2960566090,  # Home Depot
+        2960566091,  # Home Depot
+        2960566089,  # Home Depot
+        2953805219,
+        2953805221,
+        2950201581,  # AirBnB
+        2949966496,  # AirBnB
+        2953805206,
+        2953522509,
+        2953522508,
+        2953522507,
+        2953522510,
+    ]
     # Ignore specific transactions.
     self.IGNORED_TXNS: List[int] = [
         966664871,
@@ -122,7 +141,12 @@ class Config:
         2944077407,
         2926508937,
         2940650110,
-    ]
+        2960566083,
+        2959688563,
+        2960986889,
+        2963183492,
+        2966202025,
+    ] + BUSINESS_EXPENSES
     self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
     self.WAIT_FOR_ACCOUNT_SYNC: bool = True
     # substring to account type string mapping.

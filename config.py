@@ -30,14 +30,15 @@ class Config:
         stored and retrieved from.
       IMAP_SERVER: The IMAP server to use for MFA using email.
       WAIT_FOR_ACCOUNT_SYNC: Whether or not to wait for account syncing.
+      TXN_LIMIT: The limit for the number of transactions that we retrieve.
     """
 
     self.SKIPPED_ACCOUNTS: List[Text] = [
-      'Citi®\xa0Double Cash Card',
-      'Citi® Double Cash Card',
-      'Citi Double Cash Card',
-      'Wells Fargo College Checking',
-      'Total Checking',
+        'Citi®\xa0Double Cash Card',
+        'Citi® Double Cash Card',
+        'Citi Double Cash Card',
+        'Wells Fargo College Checking',
+        'Total Checking',
     ]
     self.COLUMNS: List[Text] = [
         'odate', 'mmerchant', 'amount', 'category', 'account', 'id']
@@ -122,6 +123,10 @@ class Config:
         2944077407,
         2926508937,
         2940650110,
+        2960566083,
+        2959688563,
+        2960986889,
+        2966202025,
     ]
     self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
     self.WAIT_FOR_ACCOUNT_SYNC: bool = True

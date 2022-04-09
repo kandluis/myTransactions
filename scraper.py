@@ -123,8 +123,10 @@ class ScraperOptions:
       raise ScraperError("Type %s is not valid." % (types))
 
     self.showBrowser: bool = showBrowser
-    self.scrapeTransactions = (True if types.lower() == 'all' or types.lower() == 'transactions' else False)
-    self.scrapeAccounts = (True if types.lower() == 'all' or types.lower() == 'accounts' else False)
+    self.scrapeTransactions = (
+        True if types.lower() == 'all' or types.lower() == 'transactions' else False)
+    self.scrapeAccounts = (True if types.lower() ==
+                           'all' or types.lower() == 'accounts' else False)
 
   @classmethod
   def fromArgs(cls, args: argparse.Namespace) -> 'ScraperOptions':
@@ -240,7 +242,7 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
     print("No account type for account with type: %s" % originalType)
     return 'Unknown - %s' % (originalType)
 
-  accounts: List[Dict[Text, Any]] = mint.get_accounts(get_detail=False)
+  accounts: List[Dict[Text, Any]] = mint.get_account_data()
   return pd.DataFrame([{
       'Name': account['accountName'],
       'Type': getAccountType(account['accountName']),
@@ -261,9 +263,11 @@ def _RetrieveTransactions(mint: mintapi.Mint) -> pd.DataFrame:
 
   Returns:
     A data frame of all mint transactions"""
-  transactions = mint.get_detailed_transactions(skip_duplicates=True,
-                                                remove_pending=False,
-                                                include_investment=False)
+  transactions = mint.get_transaction_data(
+      limit=_GLOBAL_CONFIG.TXN_LIMIT,
+      skip_duplicates=True,
+      remove_pending=False,
+      include_investment=False)
 
   spend_transactions = transactions[
       (~transactions.account.isin(_GLOBAL_CONFIG.SKIPPED_ACCOUNTS))

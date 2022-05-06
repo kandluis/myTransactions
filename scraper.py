@@ -123,8 +123,10 @@ class ScraperOptions:
       raise ScraperError("Type %s is not valid." % (types))
 
     self.showBrowser: bool = showBrowser
-    self.scrapeTransactions = (True if types.lower() == 'all' or types.lower() == 'transactions' else False)
-    self.scrapeAccounts = (True if types.lower() == 'all' or types.lower() == 'accounts' else False)
+    self.scrapeTransactions = (
+        True if types.lower() == 'all' or types.lower() == 'transactions' else False)
+    self.scrapeAccounts = (True if types.lower() ==
+                           'all' or types.lower() == 'accounts' else False)
 
   @classmethod
   def fromArgs(cls, args: argparse.Namespace) -> 'ScraperOptions':
@@ -223,11 +225,6 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
   Returns:
     DataFrame containing cleaned account information.
   """
-
-  def sign(acc: Dict[Text, Any]) -> int:
-    kCreditAccount = 'credit'
-    return (-1 if acc['accountType'] == kCreditAccount else 1)
-
   def getAccountType(originalType: Text) -> Text:
     # Process in sorted order from longest to shortest
     # (more specific ones match first)
@@ -240,17 +237,15 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
     print("No account type for account with type: %s" % originalType)
     return 'Unknown - %s' % (originalType)
 
-  accounts: List[Dict[Text, Any]] = mint.get_accounts(get_detail=False)
+  accounts: List[Dict[Text, Any]] = mint.get_account_data()
   return pd.DataFrame([{
-      'Name': account['accountName'],
-      'Type': getAccountType(account['accountName']),
-      'Balance': sign(account) * account['currentBalance']
+      'Name': account['name'],
+      'Type': getAccountType(account['name']),
+      'Balance': account['value']
   } for account in accounts if account['isActive']])
-  accounts = accounts[_GLOBAL_CONFIG.ACCOUNT_COLUMN_NAMES]
-  return accounts
 
 
-def _RetrieveTransactions(mint: mintapi.Mint) -> pd.DataFrame:
+def _RetrieveTransactions(mint: mintapi.Mint, sheet: pygsheets.Spreadsheet) -> pd.DataFrame:
   """Retrieves all Mint transactions using the given credentials.
 
   The functions also cleans and prepares the transactions to match
@@ -260,27 +255,37 @@ def _RetrieveTransactions(mint: mintapi.Mint) -> pd.DataFrame:
     mint: The mint connection object to the active session.
 
   Returns:
-    A data frame of all mint transactions"""
-  transactions = mint.get_detailed_transactions(skip_duplicates=True,
-                                                remove_pending=False,
-                                                include_investment=False)
+    A data frame of all mint transactions
+  """
+  all_txns_ws: pygsheets.Worksheet = sheet.worksheet_by_title(
+      title=_GLOBAL_CONFIG.RAW_TRANSACTIONS_TITLE)
+  old_txns: pd.DataFrame = all_txns_ws.get_as_df()
+  cutoff: str = old_txns.Date[old_txns.Date.size - 200]
+  start_date: str = datetime.strptime(cutoff, "%Y-%m-%d").strftime("%m/%d/%y")
 
-  spend_transactions = transactions[
-      (~transactions.account.isin(_GLOBAL_CONFIG.SKIPPED_ACCOUNTS))
-      & transactions.isSpending & ~transactions.isTransfer]
-  spend_transactions = spend_transactions[_GLOBAL_CONFIG.COLUMNS]
-  spend_transactions.columns = _GLOBAL_CONFIG.COLUMN_NAMES
-  spend_transactions.Category = spend_transactions.Category.map(_Normalize)
-  spend_transactions.Merchant = spend_transactions.Merchant.map(_Normalize)
-  spend_transactions.Account = spend_transactions.Account.map(_Normalize)
+  txns = pd.json_normalize(
+      mint.get_transaction_data(limit=20000, remove_pending=False,
+                                include_investment=False,
+                                start_date=start_date))
 
-  spend_transactions = spend_transactions[~(
-      spend_transactions.Category.isin(_GLOBAL_CONFIG.IGNORED_CATEGORIES)
-      | spend_transactions.Merchant.isin(_GLOBAL_CONFIG.IGNORED_MERCHANTS)
-      | spend_transactions.ID.isin(_GLOBAL_CONFIG.IGNORED_TXNS))]
-  # Flip expenditures so they're negative.
-  spend_transactions.Amount = -1 * spend_transactions.Amount
-  return spend_transactions.sort_values('Date', ascending=True)
+  spend_txns = txns[
+      (~txns['accountRef.name'].isin(_GLOBAL_CONFIG.SKIPPED_ACCOUNTS))
+      & txns.isExpense]
+  spend_txns = spend_txns[_GLOBAL_CONFIG.COLUMNS]
+  spend_txns.columns = _GLOBAL_CONFIG.COLUMN_NAMES
+  spend_txns.Category = spend_txns.Category.map(_Normalize)
+  spend_txns.Merchant = spend_txns.Merchant.map(_Normalize)
+  spend_txns.Account = spend_txns.Account.map(_Normalize)
+
+  spend_txns = spend_txns[~(
+      spend_txns.Category.isin(_GLOBAL_CONFIG.IGNORED_CATEGORIES)
+      | spend_txns.Merchant.isin(_GLOBAL_CONFIG.IGNORED_MERCHANTS)
+      | spend_txns.ID.isin(_GLOBAL_CONFIG.IGNORED_TXNS)
+      | spend_txns.ID.map(lambda x: int(x.split('_')[1])).isin(
+          _GLOBAL_CONFIG.V1_IGNORED_TXNS)
+  )]
+  spend_txns = spend_txns.sort_values('Date', ascending=True)
+  return pd.concat([old_txns[old_txns.Date < cutoff], spend_txns])
 
 
 def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,
@@ -360,7 +365,7 @@ def main() -> None:
       "Retrieving accounts...", lambda: _RetrieveAccounts(mint))
       if options.scrapeAccounts else None)
   latestTransactions: pd.DataFrame = (messageWrapper(
-      "Retrieving transactions...", lambda: _RetrieveTransactions(mint))
+      "Retrieving transactions...", lambda: _RetrieveTransactions(mint, sheet))
       if options.scrapeTransactions else None)
 
   print("Retrieval complete. Uploading to sheets...")

@@ -31,7 +31,6 @@ class Config:
       IMAP_SERVER: The IMAP server to use for MFA using email.
       WAIT_FOR_ACCOUNT_SYNC: Whether or not to wait for account syncing.
     """
-
     self.SKIPPED_ACCOUNTS: List[Text] = [
         'Citi®\xa0Double Cash Card',
         'Citi® Double Cash Card',
@@ -40,10 +39,9 @@ class Config:
         'Total Checking',
     ]
     self.COLUMNS: List[Text] = [
-        'odate', 'mmerchant', 'amount', 'category', 'account', 'id']
+        'fiData.date', 'fiData.inferredDescription', 'fiData.amount', 'fiData.inferredCategory.name', 'accountRef.name', 'id']
     self.COLUMN_NAMES: List[Text] = [
         'Date', 'Merchant', 'Amount', 'Category', 'Account', 'ID']
-    self.ACCOUNT_COLUMN_NAMES: List[Text] = ['Name', 'Type', 'Balance']
 
     self.RAW_TRANSACTIONS_TITLE: Text = "Raw - All Transactions"
     self.RAW_ACCOUNTS_TITLE = 'Raw - All Accounts'
@@ -87,7 +85,13 @@ class Config:
         'Financial',
     ]
     # Ignore specific transactions.
-    self.IGNORED_TXNS: List[int] = [
+    self.IGNORED_TXNS: List[str] = [
+        '75164122_2980191656_0'
+    ]
+
+    # These IDs are the old version of Mint (v1). They aren't complete, but
+    # we make our best guess.
+    self.V1_IGNORED_TXNS: List[int] = [
         2461681673,
         2482214183,
         2504269103,

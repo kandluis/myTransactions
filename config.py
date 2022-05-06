@@ -83,10 +83,12 @@ class Config:
         'Check',
         'Interest Income',
         'Financial',
+        'Buy',
     ]
     # Ignore specific transactions.
     self.IGNORED_TXNS: List[str] = [
-        '75164122_2980191656_0'
+        '75164122_2980191656_0',
+        '75164122_2983818168_0',
     ]
 
     # These IDs are the old version of Mint (v1). They aren't complete, but

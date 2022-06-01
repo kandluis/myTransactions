@@ -100,7 +100,7 @@ def _NormalizeMerchant(merchant: str) -> str:
       trimmed.append(ch)
     if nChars >= _GLOBAL_CONFIG.MAX_MERCHANT_NAME_CHARS:
       break
-  return ''.join(''.join(trimmed).title().split())
+  return ' '.join(''.join(trimmed).title().split())
 
 
 def _ConstructArgumentParser() -> argparse.ArgumentParser:

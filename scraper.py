@@ -77,9 +77,23 @@ def _Normalize(value: Text) -> Text:
     value: The text to be normalized.
 
   Returns:
-    The normalized test.
+    The normalized text.
   """
   return ''.join(ch for ch in value if ch.isalnum() or ch.isspace()).title()
+
+
+def _NormalizeMerchant(merchant: str) -> str:
+  """Normalizes the text merchant of a merchant.
+
+  Args:
+    merchant: The text to be normalized.
+
+  Returns:
+    The normalized merchant.
+  """
+  return ''.join(
+    ch for ch in merchant if ch.isalpha() or ch.isspace()
+    ).title()[:_GLOBAL_CONFIG.MAX_MERCHANT_NAME_CHARS]  
 
 
 def _ConstructArgumentParser() -> argparse.ArgumentParser:
@@ -274,7 +288,7 @@ def _RetrieveTransactions(mint: mintapi.Mint, sheet: pygsheets.Spreadsheet) -> p
   spend_txns = spend_txns[_GLOBAL_CONFIG.COLUMNS]
   spend_txns.columns = _GLOBAL_CONFIG.COLUMN_NAMES
   spend_txns.Category = spend_txns.Category.map(_Normalize)
-  spend_txns.Merchant = spend_txns.Merchant.map(_Normalize)
+  spend_txns.Merchant = spend_txns.Merchant.map(_NormalizeMerchant)
   spend_txns.Account = spend_txns.Account.map(_Normalize)
 
   spend_txns = spend_txns[~(

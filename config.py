@@ -85,6 +85,7 @@ class Config:
         'Financial',
         'Buy',
     ]
+    self.MAX_MERCHANT_NAME_CHARS: int = 20
     # Ignore specific transactions.
     self.IGNORED_TXNS: List[str] = [
         '75164122_2980191656_0',

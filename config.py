@@ -182,6 +182,7 @@ class Config:
         ('Chase Business Unlimited - Luis', 'Credit'),
         ('Checking', 'Cash'),
         ('Citi', 'Credit'),
+        ('College-GiftAccount', 'Cash'),
         ('Credit', 'Credit'),
         ('Deferred Comp', 'Restricted Cash'),
         ('Discover', 'Credit'),
@@ -220,6 +221,8 @@ class Config:
         ('Visa', 'Credit'),
         ('Wallet', 'Crypto'),
         ('XXXXXX2351', 'Loan'),
+        ('XXXXX6055', 'Loan'),
+        ('XXXXXX7338', 'Loan'),
     ]
 
 

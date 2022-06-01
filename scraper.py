@@ -91,9 +91,16 @@ def _NormalizeMerchant(merchant: str) -> str:
   Returns:
     The normalized merchant.
   """
-  return ''.join(
-    ch for ch in merchant if ch.isalpha() or ch.isspace()
-    ).title()[:_GLOBAL_CONFIG.MAX_MERCHANT_NAME_CHARS]  
+  nChars = 0
+  trimmed = []
+  for ch in merchant:
+    if ch.isalpha() or ch.isspace():
+      if ch.isalpha():
+        nChars += 1
+      trimmed.append(ch)
+    if nChars >= _GLOBAL_CONFIG.MAX_MERCHANT_NAME_CHARS:
+      break
+  return ''.join(''.join(trimmed).title().split())
 
 
 def _ConstructArgumentParser() -> argparse.ArgumentParser:
@@ -274,32 +281,42 @@ def _RetrieveTransactions(mint: mintapi.Mint, sheet: pygsheets.Spreadsheet) -> p
   all_txns_ws: pygsheets.Worksheet = sheet.worksheet_by_title(
       title=_GLOBAL_CONFIG.RAW_TRANSACTIONS_TITLE)
   old_txns: pd.DataFrame = all_txns_ws.get_as_df()
-  cutoff: str = old_txns.Date[old_txns.Date.size - 200]
+  cutoff: str = old_txns.Date[old_txns.Date.size - _GLOBAL_CONFIG.NUM_TXN_FOR_CUTOFF]
   start_date: str = datetime.strptime(cutoff, "%Y-%m-%d").strftime("%m/%d/%y")
 
   txns = pd.json_normalize(
       mint.get_transaction_data(limit=20000, remove_pending=False,
                                 include_investment=False,
                                 start_date=start_date))
-
   spend_txns = txns[
       (~txns['accountRef.name'].isin(_GLOBAL_CONFIG.SKIPPED_ACCOUNTS))
       & txns.isExpense]
+
   spend_txns = spend_txns[_GLOBAL_CONFIG.COLUMNS]
   spend_txns.columns = _GLOBAL_CONFIG.COLUMN_NAMES
+  # Filters that only apply to new txns.
+  spend_txns = spend_txns[~(
+    spend_txns.ID.map(lambda x: int(x.split('_')[1])).isin(
+          _GLOBAL_CONFIG.V1_IGNORED_TXNS)
+    )]
+  spend_txns = spend_txns.sort_values('Date', ascending=True)
+
+  # Attach old txns.
+  spend_txns = pd.concat([old_txns[old_txns.Date < cutoff], spend_txns])
+  
+  
+  # Clean-up txns -- this enables us to retroactively clean-up old txns.
   spend_txns.Category = spend_txns.Category.map(_Normalize)
   spend_txns.Merchant = spend_txns.Merchant.map(_NormalizeMerchant)
   spend_txns.Account = spend_txns.Account.map(_Normalize)
 
   spend_txns = spend_txns[~(
       spend_txns.Category.isin(_GLOBAL_CONFIG.IGNORED_CATEGORIES)
-      | spend_txns.Merchant.isin(_GLOBAL_CONFIG.IGNORED_MERCHANTS)
+      | spend_txns.Merchant.isin([_NormalizeMerchant(merchant) 
+        for merchant in _GLOBAL_CONFIG.IGNORED_MERCHANTS])
       | spend_txns.ID.isin(_GLOBAL_CONFIG.IGNORED_TXNS)
-      | spend_txns.ID.map(lambda x: int(x.split('_')[1])).isin(
-          _GLOBAL_CONFIG.V1_IGNORED_TXNS)
   )]
-  spend_txns = spend_txns.sort_values('Date', ascending=True)
-  return pd.concat([old_txns[old_txns.Date < cutoff], spend_txns])
+  return spend_txns
 
 
 def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,

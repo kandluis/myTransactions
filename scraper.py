@@ -95,12 +95,16 @@ def _NormalizeMerchant(merchant: str) -> str:
   trimmed = []
   for ch in merchant:
     if ch.isalpha() or ch.isspace():
+      trimmed.append(ch)
       if ch.isalpha():
         nChars += 1
-      trimmed.append(ch)
     if nChars >= _GLOBAL_CONFIG.MAX_MERCHANT_NAME_CHARS:
       break
-  return ' '.join(''.join(trimmed).title().split())
+  normalized = ' '.join(''.join(trimmed).split()).title()
+  for simpleName in _GLOBAL_CONFIG.MERCHANT_NORMALIZATION:
+    if simpleName in normalized:
+      return simpleName
+  return normalized
 
 
 def _ConstructArgumentParser() -> argparse.ArgumentParser:

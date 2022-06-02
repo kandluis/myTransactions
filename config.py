@@ -96,6 +96,21 @@ class Config:
         '75164122_2993888406_0',
         '75164122_2990478862_0',
     ]
+    # If any merchant includes this in their name it is normalized to that value.
+    self.MERCHANT_NORMALIZATION: List[str] = [
+      'Advisor Autopilot', 
+      'Airbnb',
+      'Amazoncom',
+      'Attbill',
+      'Audiblecom',
+      'Blueapron',
+      'Life Alive',
+      'C T Wok',
+      'Doordash',
+      'Membership Fee',
+      'Prime Video',
+    ]
+
 
     # These IDs are the old version of Mint (v1). They aren't complete, but
     # we make our best guess.

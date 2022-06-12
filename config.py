@@ -84,6 +84,7 @@ class Config:
         'Interest Income',
         'Financial',
         'Buy',
+        'Loan Principal',
     ]
     # Merchant names are trimmed to at most these many characters.
     self.MAX_MERCHANT_NAME_CHARS: int = 20
@@ -95,6 +96,7 @@ class Config:
         '75164122_2983818168_0',
         '75164122_2993888406_0',
         '75164122_2990478862_0',
+        '75164122_3000221161_0',
     ]
     # If any merchant includes this in their name it is normalized to that value.
     self.MERCHANT_NORMALIZATION: List[str] = [

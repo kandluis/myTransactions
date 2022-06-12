@@ -52,20 +52,30 @@ class Config:
     # Ignore SCPD Payments.
     self.IGNORED_MERCHANTS: List[Text] = [
         'Anita Borg Institute',
+        'Chase Autopay Ppd',
+        'Chase Credit Crd Autopa',
+        'Check',
+        'Citi Autopay Payment We',
+        'Citi Autopay Web',
+        'City Of Nacogdoc',
         'Fairway Independent Mortgage Corp',
         'Federal Tax',
         'Foremost',
         'Graves Bail Bonds',
+        'Healthequity Inc Healt',
+        'Higher One Cornellu',
         'Internet Transfer From Interest Checking Account',
         'Project Fi',
         'Rental Income',
+        'Stanford Cont Studies',
         'Stanford Scpd 6507253016 Ca',
         'Stanford Scpd Ca',
         'Stanford Scpd',
         'State Tax',
         'Treasury Direct Treas Drct',
         'Usforex',
-        'Check',
+        'Wealthfront Edi Pymnts',
+        'Wealthfront Inc',
     ]
     # Credit card payments are redundant.
     self.IGNORED_CATEGORIES: List[Text] = [
@@ -117,9 +127,12 @@ class Config:
     # These IDs are the old version of Mint (v1). They aren't complete, but
     # we make our best guess.
     self.V1_IGNORED_TXNS: List[int] = [
+        1246972549,
+        1276304584,
         2461681673,
         2482214183,
         2504269103,
+        2509775672,
         2510726212,
         2553593280,
         2553593281,

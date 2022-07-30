@@ -109,6 +109,7 @@ class Config:
             '75164122_2990478862_0',
             '75164122_3000221161_0',
             '75164122_3019178442_0',  # Banita stuff. Tracked separately.
+            '75164122_3025617139_0',  # Transfer.
         ]
         # If any merchant includes this in their name it is normalized to that value.
         self.MERCHANT_NORMALIZATION: List[str] = [

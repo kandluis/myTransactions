@@ -28,7 +28,7 @@ importlib-metadata==4.12.0
 importlib-resources==5.9.0
 keyring==23.7.0
 mccabe==0.7.0
-mintapi @ git+https://github.com/kandluis/mintapi@v2
+mintapi @ git+https://github.com/kandluis/mintapi@v2#egg=mintapi
 mock==4.0.3
 mypy==0.971
 mypy-extensions==0.4.3

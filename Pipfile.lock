@@ -338,7 +338,7 @@
         },
         "mintapi": {
             "git": "https://github.com/kandluis/mintapi",
-            "ref": "4b364e3cb15d493b9184ef86342f9f537bab6ac9"
+            "ref": "fc41011cbefc5cf2fc6c5d89ec02153e6e522381"
         },
         "mock": {
             "hashes": [

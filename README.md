@@ -19,6 +19,8 @@ Note that MFA_TOKEN is needed for Mint accounts with 2-FA enabled, and correspon
 
 Additionally, you need a `keys.json` file containing valid keys to be used when accessing the Google Spreadsheet. This is just a JSON file that you should be able to download from the Google Cloud Console. You need to attach in the `GOOGLE_SHEETS_CREDENTIALS` section above as a single string.
 
+Note that we rely on `pipenv` to automatically load the variables from `.env` into your environment. If you are not using `pipenv`, you will need to load them in some other way.
+
 
 ## Python Requirements
 

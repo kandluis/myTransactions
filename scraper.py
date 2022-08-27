@@ -1,6 +1,5 @@
 import argparse
 import config
-import dotenv  # type: ignore
 import json
 import mintapi  # type: ignore
 import os
@@ -413,5 +412,4 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    dotenv.load_dotenv()
     main()

@@ -411,5 +411,10 @@ def main() -> None:
     print("Sheets update complate!")
 
 
+def lambda_handler(event, context):
+    """Handler for when this script is run on AWS Lambda."""
+    main()
+
+
 if __name__ == '__main__':
     main()

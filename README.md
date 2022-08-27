@@ -22,7 +22,37 @@ Additionally, you need a `keys.json` file containing valid keys to be used when 
 
 ## Python Requirements
 
-### conda
+### `pipenv` and `pyenv`
+
+As of the latest update, we recommend leveraging `pipenv` and `pyenv` to maintain a hermetic static for dependencies. The other options are left here only for reference as they are not maintained/tested often.
+
+On Mac, make sure you have [Homebrew](https://brew.sh/) installed. You can install `pipenv` and `pyenv` with:
+
+```sh
+brew install pipenv
+brew install pyenv
+````
+
+After installing, you navigate to the root of the project directory, and run:
+
+```sh
+pipenv install
+```
+
+This will install all the required dependencies as well as the appropriate Python version (using pyenv). You can then run:
+
+```sh
+pipenv run python scraper.py --type='all'
+```
+
+To run the script with these installs, or you can jump into the installed Python environment at the shell bevel with:
+
+```sh
+pipenv shell
+````
+
+
+### [Deprecated] conda
 I recommend using `conda`, since it's quite easy to handle specific python versions.  You can use `miniconda` from the instructions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/macos.html).
 
 After install, you can create a new `conda` environment (with Python 3.10) which is the latest tested version, and activate it.
@@ -37,7 +67,7 @@ On the first activation, install the required packages.
 pip install -r requirements.txt
 ```
 
-### virtualenv & virtualenvwrapper
+### [Deprecated] virtualenv & virtualenvwrapper
 You can use of `virtualenv` and `virtualenvwrapper` to set this up appropriately. The provided `run.sh` script assumes these exist, but obviously you can install everything at the top-level Python environment if you so choose. This is probably a bad idea, though.
 
 Note: This package has only been tested on Python 3.7. In fact, it appears that installation of pandas in 3.8 fails due to compilation errors.

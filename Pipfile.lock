@@ -338,7 +338,7 @@
         },
         "mintapi": {
             "git": "https://github.com/kandluis/mintapi",
-            "ref": "4b364e3cb15d493b9184ef86342f9f537bab6ac9"
+            "ref": "fc41011cbefc5cf2fc6c5d89ec02153e6e522381"
         },
         "mock": {
             "hashes": [
@@ -716,11 +716,11 @@
         },
         "setuptools": {
             "hashes": [
-                "sha256:194b74f2c2d1800268fe2d857d99981e7c04d010de3099f04ee45ebec535e560",
-                "sha256:3bcaf6e27ad3b0f643ba0a48c5ab9eca930c3eb51df0e068f4826ab880c394ea"
+                "sha256:2e24e0bec025f035a2e72cdd1961119f557d78ad331bb00ff82efb2ab8da8e82",
+                "sha256:7732871f4f7fa58fb6bdcaeadb0161b2bd046c85905dbaa066bdcbcc81953b57"
             ],
             "markers": "python_version >= '3.7'",
-            "version": "==64.0.3"
+            "version": "==65.3.0"
         },
         "six": {
             "hashes": [

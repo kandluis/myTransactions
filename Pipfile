@@ -12,6 +12,10 @@ pandas = "*"
 flake8 = "*"
 mypy = "*"
 mypy-extensions = "*"
+"aws-cdk.aws-lambda" = "*"
+"aws-cdk.aws-events-targets" = "*"
+"aws-cdk.aws-events" = "*"
+"aws-cdk.core" = "*"
 
 [requires]
 python_version = "3.10.6"

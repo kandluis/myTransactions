@@ -1,5 +1,7 @@
 # Set-Up
 
+## AWS
+
 ## Environment Variables
 
 To setup the scraper, you need to follow the following steps.
@@ -82,7 +84,7 @@ pip install -r requirements.txt
 
 This will install the required libraries.
 
-## Chrome Driver
+## [Deprecated] Chrome Driver
 The Chrome driver used is, by default, located in the current working directory of the script. However, for running in Heroku, install the `heroku-buildpack-chromedriver` and `heroku-buildpack-google-chrome` and set the following:
 
 ```
@@ -92,7 +94,12 @@ GOOGLE_CHROME_BIN=/app/.apt/usr/bin/google_chrome
 
 # Running the script.
 
-Update `run.sh` to match the right locations and setup (note that it currently works by relying on virtualenv). Note that the script *by default* must be run from the top-level directory, if you want to use the included chrome driver. 
+You can run it using `pipenv` locally by executing:
+
+```sh
+pipenv run scraper.py --type='all'
+```
+
 
 You might want to consider running the `scraper.py` file with `--debug` if something goes wrong.
 
@@ -104,7 +111,15 @@ You should be able to type check by running:
 mypy scraper.py
 ```
 
-# Deploy To Heroku
+# Deploy to AWS Lambda
+
+The script is written so it can be deployed to AWS Lambda to run periodically.
+
+See this [scraper examples](https://github.com/aws-samples/lambda-web-scraper-example) for more details. The below assumes that you have the [AWS CDK](https://aws.amazon.com/cdk/) and [Docker](https://www.docker.com/) installed. Note you will need to have Node.JS intalled (see `aws` [prereqs](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html)).
+
+You want to make sure you've set-up the appropriave development dependencies (see `Pipfile`).
+
+# [Deprecated] Deploy To Heroku
 
 To deploy to our heroku server, just run:
 ```

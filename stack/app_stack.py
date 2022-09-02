@@ -13,7 +13,7 @@ class LambdaAppStack(core.Stack):
     def __init__(self, scope: core.Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-        with open("scraper.py", encoding="utf8") as fp:
+        with open("index.py", encoding="utf8") as fp:
             handler_code = fp.read()
 
         role = iam.Role(
@@ -33,7 +33,11 @@ class LambdaAppStack(core.Stack):
         role.add_to_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
             resources=["*"],
-            actions=["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]))
+            actions=[
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ]))
 
         role.add_to_policy(iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
@@ -53,7 +57,7 @@ class LambdaAppStack(core.Stack):
         lambdaFn = lambdas.Function(
             self, "Singleton",
             code=lambdas.InlineCode(handler_code),
-            handler="scraper.lambda_handler",
+            handler="index.lambda_handler",
             timeout=core.Duration.seconds(600),
             runtime=lambdas.Runtime.PYTHON_3_9,
             memory_size=512,
@@ -74,8 +78,8 @@ class LambdaAppStack(core.Stack):
 
         ac = AssetCode("./python")
 
-        layer = LayerVersion(self, "mint_scraper", code=ac,
-                             description="mint_scraper layer",
+        layer = LayerVersion(self, "mint-scraper", code=ac,
+                             description="mint-scraper layer",
                              compatible_runtimes=[lambdas.Runtime.PYTHON_3_9],
-                             layer_version_name='mint_scraper-layer')
+                             layer_version_name='mint-scraper-layer')
         lambdaFn.add_layers(layer)

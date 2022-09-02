@@ -111,3 +111,8 @@ htmlcov/
 # Ignore session data
 .mintapi
 cookies.pkl
+
+
+# Ignore output from deployment.
+python/
+cdk.out/

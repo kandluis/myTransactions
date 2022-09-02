@@ -6,6 +6,6 @@ from stack import app_stack
 
 
 app = core.App()
-app_stack.LambdaAppStack(app, "mint_scraper")
+app_stack.LambdaAppStack(app, "mint-scraper")
 
 app.synth()

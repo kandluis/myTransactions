@@ -97,6 +97,6 @@ class LambdaAppStack(core.Stack):
     )
     wrangler_layer_arn = wrangler_layer.get_att(
         "Outputs.WranglerLayer38Arn").to_string()
-    wrangler_layer_version = aws_lambda.LayerVersion.from_layer_version_arn(
+    wrangler_layer_version = lambdas.LayerVersion.from_layer_version_arn(
         self, "wrangler-layer-version", wrangler_layer_arn)
     lambdaFn.add_layers(wrangler_layer_version)

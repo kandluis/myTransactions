@@ -121,11 +121,27 @@ You want to make sure you've set-up the appropriave development dependencies (se
 
 ## Build Docker Image
 
-Run the following command from the project directory (Docker must be installed and running) to build the required Docker Image.
+Run the following command from the project directory (Docker must be installed and running) to build the required Docker and AWS outputs.
 
 ```sh
 docker build -t mint_scraper .
-``
+docker run -i -v `pwd`/python:/opt/ext -t mint_scraper
+```
+
+For the next step, you'll need your AWS ID and default region. Since you installed the `aws` CLI previously, you can find this information with the following commands:
+
+```sh
+aws sts get-caller-identity
+aws configure get region
+```
+
+Finally, you'll want to bootstrap the application. This requires that you have all the developer dependencies installed.
+
+```sh
+pipenv install -d
+# As per above.
+pipenv run cdk boostram aws://<AWS ID>/<REGION> 
+``` 
 
 # [DEPRECATED] Deploy To Heroku
 

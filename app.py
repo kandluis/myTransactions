@@ -2,10 +2,10 @@
 
 from aws_cdk import core
 
-from lambda_app import lambda_app_stack
+from stack import app_stack
 
 
 app = core.App()
-lambda_app_stack.LambdaAppStack(app, "mint_scraper")
+app_stack.LambdaAppStack(app, "mint_scraper")
 
 app.synth()

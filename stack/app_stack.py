@@ -1,8 +1,9 @@
 from aws_cdk import (
     aws_events as events,
-    aws_lambda as lambdas,
     aws_events_targets as targets,
     aws_iam as iam,
+    aws_lambda as lambdas,
+    aws_sam as sam,
     core
 )
 
@@ -84,10 +85,10 @@ class LambdaAppStack(core.Stack):
                                  layer_version_name='mint-scraper-layer')
     lambdaFn.add_layers(layer)
 
-    wrangler_layer = core.CfnApplication(
+    wrangler_layer = sam.CfnApplication(
         self,
         "wrangler-layer",
-        location=core.CfnApplication.ApplicationLocationProperty(
+        location=sam.CfnApplication.ApplicationLocationProperty(
             application_id="arn:aws:serverlessrepo:us-east-1:336392948345"
                            ":applications/aws-data-wrangler-layer-py3-9",
             # From https://github.com/awslabs/aws-data-wrangler/releases

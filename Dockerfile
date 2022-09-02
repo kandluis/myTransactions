@@ -20,5 +20,10 @@ RUN pipenv install
 RUN wget https://chromedriver.storage.googleapis.com/100.0.4896.20/chromedriver_linux64.zip
 RUN unzip chromedriver_linux64.zip
 
+# Make local files available.
+COPY __init__.py /opt/output/__init__.py
+COPY config.py /opt/output/config.py
+COPY scraper.py /opt/output/scraper.py
+
 COPY run.sh /opt/output/run.sh
 ENTRYPOINT /opt/output/run.sh

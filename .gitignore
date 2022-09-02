@@ -114,5 +114,6 @@ cookies.pkl
 
 
 # Ignore output from deployment.
-dist/
+python/
 cdk.out/
+cdk.context.json

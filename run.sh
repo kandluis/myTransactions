@@ -1,4 +1,5 @@
 #!/bin/sh
-cp -r .venv /opt/ext/
-mv /opt/ext/.venv /opt/ext/python
+cp -r .venv/lib /opt/ext/
 cp chromedriver /opt/ext/
+
+cp *.py /opt/ext/

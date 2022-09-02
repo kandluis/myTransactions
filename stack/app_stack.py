@@ -5,7 +5,6 @@ from aws_cdk import (
     aws_iam as iam,
     core
 )
-from aws_cdk.aws_lambda import LayerVersion, AssetCode
 
 
 class LambdaAppStack(core.Stack):
@@ -69,17 +68,18 @@ class LambdaAppStack(core.Stack):
         self, "Rule",
         schedule=events.Schedule.cron(
             minute='59',
-            hour='6-20/4',
+            hour='11',
             month='*',
             week_day='*',
             year='*'),
     )
     rule.add_target(targets.LambdaFunction(lambdaFn))
 
-    ac = AssetCode("./dist")
+    ac = lambdas.AssetCode("./python")
 
-    layer = LayerVersion(self, "mint-scraper", code=ac,
-                         description="mint-scraper layer",
-                         compatible_runtimes=[lambdas.Runtime.PYTHON_3_9],
-                         layer_version_name='mint-scraper-layer')
+    layer = lambdas.LayerVersion(self, "mint-scraper", code=ac,
+                                 description="mint-scraper layer",
+                                 compatible_runtimes=[
+                                     lambdas.Runtime.PYTHON_3_9],
+                                 layer_version_name='mint-scraper-layer')
     lambdaFn.add_layers(layer)

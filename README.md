@@ -56,7 +56,7 @@ pipenv shell
 ````
 
 
-### [Deprecated] conda
+### [DEPRECATED] conda
 I recommend using `conda`, since it's quite easy to handle specific python versions.  You can use `miniconda` from the instructions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/macos.html).
 
 After install, you can create a new `conda` environment (with Python 3.10) which is the latest tested version, and activate it.
@@ -71,7 +71,7 @@ On the first activation, install the required packages.
 pip install -r requirements.txt
 ```
 
-### [Deprecated] virtualenv & virtualenvwrapper
+### [DEPRECATED] virtualenv & virtualenvwrapper
 You can use of `virtualenv` and `virtualenvwrapper` to set this up appropriately. The provided `run.sh` script assumes these exist, but obviously you can install everything at the top-level Python environment if you so choose. This is probably a bad idea, though.
 
 Note: This package has only been tested on Python 3.7. In fact, it appears that installation of pandas in 3.8 fails due to compilation errors.
@@ -84,7 +84,7 @@ pip install -r requirements.txt
 
 This will install the required libraries.
 
-## [Deprecated] Chrome Driver
+## [DEPRECATED] Chrome Driver
 The Chrome driver used is, by default, located in the current working directory of the script. However, for running in Heroku, install the `heroku-buildpack-chromedriver` and `heroku-buildpack-google-chrome` and set the following:
 
 ```
@@ -113,13 +113,21 @@ mypy scraper.py
 
 # Deploy to AWS Lambda
 
-The script is written so it can be deployed to AWS Lambda to run periodically.
+The script is written so it can be deployed to AWS Lambda to run periodically. You can also follow the instructions here to test locally before deployment to confirm everything is working as expected.
 
 See this [scraper examples](https://github.com/aws-samples/lambda-web-scraper-example) for more details. The below assumes that you have the [AWS CDK](https://aws.amazon.com/cdk/) and [Docker](https://www.docker.com/) installed. Note you will need to have Node.JS intalled (see `aws` [prereqs](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html)).
 
 You want to make sure you've set-up the appropriave development dependencies (see `Pipfile`).
 
-# [Deprecated] Deploy To Heroku
+## Build Docker Image
+
+Run the following command from the project directory (Docker must be installed and running) to build the required Docker Image.
+
+```sh
+docker build -t mint_scraper .
+``
+
+# [DEPRECATED] Deploy To Heroku
 
 To deploy to our heroku server, just run:
 ```

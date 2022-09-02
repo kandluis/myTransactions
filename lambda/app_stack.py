@@ -17,7 +17,7 @@ class LambdaAppStack(core.Stack):
             handler_code = fp.read()
 
         role = iam.Role(
-            self, 'myappRole',
+            self, 'mintScraperRole',
             assumed_by=iam.ServicePrincipal('lambda.amazonaws.com'))
 
         role.add_to_policy(iam.PolicyStatement(
@@ -55,7 +55,7 @@ class LambdaAppStack(core.Stack):
             code=lambdas.InlineCode(handler_code),
             handler="scraper.lambda_handler",
             timeout=core.Duration.seconds(600),
-            runtime=lambdas.Runtime.PYTHON_3_6,
+            runtime=lambdas.Runtime.PYTHON_3_9,
             memory_size=512,
             environment=dict(PATH="/opt"),
             role=role
@@ -74,8 +74,8 @@ class LambdaAppStack(core.Stack):
 
         ac = AssetCode("./python")
 
-        layer = LayerVersion(self, "mintapi", code=ac,
-                             description="mintapi layer",
-                             compatible_runtimes=[lambdas.Runtime.PYTHON_3_6],
-                             layer_version_name='mintapi-layer')
+        layer = LayerVersion(self, "mint_scraper", code=ac,
+                             description="mint_scraper layer",
+                             compatible_runtimes=[lambdas.Runtime.PYTHON_3_9],
+                             layer_version_name='mint_scraper-layer')
         lambdaFn.add_layers(layer)

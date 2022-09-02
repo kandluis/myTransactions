@@ -1,13 +1,23 @@
 ARG PYTHON_VERSION=3.10.6 
-
 FROM amazonlinux
+
+ARG PYTHON_VERSION
+
 RUN yum update -y
 RUN yum install -y \
     gcc \
-    openssl-devel \
-    zlib-devel \
+    libdb4o-cil-dev \
     libffi-devel \
-    wget && \
+    libgdm-dev \
+    libncurses5-dev \
+    libpcap-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libssl-dev \ 
+    libtk8.6 \
+    openssl-devel \
+    wget \
+    zlib-devel && \
     yum -y clean all
 RUN yum -y groupinstall development
 WORKDIR /usr/src

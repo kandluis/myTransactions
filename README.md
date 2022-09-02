@@ -125,7 +125,7 @@ Run the following command from the project directory (Docker must be installed a
 
 ```sh
 docker build -t mint_scraper .
-docker run -i -v `pwd`/python:/opt/ext -t mint_scraper
+docker run -i -v `pwd`/dist:/opt/ext -t mint_scraper
 ```
 
 For the next step, you'll need your AWS ID and default region. Since you installed the `aws` CLI previously, you can find this information with the following commands:
@@ -140,7 +140,9 @@ Finally, you'll want to bootstrap the application. This requires that you have a
 ```sh
 pipenv install -d
 # As per above.
-pipenv run cdk boostram aws://<AWS ID>/<REGION> 
+pipenv run cdk bootstrap aws://<AWS ID>/<REGION> 
+# Perform deployment of application.
+pipenv cdk deploy
 ``` 
 
 # [DEPRECATED] Deploy To Heroku

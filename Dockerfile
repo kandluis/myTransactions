@@ -7,12 +7,15 @@ RUN yum install -y \
     wget && \
     yum -y clean all
 
-# Install pipenv and pyenv
+# Install pipenv and pyenv so we can do the setup.
 RUN pip3.9 install pipenv
 RUN curl https://pyenv.run | bash
 
-# Install Chromedriver/Selenium
+# Install dependencies into output directory.
 WORKDIR /opt/output/
+# This is so the pipenv environment deps is installed locally.
+RUN mkdir .venv
+RUN pipenv install
 
 RUN wget https://chromedriver.storage.googleapis.com/100.0.4896.20/chromedriver_linux64.zip
 RUN unzip chromedriver_linux64.zip

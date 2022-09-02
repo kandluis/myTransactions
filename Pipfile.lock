@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "5374ffdbc87a3d546cc89c43a960973ae482e2cdb4d8300d441af126bf8ce601"
+            "sha256": "495cf087973b564d384254daee0306b2d912915b6827267511c9ec3d3aec7061"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -217,7 +217,7 @@
                 "sha256:e603ca1fb47b913942f3e660a15e55a9ebca906857edfea476ae5f0fe9b457d5",
                 "sha256:ecfdd68d334a6b97472ed032b5b37a30d8217c097acfff15e8452c710e775524"
             ],
-            "markers": "python_version < '3.10' and platform_machine == 'arm64'",
+            "index": "pypi",
             "version": "==1.23.2"
         },
         "oathtool": {
@@ -379,7 +379,7 @@
                 "sha256:7c5599b102feddaa661c826c56ab4fee28bfd17f5abca1ebbe3e7f19d7c97983",
                 "sha256:8fefa2a1a1365bf5520aac41836fbee479da67864514bdb821f31ce07ce65349"
             ],
-            "markers": "python_version >= '3.7' and python_version < '4.0'",
+            "markers": "python_version >= '3.7' and python_version < '4'",
             "version": "==2.28.1"
         },
         "requests-file": {
@@ -417,7 +417,7 @@
                 "sha256:471ed62de81cc5ef752e6081792da8a50cae5ebc67d5111a59f38c566ff352d9",
                 "sha256:5beab478ebea5514264953a8c4a25789b2eeb3741b21b7b78b0823629775fbfc"
             ],
-            "markers": "python_version >= '3.7' and python_version < '4.0'",
+            "markers": "python_version >= '3.7' and python_version < '4'",
             "version": "==2.0.0"
         },
         "six": {
@@ -476,14 +476,12 @@
             "version": "==4.1.1"
         },
         "urllib3": {
-            "extras": [
-                "socks"
-            ],
+            "extras": [],
             "hashes": [
                 "sha256:3fa96cf423e6987997fc326ae8df396db2a8b7c667747d47ddd8ecba91f4a74e",
                 "sha256:b930dd878d5a8afb066a637fbb35144fe7901e3b209d1cd4f524bd0e9deee997"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5' and python_version < '4.0'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5' and python_version < '4'",
             "version": "==1.26.12"
         },
         "wsproto": {

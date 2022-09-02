@@ -75,7 +75,7 @@ class LambdaAppStack(core.Stack):
     )
     rule.add_target(targets.LambdaFunction(lambdaFn))
 
-    ac = lambdas.AssetCode("./python")
+    ac = lambdas.AssetCode("./dist")
 
     layer = lambdas.LayerVersion(self, "mint-scraper", code=ac,
                                  description="mint-scraper layer",

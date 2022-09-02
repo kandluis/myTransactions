@@ -175,7 +175,6 @@
             "version": "==23.9.0"
         },
         "mintapi": {
-            "editable": true,
             "git": "https://github.com/kandluis/mintapi",
             "ref": "fc41011cbefc5cf2fc6c5d89ec02153e6e522381"
         },

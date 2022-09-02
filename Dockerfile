@@ -11,14 +11,24 @@ RUN yum install -y \
 RUN pip3.9 install pipenv
 RUN curl https://pyenv.run | bash
 
-# Install dependencies into output directory.
-WORKDIR /opt/output/
-# This is so the pipenv environment deps is installed locally.
-RUN mkdir .venv
-RUN pipenv install
+# Construct local environment and move to output.
+WORKDIR /tmp/
 
-RUN wget https://chromedriver.storage.googleapis.com/100.0.4896.20/chromedriver_linux64.zip
-RUN unzip chromedriver_linux64.zip
+COPY Pipfile /tmp/Pipfile
+COPY Pipfile.lock /tmp/Pipfile.lock
+
+RUN PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy --ignore-pipfile
+
+
+WORKDIR /opt/output/
+
+# Copy output.
+RUN cp -r /tmp/.venv /opt/output/.venv
+# Remove bin cause we don't use this.
+RUN rm -rf /opt/output/bin
+
+# Fetch local chromedriver.
+COPY chromedriver /opt/output/chromedriver
 
 # Make local files available.
 COPY __init__.py /opt/output/__init__.py

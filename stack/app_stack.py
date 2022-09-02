@@ -83,3 +83,19 @@ class LambdaAppStack(core.Stack):
                                      lambdas.Runtime.PYTHON_3_9],
                                  layer_version_name='mint-scraper-layer')
     lambdaFn.add_layers(layer)
+
+    wrangler_layer = core.CfnApplication(
+        self,
+        "wrangler-layer",
+        location=core.CfnApplication.ApplicationLocationProperty(
+            application_id="arn:aws:serverlessrepo:us-east-1:336392948345"
+                           ":applications/aws-data-wrangler-layer-py3-9",
+            # From https://github.com/awslabs/aws-data-wrangler/releases
+            semantic_version="2.16.1",
+        ),
+    )
+    wrangler_layer_arn = wrangler_layer.get_att(
+        "Outputs.WranglerLayer38Arn").to_string()
+    wrangler_layer_version = aws_lambda.LayerVersion.from_layer_version_arn(
+        self, "wrangler-layer-version", wrangler_layer_arn)
+    lambdaFn.add_layers(wrangler_layer_version)

@@ -25,7 +25,7 @@ RUN unzip /tmp/chromedriver.zip chromedriver
 
 # Fetch the latest Chrome.
 RUN wget -O /tmp/chrome.rpm https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
-RUN yum -y install chrome.rpm
+RUN yum -y install /tmp/chrome.rpm
 
 
 

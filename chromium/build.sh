@@ -21,7 +21,10 @@ VERSION=${VERSION:-master}
 printf "LANG=en_US.utf-8\nLC_ALL=en_US.utf-8" >> /etc/environment
 
 # install dependencies
-yum groupinstall -y "Development Tools" --setopt=group_package_types=mandatory,default,optional
+# yum groups mark install "Development Tools"
+echo "Installing dependencies..."
+yum groups mark convert "Development Tools"
+yum groupinstall -y "Development Tools"
 yum install -y \
   alsa-lib-devel atk-devel binutils bison bluez-libs-devel brlapi-devel \
   bzip2 bzip2-devel cairo-devel cmake cups-devel dbus-devel dbus-glib-devel \
@@ -38,6 +41,7 @@ mkdir -p build/chromium
 cd build
 
 # install dept_tools
+echo "Installing dep_tools..."
 git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
 
 export PATH="/opt/gtk/bin:$PATH:$BUILD_BASE/build/depot_tools"
@@ -48,11 +52,12 @@ cd chromium
 # ref: https://www.chromium.org/developers/how-tos/get-the-code/working-with-release-branches
 
 # git shallow clone, much quicker than a full git clone; see https://stackoverflow.com/a/39067940/3145038 for more details
-
+echo "Cloning chrome..."
 git clone --branch "$VERSION" --depth 1 https://chromium.googlesource.com/chromium/src.git
 
 # Checkout all the submodules at their branch DEPS revisions
-gclient sync --with_branch_heads --jobs 16
+echo "Syncing chrome..."
+GCLIENT_PY3=0 gclient sync --with_branch_heads --jobs 16
 
 cd src
 
@@ -66,6 +71,7 @@ sed -e 's/PLOG(WARNING) << "poll";/PLOG(WARNING) << "poll"; failed_polls = 0;/g'
 
 
 # specify build flags
+echo "Building chrome..."
 mkdir -p out/Headless && \
   echo 'import("//build/args/headless.gn")' > out/Headless/args.gn && \
   echo 'is_debug = false' >> out/Headless/args.gn && \

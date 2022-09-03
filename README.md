@@ -119,13 +119,31 @@ See this [scraper examples](https://github.com/aws-samples/lambda-web-scraper-ex
 
 You want to make sure you've set-up the appropriave development dependencies (see `Pipfile`).
 
-## Build Docker Image
+## Build and Test Docker Image
 
 Run the following command from the project directory (Docker must be installed and running) to build the required Docker and AWS outputs.
 
 ```sh
 docker build -t mint_scraper .
-docker run -i -v `pwd`/dist:/opt/ext -t mint_scraper
+```
+
+Then run the docker image which should setup your Lambda endpoint locally:
+
+```sh
+docker run -p 9000:8080 mint_scraper:latest
+```
+
+To test, on a new terminal, you can issue commands to your server:
+```sh
+curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{}'
+```
+
+You can also connect to the running instance of Docker and launch an interactive shell for faster debugging:
+```sh
+# After launching the server, take not of its ID with `ps` command.
+docker ps
+# Connect with an interative shell.
+docker exec -it <ID> sh
 ```
 
 For the next step, you'll need your AWS ID and default region. Since you installed the `aws` CLI previously, you can find this information with the following commands:

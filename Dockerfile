@@ -4,6 +4,7 @@ RUN yum update -y
 RUN yum install -y \
     git \
     google-chrome-stable \
+    libxcb \
     unzip \
     wget 
 RUN yum -y clean all

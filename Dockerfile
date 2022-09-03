@@ -3,6 +3,7 @@ FROM public.ecr.aws/lambda/python:3.9
 RUN yum update -y
 RUN yum install -y \
     git \
+    google-chrome-stable \
     yum -y clean all
 
 # Install pipenv so we can do hermetic setup.

@@ -7,6 +7,7 @@ name = "pypi"
 mintapi = {ref = "v2", git = "https://github.com/kandluis/mintapi"}
 pygsheets = "*"
 pandas = "*"
+python-dotenv = "*"
 numpy = "*"
 
 [dev-packages]

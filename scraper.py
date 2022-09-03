@@ -1,5 +1,6 @@
 import argparse
 import config
+import dotenv  # type: ignore
 import json
 import mintapi  # type: ignore
 import os
@@ -9,6 +10,7 @@ import pygsheets  # type: ignore
 import socket
 import sys
 import time
+
 
 from datetime import datetime
 
@@ -392,6 +394,8 @@ def scrape_and_upload(options: ScraperOptions) -> None:
   Output:
       Calling this functions prints progress messages to stdout.
   """
+  dotenv.load_dotenv()
+
   creds: Credentials = _GetCredentials()
 
   print("Logging into mint")

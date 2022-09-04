@@ -7,5 +7,5 @@ def lambda_handler(event, context):
 
   scraper.scrape_and_upload(
       options=scraper.ScraperOptions(
-          types='all', showBrowser=False, cookies=None)
+          types='all', showBrowser=False, cookies=None, session_path=None)
   )

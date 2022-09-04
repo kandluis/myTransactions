@@ -239,6 +239,8 @@ class Config:
             ('LemonBunny', 'Credit'),
             ('LendingClub', 'Loan'),
             ('LPFSA', 'Restricted Cash'),
+            ('M&T Mortgage', 'Loan'),
+            ('M1 Spend Plus', 'Cash'),
             ('Marriott', 'Credit'),
             ('META PLATFORMS', 'Stock'),
             ('Other Property', 'Cash'),

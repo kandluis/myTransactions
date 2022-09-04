@@ -6,7 +6,7 @@ To setup the scraper, you need to follow the following steps.
 
 First, a `.env` file at the top-level directory needs to exists. It should look like:
 
-```
+```sh
 MINT_EMAIL=<TODO>
 MINT_PASSWORD=<TODO>
 EMAIL_PASSWORD=<TODO>
@@ -76,7 +76,7 @@ Note: This package has only been tested on Python 3.7. In fact, it appears that 
 
 If you already have `virtualenvwrapper` installed, then simply create a new environment and run:
 
-```
+```sh
 pip install -r requirements.txt
 ```
 
@@ -85,7 +85,7 @@ This will install the required libraries.
 ## Chrome Driver
 The Chrome driver used is, by default, located in the current working directory of the script. However, for running in Heroku, install the `heroku-buildpack-chromedriver` and `heroku-buildpack-google-chrome` and set the following:
 
-```
+```sh
 CHROMEDRIVER_PATH=/app/.chromedriver/bin
 GOOGLE_CHROME_BIN=/app/.apt/usr/bin/google_chrome
 ```
@@ -100,17 +100,17 @@ You might want to consider running the `scraper.py` file with `--debug` if somet
 
 You should be able to type check by running:
 
-```
-mypy scraper.py
+```sh
+pipenv run mypy scraper.py
 ```
 
 # Deploy To Heroku
 
 To deploy to our heroku server, just run:
-```
+```sh
 git push heroku master
 ```
 
 # Version
 
-1.0.0
+1.0.1

@@ -265,5 +265,5 @@ class Config:
     ]
 
 
-def getConfig() -> Config:
-  return Config()
+# Global config.
+GLOBAL = Config()

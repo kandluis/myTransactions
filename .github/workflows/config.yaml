@@ -48,7 +48,7 @@ jobs:
 
       - name: Run type checking
         run: |
-          pipenv run mypy scraper.py
+          pipenv run mypy .
 
   deploy:
       name: Deploy to fly.io

@@ -150,9 +150,9 @@ class ScraperOptions:
 
     self.showBrowser: bool = showBrowser
     self.scrapeTransactions = (
-        True if types.lower() == 'all' or types.lower() == 'transactions' else False)
-    self.scrapeAccounts = (True if types.lower() ==
-                           'all' or types.lower() == 'accounts' else False)
+        types.lower() == 'all' or types.lower() == 'transactions')
+    self.scrapeAccounts = (
+        types.lower() == 'all' or types.lower() == 'accounts')
 
   @classmethod
   def fromArgs(cls, args: argparse.Namespace) -> 'ScraperOptions':
@@ -275,7 +275,8 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
   } for account in accounts if account['isActive']])
 
 
-def _RetrieveTransactions(mint: mintapi.Mint, sheet: pygsheets.Spreadsheet) -> pd.DataFrame:
+def _RetrieveTransactions(
+        mint: mintapi.Mint, sheet: pygsheets.Spreadsheet) -> pd.DataFrame:
   """Retrieves all Mint transactions using the given credentials.
 
   The functions also cleans and prepares the transactions to match
@@ -290,7 +291,8 @@ def _RetrieveTransactions(mint: mintapi.Mint, sheet: pygsheets.Spreadsheet) -> p
   all_txns_ws: pygsheets.Worksheet = sheet.worksheet_by_title(
       title=_GLOBAL_CONFIG.RAW_TRANSACTIONS_TITLE)
   old_txns: pd.DataFrame = all_txns_ws.get_as_df()
-  cutoff: str = old_txns.Date[old_txns.Date.size - _GLOBAL_CONFIG.NUM_TXN_FOR_CUTOFF]
+  cutoff: str = old_txns.Date[
+      old_txns.Date.size - _GLOBAL_CONFIG.NUM_TXN_FOR_CUTOFF]
   start_date: str = datetime.strptime(cutoff, "%Y-%m-%d").strftime("%m/%d/%y")
 
   txns = pd.json_normalize(
@@ -320,8 +322,9 @@ def _RetrieveTransactions(mint: mintapi.Mint, sheet: pygsheets.Spreadsheet) -> p
 
   spend_txns = spend_txns[~(
       spend_txns.Category.isin(_GLOBAL_CONFIG.IGNORED_CATEGORIES)
-      | spend_txns.Merchant.isin([_NormalizeMerchant(merchant)
-                                  for merchant in _GLOBAL_CONFIG.IGNORED_MERCHANTS])
+      | spend_txns.Merchant.isin([
+          _NormalizeMerchant(merchant)
+          for merchant in _GLOBAL_CONFIG.IGNORED_MERCHANTS])
       | spend_txns.ID.isin(_GLOBAL_CONFIG.IGNORED_TXNS)
   )]
   return spend_txns

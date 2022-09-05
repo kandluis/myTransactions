@@ -22,7 +22,7 @@ ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]
 
 # Own the app, drop to heroku user.
 RUN chown -R heroku:heroku /app && \
-    chmod a+x ./app/serve.sh
+    chmod a+x /app/serve.sh
 USER heroku
 
 

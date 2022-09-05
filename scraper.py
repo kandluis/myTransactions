@@ -22,7 +22,6 @@ from typing import (
     Mapping,
     NamedTuple,
     Optional,
-    Text,
 )
 
 _GLOBAL_CONFIG: config.Config = config.getConfig()
@@ -40,15 +39,30 @@ class Credentials(NamedTuple):
     email: The email address associated with the Mint account.
     mintPassword: The password for the Mint account.
     emailPassword: The password for the email account.
+    sheets: The credentials for the service account for Google Sheets.
 
   """
-  email: Text
-  mintPassword: Text
-  emailPassword: Text
+  email: str
+  mintPassword: str
+  emailPassword: str
+  sheets: service_account.Credentials
+
+
+def _getGoogleCredentials() -> service_account.Credentials:
+  """Loads the Google Account Service Credentials to access sheets."""
+  credentials_string = os.getenv('GOOGLE_SHEETS_CREDENTIALS')
+  if not credentials_string:
+    raise ScraperError(
+        f"Invalid Google credentials. Got {credentials_string}")
+  service_info: Mapping[str, str] = json.loads(credentials_string)
+  _SCOPES = ('https://www.googleapis.com/auth/spreadsheets',
+             'https://www.googleapis.com/auth/drive')
+  return service_account.Credentials.from_service_account_info(
+      service_info, scopes=_SCOPES)
 
 
 def _GetCredentials() -> Credentials:
-  """Retrieves the crendentials for logging into Mint.
+  """Retrieves the crendentials for logging into Mint from the environment.
 
   This is necessary because they do not currently provide an API.
 
@@ -66,28 +80,30 @@ def _GetCredentials() -> Credentials:
   if not emailPassword:
     raise ScraperError("Unable to find pass from var %s!" %
                        'EMAIL_PASSWORD')
+  sheets_creds = _getGoogleCredentials()
   return Credentials(email=email,
                      mintPassword=mintPassword,
-                     emailPassword=emailPassword)
+                     emailPassword=emailPassword,
+                     sheets=sheets_creds)
 
 
-def _Normalize(value: Text) -> Text:
-  """Normalizes the text value
+def _Normalize(value: str) -> str:
+  """Normalizes the str value
 
   Args:
-    value: The text to be normalized.
+    value: The str to be normalized.
 
   Returns:
-    The normalized text.
+    The normalized str.
   """
   return ''.join(ch for ch in value if ch.isalnum() or ch.isspace()).title()
 
 
 def _NormalizeMerchant(merchant: str) -> str:
-  """Normalizes the text merchant of a merchant.
+  """Normalizes the str merchant of a merchant.
 
   Args:
-    merchant: The text to be normalized.
+    merchant: The str to be normalized.
 
   Returns:
     The normalized merchant.
@@ -121,7 +137,7 @@ def _ConstructArgumentParser() -> argparse.ArgumentParser:
            'scrape',
       default='all')
   parser.add_argument(
-      '--cookies',
+      '--cookies_path',
       type=str,
       default=None,
       help='The location of the cookies file to load and also update.')
@@ -129,47 +145,73 @@ def _ConstructArgumentParser() -> argparse.ArgumentParser:
 
 
 class ScraperOptions:
-  """Options on how to scrape mint
+  """Options on how to scrape mint.
 
   Properties:
-    showBrowser: bool, property specifying whether to show the brownser
+    show_browser: bool, property specifying whether to show the brownser
     when logging into mint.
+    scrape_transactions: bool. If true, we scrape txns. Default true.
+    scrape_accounts: bool, if true, we scrape account data. Default true.
   """
+  # When true, browser head is shown. Useful for debugging.
+  show_browser: bool = False
+  # When true, scrape txn data from Mint.
+  scrape_transactions: bool = True
+  # When true, scrape account data from Mint.
+  scrape_accounts: bool = True
+  # Path where we store the chrome session (speed up scraping).
+  session_path: str = os.path.join(os.getcwd(), '.mintapi', 'session')
+  # MFA Method to use.
+  mfa_method: str = 'str'
+  # Required when using 'soft-token' method.
+  mfa_token: Optional[str] = None
+  # If set, expects chromedriver to be available in PATH.
+  use_chromedriver_on_path = False
+  # Only used when `use_chromedriver_on_path` is False. If so, this specifies
+  # the directory where the latest version of chromedriver will be downloaded.
+  chromedriver_download_path = os.getcwd()
 
-  def __init__(self, types: Text, showBrowser: bool = False) -> None:
-    """Initialize an options object
-
-    Args:
-      types: One of 'all', 'accounts', 'transactions' specifying what type of
-        data to scrape from Mint.
-      showBrowser: If given, specifies whether to show the browser or not.
-        the default is to show the browser.
-    """
-    if types.lower() not in ['all', 'accounts', 'transactions']:
-      raise ScraperError("Type %s is not valid." % (types))
-
-    self.showBrowser: bool = showBrowser
-    self.scrapeTransactions = (
-        types.lower() == 'all' or types.lower() == 'transactions')
-    self.scrapeAccounts = (
-        types.lower() == 'all' or types.lower() == 'accounts')
+  def __init__(self) -> None:
+    """Initialize an options object. Options are the defaults."""
+    pass
 
   @classmethod
-  def fromArgs(cls, args: argparse.Namespace) -> 'ScraperOptions':
+  def fromArgsAndEnv(cls, args: argparse.Namespace) -> 'ScraperOptions':
     """Initializes an options object from the given commandline
-    arguments.showBrowser
+    arguments and environment variables.
 
     Args:
       args: The parsed arguments from the commandline from which to construct
       these options.
+
+    Env:
+      Reads environment variables.
     """
-    if args.debug:
-      return ScraperOptions(args.types, showBrowser=args.debug)
-    else:
-      return ScraperOptions(args.types)
+    types = args.types
+    if types.lower() not in ['all', 'accounts', 'transactions']:
+      raise ScraperError("Type %s is not valid." % (types))
+
+    options = ScraperOptions()
+    options.show_browser = args.debug
+    options.scrape_transactions = (
+        types.lower() == 'all' or types.lower() == 'transactions')
+    options.scrape_accounts = (
+        types.lower() == 'all' or types.lower() == 'accounts')
+
+    options.session_path = os.getenv(
+        'CHROME_SESSION_PATH', options.session_path)
+    options.mfa_method = 'soft-token' if os.getenv('MFA_TOKEN') else 'str'
+    options.mfa_token = os.getenv('MFA_TOKEN', options.mfa_token)
+    options.use_chromedriver_on_path = os.getenv(
+        'USE_CHROMEDRIVER_ON_PATH',
+        default='False').lower() in ['true', 't', '1', 'y', 'yes']
+    options.chromedriver_download_path = os.getenv(
+        'CHROMEDRIVER_PATH', options.chromedriver_download_path)
+
+    return options
 
 
-def _fetchCookies(cookies_file: Text) -> List[Text]:
+def _fetchCookies(cookies_file: str) -> List[str]:
   """Fetches the cookies for Mint if available.
 
   Args:
@@ -178,14 +220,14 @@ def _fetchCookies(cookies_file: Text) -> List[Text]:
   Returns:
     The fetched cookies, if any.
   """
-  cookies: List[Text] = []
+  cookies: List[str] = []
   if os.path.exists(cookies_file):
     with open(cookies_file, 'rb') as f:
       cookies = pickle.load(f)
   return cookies
 
 
-def _dumpCookies(mint: mintapi.Mint, cookies_file: Text) -> None:
+def _dumpCookies(mint: mintapi.Mint, cookies_file: str) -> None:
   """Dumps the cookies in the current session to the cookies file.
 
   Args:
@@ -197,46 +239,31 @@ def _dumpCookies(mint: mintapi.Mint, cookies_file: Text) -> None:
 
 
 def _LogIntoMint(creds: Credentials, options: ScraperOptions,
-                 chromedriver_download_path: Text,
-                 cookies: List[Text]) -> mintapi.Mint:
+                 cookies: List[str]) -> mintapi.Mint:
   """Logs into mint and retrieves an active connection.
 
   Args:
     creds: The credentials for the account to log into.
     options: Options for how to connect.
-    chromedriver_download_path: Location of chromedriver.
     cookies: Cookies to attach to the session, when provided.
 
   Returns:
     The mint connection object.
   """
-  if os.getenv('CHROME_SESSION_PATH'):
-    session_path = os.getenv('CHROME_SESSION_PATH')
-  else:
-    session_path = os.path.join(os.getcwd(), '.mintapi', 'session')
-  if os.getenv('MFA_TOKEN'):
-    mfa_method = 'soft-token'
-    mfa_token = os.getenv('MFA_TOKEN')
-  else:
-    mfa_method = 'text'
-    mfa_token = None
-
   mint = mintapi.Mint(
       creds.email,
       creds.mintPassword,
-      chromedriver_download_path=chromedriver_download_path,
-      use_chromedriver_on_path=os.getenv(
-          'USE_CHROMEDRIVER_ON_PATH',
-          default='False').lower() in ['true', 't', '1', 'y', 'yes'],
-      headless=not options.showBrowser,
+      chromedriver_download_path=options.chromedriver_download_path,
+      use_chromedriver_on_path=options.use_chromedriver_on_path,
+      headless=not options.show_browser,
       imap_account=creds.email,
       imap_folder='Inbox',
       imap_password=creds.emailPassword,
       imap_server=_GLOBAL_CONFIG.IMAP_SERVER,
       mfa_input_callback=None,
-      mfa_method=mfa_method,
-      mfa_token=mfa_token,
-      session_path=session_path,
+      mfa_method=options.mfa_method,
+      mfa_token=options.mfa_token,
+      session_path=options.session_path,
       wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC,
   )
   time.sleep(5)
@@ -255,7 +282,7 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
   Returns:
     DataFrame containing cleaned account information.
   """
-  def getAccountType(originalType: Text) -> Text:
+  def getAccountType(originalType: str) -> str:
     # Process in sorted order from longest to shortest
     # (more specific ones match first)
     for substring, accountType in sorted(
@@ -267,7 +294,7 @@ def _RetrieveAccounts(mint: mintapi.Mint) -> pd.DataFrame:
     print("No account type for account with type: %s" % originalType)
     return 'Unknown - %s' % (originalType)
 
-  accounts: List[Dict[Text, Any]] = mint.get_account_data()
+  accounts: List[Dict[str, Any]] = mint.get_account_data()
   return pd.DataFrame([{
       'Name': account['name'],
       'Type': getAccountType(account['name']),
@@ -302,8 +329,9 @@ def _RetrieveTransactions(
   # Only keep txns from cutoff even if more returned by API.
   txns = txns[txns.date >= cutoff]
   spend_txns = txns[
-      (~txns['accountRef.name'].isin(_GLOBAL_CONFIG.SKIPPED_ACCOUNTS))
-      & txns.isExpense]
+      (~txns['accountRef.name'].isin(
+          _GLOBAL_CONFIG.SKIPPED_ACCOUNTS
+      )) & txns.isExpense]
 
   spend_txns = spend_txns[_GLOBAL_CONFIG.COLUMNS]
   spend_txns.columns = _GLOBAL_CONFIG.COLUMN_NAMES
@@ -323,11 +351,12 @@ def _RetrieveTransactions(
   spend_txns.Account = spend_txns.Account.map(_Normalize)
 
   spend_txns = spend_txns[~(
-      spend_txns.Category.isin(_GLOBAL_CONFIG.IGNORED_CATEGORIES)
-      | spend_txns.Merchant.isin([
+      spend_txns.Category.isin(
+          _GLOBAL_CONFIG.IGNORED_CATEGORIES
+      ) | spend_txns.Merchant.isin([
           _NormalizeMerchant(merchant)
-          for merchant in _GLOBAL_CONFIG.IGNORED_MERCHANTS])
-      | spend_txns.ID.isin(_GLOBAL_CONFIG.IGNORED_TXNS)
+          for merchant in _GLOBAL_CONFIG.IGNORED_MERCHANTS]
+      ) | spend_txns.ID.isin(_GLOBAL_CONFIG.IGNORED_TXNS)
   )]
   return spend_txns
 
@@ -360,57 +389,39 @@ def _UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,
   settings_ws.set_dataframe(pd.DataFrame([today_string, hostname]), 'D2')
 
 
-def _getGoogleCredentials() -> Optional[service_account.Credentials]:
-  """Loads the Google Account Service Credentials to access sheets."""
-  credentials_string = os.getenv('GOOGLE_SHEETS_CREDENTIALS')
-  if not credentials_string:
-    return None
-  service_info: Mapping[str, str] = json.loads(credentials_string)
-  _SCOPES = ('https://www.googleapis.com/auth/spreadsheets',
-             'https://www.googleapis.com/auth/drive')
-  return service_account.Credentials.from_service_account_info(
-      service_info, scopes=_SCOPES)
+def scrape_and_push(
+        options: ScraperOptions,
+        creds: Credentials,
+        cookies: List[str]
+) -> mintapi.Mint:
+  """Scrapes mint and pushes results.
 
+  Args:
+    options: Scraper options to use for this run.
+    creds: Credentials for logging into Mint and Google Sheets.
+    cookies: Cookies to load, if any.
 
-def main() -> None:
-  """Main function for the script."""
-  parser: argparse.ArgumentParser = _ConstructArgumentParser()
-  args: argparse.Namespace = parser.parse_args()
-  options = ScraperOptions.fromArgs(args)
-  creds: Credentials = _GetCredentials()
-
+  Returns:
+    Mint session.
+  """
   print("Logging into mint")
-  if os.getenv('CHROMEDRIVER_PATH'):
-    chromedriver_download_path = os.getenv('CHROMEDRIVER_PATH')
-  else:
-    chromedriver_download_path = os.getcwd()
-  assert chromedriver_download_path
-
-  cookies: List[Text] = []
-  if args.cookies:
-    cookies_file = os.path.join(chromedriver_download_path, args.cookies)
-    cookies = _fetchCookies(cookies_file)
-
-  mint: mintapi.Mint = _LogIntoMint(creds, options, chromedriver_download_path,
-                                    cookies)
-  if args.cookies:
-    _dumpCookies(mint, cookies_file)
+  mint: mintapi.Mint = _LogIntoMint(creds, options, cookies)
   print("Connecting to sheets.")
 
-  client = pygsheets.authorize(custom_credentials=_getGoogleCredentials())
+  client = pygsheets.authorize(custom_credentials=creds.sheets)
   sheet = client.open(_GLOBAL_CONFIG.WORKSHEET_TITLE)
 
-  def messageWrapper(msg: Text, f: Callable[[], pd.DataFrame]) -> pd.DataFrame:
+  def messageWrapper(msg: str, f: Callable[[], pd.DataFrame]) -> pd.DataFrame:
     print(msg)
     sys.stdout.flush()
     return f()
 
   latestAccounts: pd.DataFrame = (messageWrapper(
       "Retrieving accounts...", lambda: _RetrieveAccounts(mint))
-      if options.scrapeAccounts else None)
+      if options.scrape_accounts else None)
   latestTransactions: pd.DataFrame = (messageWrapper(
       "Retrieving transactions...", lambda: _RetrieveTransactions(mint, sheet))
-      if options.scrapeTransactions else None)
+      if options.scrape_transactions else None)
 
   print("Retrieval complete. Uploading to sheets...")
   _UpdateGoogleSheet(sheet=sheet,
@@ -418,6 +429,27 @@ def main() -> None:
                      accounts=latestAccounts)
 
   print("Sheets update complate!")
+
+  return mint
+
+
+def main() -> None:
+  """Main function for the script."""
+  parser: argparse.ArgumentParser = _ConstructArgumentParser()
+  args: argparse.Namespace = parser.parse_args()
+  options = ScraperOptions.fromArgsAndEnv(args)
+  creds: Credentials = _GetCredentials()
+
+  cookies: List[str] = []
+  if args.cookies_path:
+    cookies_file = os.path.join(
+        options.chromedriver_download_path, args.cookies_path)
+    cookies = _fetchCookies(cookies_file)
+
+  mint: mintapi.Mint = scrape_and_push(options, creds, cookies)
+
+  if args.cookies_path:
+    _dumpCookies(mint, cookies_file)
 
 
 if __name__ == '__main__':

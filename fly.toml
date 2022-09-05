@@ -11,7 +11,7 @@ kill_timeout = 5
   GOOGLE_CHROME_BIN = "/app/.apt/usr/bin/google_chrome"
 
 [processes]
-  serve = "./serve.sh"
+  scraper = "./serve.sh"
 
 [experimental]
   allowed_public_ports = []

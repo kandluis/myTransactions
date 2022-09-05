@@ -1,1 +1,1 @@
-scraper: python scraper.py --type='all'
+scraper: ./serve.sh

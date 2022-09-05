@@ -104,7 +104,41 @@ You should be able to type check by running:
 pipenv run mypy scraper.py
 ```
 
-# Deploy To Heroku
+# Deploy to fly.io
+
+## Setup
+
+The first thing you want to do is install `flyctl`. You can do this on Mac trivially if you have `brew` installed using:
+
+```sh
+brew install flyctl
+```
+
+## Deployment
+We migrated our Heroku stack. We now leverage a custom-built Docker container that gets deployed to `fly.io` for our purposes. You can build this container locally and run it:
+
+```sh
+docker build -t mint_scraper .
+```
+
+Once built, you can test locally by running the image. Note that it might fail due to binary incompatibitlies between the driver versions.
+```sh
+docker run --env-file=.env mint_scraper:latest python scraper.py --type='all'
+```
+
+## Debugging
+
+If you're running into issues, you want to debug by ssh'ing into the machine. 
+
+1. Download and install [Wireguard](https://www.wireguard.com/install/).
+2. Run `flyctl wireguard create` and use the output config for a new tunnel in Wireguard. Activate this tunnel.
+3. Run `flyctl ssh issue --agent` to populate a 24hr certificate in your local agent.
+4. RUn `flyctl ssh console --app mint-scraper-fly`
+
+For the last command, you can replace `mint-scraper-fly` with the name of the app. This will connect to a running instance of `mint-scraper-fly` using a basic shell. You can now debug to your heart's content.
+
+
+# [DEPRECATED] Deploy To Heroku
 
 To deploy to our heroku server, just run:
 ```sh

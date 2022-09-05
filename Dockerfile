@@ -9,7 +9,7 @@ ENV PORT 8080
 # That were installed locally on heroku at time of deployment (9/4/22).
 # This means it's hard/impossible to update this.
 # In generally, we'll try to keep fixed to this version.
-RUN curl "https://s3-external-1.amazonaws.com/heroku-slugs-us/0ff7/0ff727e8-3de5-4b74-9266-303d673e21c9.tar.gz?AWSAccessKeyId=AKIAZSXS6CXK4G6YZGNK&Signature=vkqJlz95NnKjOohHXepoWjnMbSg%3D&Expires=1662350324" | tar xzf - --strip 2 -C /app
+RUN curl "https://nautilikassets.s3.us-west-1.amazonaws.com/archive.tgz" | tar xzf - --strip 1 -C /app
 
 # Copy our local files over to /app so we can update the local installation.
 COPY . /app

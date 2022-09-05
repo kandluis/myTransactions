@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-mintapi = {editable = true, ref = "v2", git = "https://github.com/kandluis/mintapi"}
+mintapi = {ref = "v2", git = "https://github.com/kandluis/mintapi"}
 pygsheets = "*"
 pandas = "*"
 numpy = "*"

@@ -115,15 +115,23 @@ brew install flyctl
 ```
 
 ## Deployment
-We migrated our Heroku stack. We now leverage a custom-built Docker container that gets deployed to `fly.io` for our purposes. You can build this container locally and run it:
+We migrated our Heroku stack. We now leverage a custom-built Docker container that gets deployed to `fly.io` for our purposes. 
 
+To deploy the container, we recommend you build it remotely. This happens by default when simply running:
+
+```sh
+flyctl deploy --remote-only
+```
+
+### Testing Locally
+You can build this container locally and run it:
 ```sh
 docker build -t mint_scraper .
 ```
 
 Once built, you can test locally by running the image. Note that it might fail due to binary incompatibitlies between the driver versions.
 ```sh
-docker run --env-file=.env mint_scraper:latest python scraper.py --type='all'
+docker run --env-file=.env -e USE_CHROMEDRIVER_ON_PATH=1 mint_scraper:latest python scraper.py --type='all'
 ```
 
 ## Debugging

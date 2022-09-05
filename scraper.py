@@ -299,6 +299,8 @@ def _RetrieveTransactions(
       mint.get_transaction_data(limit=20000, remove_pending=False,
                                 include_investment=False,
                                 start_date=start_date))
+  # Only keep txns from cutoff even if more returned by API.
+  txns = txns[txns.date >= cutoff]
   spend_txns = txns[
       (~txns['accountRef.name'].isin(_GLOBAL_CONFIG.SKIPPED_ACCOUNTS))
       & txns.isExpense]

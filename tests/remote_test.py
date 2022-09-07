@@ -1,6 +1,6 @@
 # We test several internal-only details. Its easier this way.
 import remote
-import pandas as pd
+import pandas as pd  # type: ignore
 import pytest
 
 from _pytest.monkeypatch import MonkeyPatch

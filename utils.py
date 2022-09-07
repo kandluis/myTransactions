@@ -1,7 +1,28 @@
 import argparse
 import os
+from dataclasses import dataclass
 
 from typing import Optional
+
+
+def ConstructArgumentParser() -> argparse.ArgumentParser:
+  """Constructs the argument parser for the script."""
+  parser = argparse.ArgumentParser(
+      description='Scrape mint for transaction data and upload to '
+                  'visualization.')
+  parser.add_argument('--debug', action='store_true')
+  parser.add_argument(
+      '--types',
+      type=str,
+      help='One of "all", "transactions", or "accounts" to specify what to '
+           'scrape',
+      default='all')
+  parser.add_argument(
+      '--cookies_path',
+      type=str,
+      default=None,
+      help='The location of the cookies file to load and also update.')
+  return parser
 
 
 class ScraperError(Exception):
@@ -9,6 +30,7 @@ class ScraperError(Exception):
   pass
 
 
+@dataclass
 class ScraperOptions:
   """Options on how to scrape mint.
 
@@ -27,7 +49,7 @@ class ScraperOptions:
   # Path where we store the chrome session (speed up scraping).
   session_path: str = os.path.join(os.getcwd(), '.mintapi', 'session')
   # MFA Method to use.
-  mfa_method: str = 'str'
+  mfa_method: str = 'text'
   # Required when using 'soft-token' method.
   mfa_token: Optional[str] = None
   # If set, expects chromedriver to be available in PATH.
@@ -65,7 +87,7 @@ class ScraperOptions:
 
     options.session_path = os.getenv(
         'CHROME_SESSION_PATH', options.session_path)
-    options.mfa_method = 'soft-token' if os.getenv('MFA_TOKEN') else 'str'
+    options.mfa_method = 'soft-token' if os.getenv('MFA_TOKEN') else 'text'
     options.mfa_token = os.getenv('MFA_TOKEN', options.mfa_token)
     options.use_chromedriver_on_path = os.getenv(
         'USE_CHROMEDRIVER_ON_PATH',

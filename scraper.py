@@ -13,26 +13,6 @@ import utils
 from typing import Callable, Iterable, List
 
 
-def _ConstructArgumentParser() -> argparse.ArgumentParser:
-  """Constructs the argument parser for the script."""
-  parser = argparse.ArgumentParser(
-      description='Scrape mint for transaction data and upload to '
-                  'visualization.')
-  parser.add_argument('--debug', action='store_true')
-  parser.add_argument(
-      '--types',
-      type=str,
-      help='One of "all", "transactions", or "accounts" to specify what to '
-           'scrape',
-      default='all')
-  parser.add_argument(
-      '--cookies_path',
-      type=str,
-      default=None,
-      help='The location of the cookies file to load and also update.')
-  return parser
-
-
 def _fetchCookies(cookies_file: str) -> List[str]:
   """Fetches the cookies for Mint if available.
 
@@ -107,7 +87,7 @@ def scrape_and_push(
 
 def main() -> None:
   """Main function for the script."""
-  parser: argparse.ArgumentParser = _ConstructArgumentParser()
+  parser: argparse.ArgumentParser = utils.ConstructArgumentParser()
   args: argparse.Namespace = parser.parse_args()
   options = utils.ScraperOptions.fromArgsAndEnv(args)
   creds: auth.Credentials = auth.GetCredentials()

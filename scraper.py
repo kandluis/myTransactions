@@ -145,7 +145,8 @@ class ScraperOptions:
           self,
           types: Text,
           showBrowser: bool = False,
-          cookies: Optional[str] = None) -> None:
+          cookies: Optional[str] = None,
+          session_path: Optional[str] = None) -> None:
     """Initialize an options object
 
     Args:
@@ -155,6 +156,7 @@ class ScraperOptions:
         the default is to show the browser.
       cookies: The location of any cookies that should be loaded into the
         browser session before running the scraper.
+      session_path: The local data directory.
     """
     if types.lower() not in ['all', 'accounts', 'transactions']:
       raise ScraperError("Type %s is not valid." % (types))
@@ -165,6 +167,7 @@ class ScraperOptions:
     self.scrapeAccounts = (
         types.lower() == 'all' or types.lower() == 'accounts')
     self.cookies = cookies
+    self.session_path = session_path
 
   @classmethod
   def fromArgs(cls, args: argparse.Namespace) -> 'ScraperOptions':
@@ -223,10 +226,6 @@ def _LogIntoMint(creds: Credentials, options: ScraperOptions,
   Returns:
     The mint connection object.
   """
-  if os.getenv('CHROME_SESSION_PATH'):
-    session_path = os.getenv('CHROME_SESSION_PATH')
-  else:
-    session_path = os.path.join(os.getcwd(), '.mintapi', 'session')
   if os.getenv('MFA_TOKEN'):
     mfa_method = 'soft-token'
     mfa_token = os.getenv('MFA_TOKEN')
@@ -245,7 +244,7 @@ def _LogIntoMint(creds: Credentials, options: ScraperOptions,
                       mfa_input_callback=None,
                       mfa_method=mfa_method,
                       mfa_token=mfa_token,
-                      session_path=session_path,
+                      session_path=options.session_path,
                       wait_for_sync=_GLOBAL_CONFIG.WAIT_FOR_ACCOUNT_SYNC,
                       )
   time.sleep(5)
@@ -444,7 +443,14 @@ def main() -> None:
   """Main function for the script."""
   parser: argparse.ArgumentParser = _ConstructArgumentParser()
   args: argparse.Namespace = parser.parse_args()
-  scrape_and_upload(options=ScraperOptions.fromArgs(args))
+  options = ScraperOptions.fromArgs(args)
+
+  if os.getenv('CHROME_SESSION_PATH'):
+    options.session_path = os.getenv('CHROME_SESSION_PATH')
+  else:
+    options.session_path = os.path.join(os.getcwd(), '.mintapi', 'session')
+
+  scrape_and_upload(options=options)
 
 
 if __name__ == '__main__':

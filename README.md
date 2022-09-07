@@ -104,6 +104,13 @@ You should be able to type check by running:
 pipenv run mypy scraper.py
 ```
 
+# Unit Tests
+
+You can run all unit tests with the command:
+```sh
+pipenv run pytest
+```
+
 # Deploy to fly.io
 
 ## Setup
@@ -117,7 +124,11 @@ brew install flyctl
 ## Deployment
 We migrated our Heroku stack. We now leverage a custom-built Docker container that gets deployed to `fly.io` for our purposes. 
 
-To deploy the container, we recommend you build it remotely. This happens by default when simply running:
+The deployment of the container should happen automatically using Github actions whenever you push the repo. Just leverage that.
+
+### Wait, I need to deploy manualyl!
+
+We recommend you build it remotely. This happens by default when simply running:
 
 ```sh
 flyctl deploy --remote-only

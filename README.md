@@ -54,34 +54,6 @@ pipenv shell
 ````
 
 
-### [Deprecated] conda
-I recommend using `conda`, since it's quite easy to handle specific python versions.  You can use `miniconda` from the instructions [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/macos.html).
-
-After install, you can create a new `conda` environment (with Python 3.10) which is the latest tested version, and activate it.
-
-```sh
-conda create -n txn python=3.10
-```
-
-On the first activation, install the required packages.
-
-```sh
-pip install -r requirements.txt
-```
-
-### [Deprecated] virtualenv & virtualenvwrapper
-You can use of `virtualenv` and `virtualenvwrapper` to set this up appropriately. The provided `run.sh` script assumes these exist, but obviously you can install everything at the top-level Python environment if you so choose. This is probably a bad idea, though.
-
-Note: This package has only been tested on Python 3.7. In fact, it appears that installation of pandas in 3.8 fails due to compilation errors.
-
-If you already have `virtualenvwrapper` installed, then simply create a new environment and run:
-
-```sh
-pip install -r requirements.txt
-```
-
-This will install the required libraries.
-
 ## Chrome Driver
 The Chrome driver used is, by default, located in the current working directory of the script. However, for running in Heroku, install the `heroku-buildpack-chromedriver` and `heroku-buildpack-google-chrome` and set the following:
 
@@ -90,13 +62,9 @@ CHROMEDRIVER_PATH=/app/.chromedriver/bin
 GOOGLE_CHROME_BIN=/app/.apt/usr/bin/google_chrome
 ```
 
-# Running the script.
-
-Update `run.sh` to match the right locations and setup (note that it currently works by relying on virtualenv). Note that the script *by default* must be run from the top-level directory, if you want to use the included chrome driver. 
-
-You might want to consider running the `scraper.py` file with `--debug` if something goes wrong.
-
 # Type Checking
+
+For development purposes, you want to also install the dev dependencies by running `pipenv install -d`.
 
 You should be able to type check by running:
 

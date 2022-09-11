@@ -96,7 +96,7 @@ The deployment of the container should happen automatically using Github actions
 
 ### Wait, I need to deploy manualyl!
 
-We recommend you build it remotely. This happens by default when simply running:
+We recommend you build it remotely. This happens by default when simply running. You can install `flyctl` with `brew install flyctl`:
 
 ```sh
 flyctl deploy --remote-only
@@ -125,13 +125,6 @@ If you're running into issues, you want to debug by ssh'ing into the machine.
 For the last command, you can replace `mint-scraper-fly` with the name of the app. This will connect to a running instance of `mint-scraper-fly` using a basic shell. You can now debug to your heart's content.
 
 
-# [DEPRECATED] Deploy To Heroku
-
-To deploy to our heroku server, just run:
-```sh
-git push heroku master
-```
-
 # Version
 
-1.0.1
+2.0.0

@@ -111,3 +111,9 @@ htmlcov/
 # Ignore session data
 .mintapi
 cookies.pkl
+
+# Ignore sublime project settings.
+*.sublime-project
+
+# Don't commit binary -- no longer needed.
+chromedriver

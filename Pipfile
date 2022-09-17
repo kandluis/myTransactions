@@ -13,6 +13,9 @@ numpy = "*"
 flake8 = "*"
 mypy = "*"
 mypy-extensions = "*"
+pytest = "*"
+pytest-cov = "*"
+pytest-mock = "*"
 
 [requires]
 python_version = "3.9.13"

@@ -50,6 +50,9 @@ jobs:
         run: |
           pipenv run mypy .
 
+      - name: Run unit tests.
+        run: |
+          pipenv run pytest --doctest-modules
   deploy:
       name: Deploy to fly.io
       runs-on: ubuntu-latest

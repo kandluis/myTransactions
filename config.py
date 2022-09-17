@@ -81,21 +81,22 @@ class Config:
     # Credit card payments are redundant.
     self.IGNORED_CATEGORIES: List[Text] = [
         'Auto Payment',
+        'Buy',
+        'Check',
         'Credit Card Payment',
+        'Federal Tax',
+        'Financial',
         'Income',
+        'Interest Income',
         'Investments',
+        'Loan Principal',
         'Mortgage  Rent',
         'Paycheck',
-        'Taxes',
-        'Transfer',
-        'Federal Tax',
-        'State Tax',
         'Rental Income',
-        'Check',
-        'Interest Income',
-        'Financial',
-        'Buy',
-        'Loan Principal',
+        'State Tax',
+        'Taxes',
+        'Transfer For Cash Spending',
+        'Transfer',
     ]
     # Merchant names are trimmed to at most these many characters.
     self.MAX_MERCHANT_NAME_CHARS: int = 20
@@ -109,8 +110,8 @@ class Config:
         '75164122_2990478862_0',
         '75164122_3000221161_0',
         '75164122_3019178442_0',  # Banita stuff. Tracked separately.
-        '75164122_3025617139_0',  # Transfer.
         '75164122_3036154626_0',  # Amex card.
+        '75164122_3048334440_0',  # Transfer.
     ]
     # If any merchant includes this in their name is normalized to that value.
     self.MERCHANT_NORMALIZATION: List[str] = [

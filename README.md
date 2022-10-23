@@ -69,7 +69,7 @@ For development purposes, you want to also install the dev dependencies by runni
 You should be able to type check by running:
 
 ```sh
-pipenv run mypy *.py
+pipenv run mypy .
 ```
 
 # Unit Tests

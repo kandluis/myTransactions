@@ -112,6 +112,7 @@ class Config:
         '75164122_3019178442_0',  # Banita stuff. Tracked separately.
         '75164122_3036154626_0',  # Amex card.
         '75164122_3048334440_0',  # Transfer.
+        '75164122_3051356816_0',  # NYC Trip Flight.
     ]
     # If any merchant includes this in their name is normalized to that value.
     self.MERCHANT_NORMALIZATION: List[str] = [

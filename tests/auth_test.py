@@ -11,8 +11,8 @@ _REQUIRED_ENV_KEYS: Dict[str, str] = {
     "EMAIL_PASSWORD": "TEST_EMAIL_PASSWORD",
     # This needs to be valued JSON.
     "GOOGLE_SHEETS_CREDENTIALS": """{
-      "key" : "value", 
-      "key2" : "value2" 
+      "key" : "value",
+      "key2" : "value2"
     }""",
 }
 

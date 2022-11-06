@@ -166,6 +166,7 @@ def RetrieveTransactions(
   spend_txns.Category = spend_txns.Category.map(_Normalize)
   spend_txns.Merchant = spend_txns.Merchant.map(_NormalizeMerchant)
   spend_txns.Account = spend_txns.Account.map(_Normalize)
+  spend_txns.Description = spend_txns.Description.map(_Normalize)
 
   spend_txns = spend_txns[~(
       spend_txns.Category.isin(

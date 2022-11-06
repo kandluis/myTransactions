@@ -43,11 +43,13 @@ class Config:
     ]
     self.COLUMNS: List[Text] = [
         'fiData.date', 'fiData.inferredDescription', 'fiData.amount',
-        'fiData.inferredCategory.name', 'accountRef.name', 'id']
+        'fiData.inferredCategory.name', 'accountRef.name', 'id',
+        'fiData.inferredDescription']
     self.COLUMN_NAMES: List[Text] = [
-        'Date', 'Merchant', 'Amount', 'Category', 'Account', 'ID']
+        'Date', 'Merchant', 'Amount', 'Category', 'Account', 'ID',
+        'Description']
     self.IDENTIFIER_COLUMNS = [
-        'Date', 'Merchant', 'Amount', 'Category', 'Account']
+        'Date', 'Merchant', 'Amount', 'Category', 'Account', 'Description']
 
     self.RAW_TRANSACTIONS_TITLE: Text = "Raw - All Transactions"
     self.RAW_ACCOUNTS_TITLE = 'Raw - All Accounts'

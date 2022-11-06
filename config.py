@@ -108,7 +108,7 @@ class Config:
     # Merchant names are trimmed to at most these many characters.
     self.MAX_MERCHANT_NAME_CHARS: int = 20
     # We look back these many number of TXNs to identify the start date.
-    self.NUM_TXN_FOR_CUTOFF: int = 400
+    self.NUM_TXN_FOR_CUTOFF: int = 1000
     # Ignore specific transactions.
     self.IGNORED_TXNS: List[str] = [
         '75164122_2980191656_0',

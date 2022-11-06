@@ -140,7 +140,7 @@ def RetrieveTransactions(
   start_date: str = datetime.strptime(cutoff, "%Y-%m-%d").strftime("%m/%d/%y")
 
   txns = pd.json_normalize(
-      mint.get_transaction_data(limit=20000, remove_pending=False,
+      mint.get_transaction_data(limit=20000, remove_pending=True,
                                 include_investment=False,
                                 start_date=start_date))
   # Only keep txns from cutoff even if more returned by API.

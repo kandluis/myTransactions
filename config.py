@@ -14,6 +14,9 @@ class Config:
         mintapi library.
       COLUMN_NAMES: COLUMN_NAMES[i] is the column name in the Google sheet
         of the corresponding COLUMNs[i]
+      UNIQUE_COLUMNs: These column names are used to uniquely identify txns
+        insted of the txn id. This aids in de-duplicating accidentally
+        duplicated txns from Mint API.
       RAW_SHEET_TITLE: The name of the sheet which contains the raw
         transactions.
       SETTINGS_SHEET_TITLE: The name of the sheet containing the setting
@@ -43,6 +46,8 @@ class Config:
         'fiData.inferredCategory.name', 'accountRef.name', 'id']
     self.COLUMN_NAMES: List[Text] = [
         'Date', 'Merchant', 'Amount', 'Category', 'Account', 'ID']
+    self.IDENTIFIER_COLUMNS = [
+        'Date', 'Merchant', 'Amount', 'Category', 'Account']
 
     self.RAW_TRANSACTIONS_TITLE: Text = "Raw - All Transactions"
     self.RAW_ACCOUNTS_TITLE = 'Raw - All Accounts'

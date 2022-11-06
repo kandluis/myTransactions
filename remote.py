@@ -175,7 +175,9 @@ def RetrieveTransactions(
           for merchant in config.GLOBAL.IGNORED_MERCHANTS]
       ) | spend_txns.ID.isin(config.GLOBAL.IGNORED_TXNS)
   )]
-  return spend_txns
+  deduped_txns = spend_txns.drop_duplicates(
+      subset=config.GLOBAL.IDENTIFIER_COLUMNS, ignore_index=True)
+  return deduped_txns
 
 
 def UpdateGoogleSheet(sheet: pygsheets.Spreadsheet,

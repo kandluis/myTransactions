@@ -37,6 +37,7 @@ class Config:
     self.SKIPPED_ACCOUNTS: List[Text] = [
         'Citi®\xa0Double Cash Card',
         'Citi® Double Cash Card',
+        'Citi Double Cash® Card',
         'Citi Double Cash Card',
         'Citi Double Cash Card',
         'Wells Fargo College Checking',

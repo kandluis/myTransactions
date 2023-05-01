@@ -265,6 +265,7 @@ class Config:
         ('Savings', 'Cash'),
         ('Smart Saver', 'Stock'),
         ('SpendAccount', 'Cash'),
+        ('Staked', 'Crypto'),
         ('Southest Business - Belinda', 'Credit'),
         ('Southwest Business - Luis', 'Credit'),
         ('TAXABLE Account', 'Stock'),

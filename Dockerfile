@@ -10,6 +10,8 @@ ENV PORT 8080
 # This means it's hard/impossible to update this.
 # In general, we'll try to keep fixed to this version.
 RUN curl "https://nautilikassets.s3.us-west-1.amazonaws.com/archive.tgz" | tar xzf - --strip 1 -C /app
+# Delete old chromedriver, we'll fetch our own by default.
+RUN rm -f /app/.chromedriver/bin/chromedriver
 
 # Copy our local files over to /app so we can update the local installation.
 COPY . /app

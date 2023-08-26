@@ -4,10 +4,10 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-mintapi = {ref = "v2", git = "https://github.com/kandluis/mintapi"}
 pygsheets = "*"
 pandas = "*"
 numpy = "*"
+mintapi = "*"
 
 [dev-packages]
 flake8 = "*"

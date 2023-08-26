@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "bd2c0efcc383c46a6f14fcf1fa9ee6abea566707131862ea7ff34e338df40e35"
+            "sha256": "8341d0e3d5e3423836cad79617217a5b5a02bb3235baab135b5161671db3e8f4"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -171,11 +171,11 @@
         },
         "google-auth": {
             "hashes": [
-                "sha256:ce311e2bc58b130fddf316df57c9b3943c2a7b4f6ec31de9663a9333e4064efc",
-                "sha256:f586b274d3eb7bd932ea424b1c702a30e0393a2e2bc4ca3eae8263ffd8be229f"
+                "sha256:164cba9af4e6e4e40c3a4f90a1a6c12ee56f14c0b4868d1ca91b32826ab334ce",
+                "sha256:d61d1b40897407b574da67da1a833bdc10d5a11642566e506565d1b1a46ba873"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5'",
-            "version": "==2.17.3"
+            "markers": "python_version >= '3.6'",
+            "version": "==2.22.0"
         },
         "google-auth-httplib2": {
             "hashes": [
@@ -249,8 +249,11 @@
             "version": "==24.2.0"
         },
         "mintapi": {
-            "git": "https://github.com/kandluis/mintapi",
-            "ref": "8a7d37c6302a939fd35166669f78ae0aa16006c4"
+            "hashes": [
+                "sha256:9bc8ac0618c9b88a0494166019b0e875646736a444eccfead8f7146ea7fd2248"
+            ],
+            "index": "pypi",
+            "version": "==2.14"
         },
         "more-itertools": {
             "hashes": [
@@ -456,7 +459,7 @@
                 "sha256:90260d9058e514786967344d0ef75fa8727eed8a7d2e43ce9f4bcf1b536174f7",
                 "sha256:e38464a49c6c85d7f1351b0126661487a7e0a14a50f1675ec50eb34d4f20ef21"
             ],
-            "markers": "python_version >= '3.6'",
+            "markers": "python_version >= '3.6' and python_version < '4'",
             "version": "==4.9"
         },
         "selenium": {
@@ -540,11 +543,11 @@
         },
         "urllib3": {
             "hashes": [
-                "sha256:8d22f86aae8ef5e410d4f539fde9ce6b2113a001bb4d189e0aed70642d602b11",
-                "sha256:de7df1803967d2c2a98e4b11bb7d6bd9210474c46e8a0401514e3a42a75ebde4"
+                "sha256:8d36afa7616d8ab714608411b4a3b13e58f463aee519024578e062e141dce20f",
+                "sha256:8f135f6502756bde6b2a9b28989df5fbe87c9970cecaa69041edcce7f0589b14"
             ],
-            "markers": "python_version >= '3.7'",
-            "version": "==2.0.4"
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5'",
+            "version": "==1.26.16"
         },
         "wsproto": {
             "hashes": [

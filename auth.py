@@ -42,16 +42,18 @@ def _getGoogleCredentials() -> service_account.Credentials:
 
 
 def GetCredentials() -> Credentials:
-    """Retrieves the crendentials for logging into Mint from the environment.
+    """Retrieves the crendentials for logging into Mint/PC from the environment.
 
     This is necessary because they do not currently provide an API.
 
     Returns:
-      The retrieved crendentials
+      The retrieved crendentials.
     """
-    username = os.getenv("USERNAME")
+    username = os.getenv("ACCOUNT_USERNAME")
     if not username:
-        raise utils.ScraperError("Unable to find username from var %s!" % "USERNAME")
+        raise utils.ScraperError(
+            "Unable to find username from var %s!" % "ACCOUNT_USERNAME"
+        )
     password = os.getenv("PASSWORD")
     if not password:
         raise utils.ScraperError("Unable to find password from var %s!" % "PASSWORD")

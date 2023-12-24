@@ -2,7 +2,9 @@ import argparse
 import os
 from dataclasses import dataclass
 
+
 from typing import Optional
+from constants import TMFAMethod
 
 
 def ConstructArgumentParser() -> argparse.ArgumentParser:
@@ -52,7 +54,7 @@ class ScraperOptions:
     # Path where we store the chrome session (speed up scraping).
     session_path: str = os.path.join(os.getcwd(), ".mintapi", "session")
     # MFA Method to use.
-    mfa_method: str = "text"
+    mfa_method: TMFAMethod = "sms"
     # Required when using 'soft-token' method.
     mfa_token: Optional[str] = None
     # If set, expects chromedriver to be available in PATH.
@@ -89,7 +91,7 @@ class ScraperOptions:
         options.scrape_accounts = types.lower() == "all" or types.lower() == "accounts"
 
         options.session_path = os.getenv("CHROME_SESSION_PATH", options.session_path)
-        options.mfa_method = "soft-token" if os.getenv("MFA_TOKEN") else "text"
+        options.mfa_method = "totp" if os.getenv("MFA_TOKEN") else "sms"
         options.mfa_token = os.getenv("MFA_TOKEN", options.mfa_token)
         options.use_chromedriver_on_path = os.getenv(
             "USE_CHROMEDRIVER_ON_PATH", default="False"

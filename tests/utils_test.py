@@ -87,5 +87,5 @@ def test_scraper_option_env(test_env: MonkeyPatch) -> None:
     with test_env.context() as env:
         env.setenv("MFA_TOKEN", "12345")
         options = utils.ScraperOptions.fromArgsAndEnv(args)
-        assert options.mfa_method == "soft-token"
+        assert options.mfa_method == "totp"
         assert options.mfa_token == "12345"

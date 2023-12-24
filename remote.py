@@ -1,6 +1,7 @@
 import auth
 import utils
 import config
+import empower
 import mintapi  # type: ignore
 import pandas as pd  # type: ignore
 import pygsheets  # type: ignore
@@ -53,6 +54,28 @@ def _NormalizeMerchant(merchant: str) -> str:
         if simpleName in normalized:
             return simpleName
     return normalized
+
+
+def LogIntoPC(
+    creds: auth.Credentials, options: utils.ScraperOptions
+) -> empower.PersonalCapital:
+    """Logs into Personal Capital and retrieves an active API connection.
+
+    Args:
+      creds: The credentials for the account to log into.
+      options: Options for how to connect.
+
+    Returns:
+      The PersonalCapital connection object.
+    """
+    pc = empower.PersonalCapital()
+    pc.login(
+        email=creds.username,
+        password=creds.password,
+        mfa_method=options.mfa_method,
+        mfa_token=options.mfa_token,
+    )
+    return pc
 
 
 def LogIntoMint(

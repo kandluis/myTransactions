@@ -8,6 +8,7 @@ pygsheets = "*"
 pandas = "*"
 numpy = "*"
 mintapi = "*"
+mintotp = "*"
 
 [dev-packages]
 flake8 = "*"
@@ -17,6 +18,8 @@ pytest = "*"
 pytest-cov = "*"
 pytest-mock = "*"
 black = "*"
+pandas-stubs = "*"
+types-requests = "*"
 
 [requires]
 python_version = "3.9.13"

@@ -1,15 +1,32 @@
 name: myTransactions Package
 
-on: [push]
-
-env:
-  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+on:
+  push:
+    branches:
+      - main
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            backend:
+              - '.github/**'
+              - '*.py'
+              - 'Dockerfile'
+              - '*.toml'
+              - 'Pipfile*'
+              - '*.sh'
   build:
-
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ${{ matrix.os }}
-
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -17,6 +34,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - uses: psf/black@stable
       
       - name: Set up Python 3.9
         uses: actions/setup-python@v4
@@ -39,9 +57,6 @@ jobs:
         run: |
           pipenv install --deploy --dev
       
-      - name: Run formatting with black.
-        run: |
-          pipenv run black .
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
@@ -57,9 +72,13 @@ jobs:
         run: |
           pipenv run pytest --doctest-modules
   deploy:
-      name: Deploy to fly.io
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v2
-        - uses: superfly/flyctl-actions/setup-flyctl@master
-        - run: flyctl deploy --remote-only
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    name: Deploy to fly.io
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only

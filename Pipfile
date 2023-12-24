@@ -16,6 +16,7 @@ mypy-extensions = "*"
 pytest = "*"
 pytest-cov = "*"
 pytest-mock = "*"
+black = "*"
 
 [requires]
 python_version = "3.9.13"

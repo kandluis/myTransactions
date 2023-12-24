@@ -79,6 +79,13 @@ You can run all unit tests with the command:
 pipenv run pytest
 ```
 
+# Formatting
+
+You can run all formatting with the command:
+```sh
+pipenv run black .
+```
+
 # Deploy to fly.io
 
 ## Setup

@@ -12,6 +12,7 @@ def ConstructArgumentParser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Scrape mint for transaction data and upload to " "visualization."
     )
+    parser.add_argument("--dry_run", action="store_true")
     parser.add_argument("--debug", action="store_true")
     parser.add_argument(
         "--types",
@@ -45,6 +46,8 @@ class ScraperOptions:
       scrape_accounts: bool, if true, we scrape account data. Default true.
     """
 
+    # When true, do all read operations but don't write data to sheets.
+    dry_run: bool = False
     # When true, browser head is shown. Useful for debugging.
     show_browser: bool = False
     # When true, scrape txn data from Mint.
@@ -84,6 +87,7 @@ class ScraperOptions:
             raise ScraperError("Type %s is not valid." % (types))
 
         options = ScraperOptions()
+        options.dry_run = args.dry_run
         options.show_browser = args.debug
         options.scrape_transactions = (
             types.lower() == "all" or types.lower() == "transactions"

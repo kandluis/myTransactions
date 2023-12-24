@@ -7,8 +7,8 @@ To setup the scraper, you need to follow the following steps.
 First, a `.env` file at the top-level directory needs to exists. It should look like:
 
 ```sh
-MINT_EMAIL=<TODO>
-MINT_PASSWORD=<TODO>
+USERNAME=<TODO>
+PASSWORD=<TODO>
 EMAIL_PASSWORD=<TODO>
 CHROME_DRIVER_PATH=<TODO>  // Defaults to os.getcwd() if not provided.
 MFA_TOKEN=<TODO>

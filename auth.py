@@ -11,15 +11,15 @@ class Credentials(NamedTuple):
     """Holds credential information needed to successfully run the scraper.
 
     Properties:
-      email: The email address associated with the Mint account.
-      mintPassword: The password for the Mint account.
+      username: The username associated with the Mint/PC account.
+      password: The password for the Mint/PC account.
       emailPassword: The password for the email account.
       sheets: The credentials for the service account for Google Sheets.
 
     """
 
-    email: str
-    mintPassword: str
+    username: str
+    password: str
     emailPassword: str
     sheets: service_account.Credentials
 
@@ -49,19 +49,19 @@ def GetCredentials() -> Credentials:
     Returns:
       The retrieved crendentials
     """
-    email = os.getenv("MINT_EMAIL")
-    if not email:
-        raise utils.ScraperError("Unable to find email from var %s!" % "MINT_EMAIL")
-    mintPassword = os.getenv("MINT_PASSWORD")
-    if not mintPassword:
-        raise utils.ScraperError("Unable to find pass from var %s!" % "MINT_PASSWORD")
+    username = os.getenv("USERNAME")
+    if not username:
+        raise utils.ScraperError("Unable to find username from var %s!" % "USERNAME")
+    password = os.getenv("PASSWORD")
+    if not password:
+        raise utils.ScraperError("Unable to find password from var %s!" % "PASSWORD")
     emailPassword = os.getenv("EMAIL_PASSWORD")
     if not emailPassword:
         raise utils.ScraperError("Unable to find pass from var %s!" % "EMAIL_PASSWORD")
     sheets_creds = _getGoogleCredentials()
     return Credentials(
-        email=email,
-        mintPassword=mintPassword,
+        username=username,
+        password=password,
         emailPassword=emailPassword,
         sheets=sheets_creds,
     )

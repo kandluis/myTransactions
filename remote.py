@@ -69,12 +69,12 @@ def LogIntoMint(
       The mint connection object.
     """
     mint = mintapi.Mint(
-        creds.email,
-        creds.mintPassword,
+        creds.username,
+        creds.password,
         chromedriver_download_path=options.chromedriver_download_path,
         use_chromedriver_on_path=options.use_chromedriver_on_path,
         headless=not options.show_browser,
-        imap_account=creds.email,
+        imap_account=creds.username,
         imap_folder="Inbox",
         imap_password=creds.emailPassword,
         imap_server=config.GLOBAL.IMAP_SERVER,

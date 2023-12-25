@@ -155,7 +155,10 @@ def RetrieveTransactions(
     )
     old_txns: pd.DataFrame = all_txns_ws.get_as_df(numerize=False)
     cutoff: str = old_txns.Date[old_txns.Date.size - config.GLOBAL.NUM_TXN_FOR_CUTOFF]
-    start_date: str = datetime.strptime(cutoff, "%Y-%m-%d")
+    start_date: datetime.datetime = max(
+        datetime.strptime(cutoff, "%Y-%m-%d"),
+        datetime.strptime(config.GLOBAL.PC_MIGRATION_DATE, "%Y-%m-%d"),
+    )
     txns = pd.json_normalize(
         conn.get_transaction_data(
             start_date=start_date,
@@ -164,14 +167,16 @@ def RetrieveTransactions(
     # Only keep txns from cutoff even if more returned by API.
     txns = txns[txns.transactionDate >= cutoff]
     # Only spending and non-investment txns.
-    spend_txns = txns[(txns.isSpending | txns.isCashOut) & txns.investmentType.isna()]
+    spend_txns = txns[(txns.isSpending | txns.isCashOut) & txns.investmentType.isna()].copy()
+    # Get amounts correct. Credits are positive, everything else is negative.
+    spend_txns.amount = spend_txns.amount * spend_txns.isCredit.map(
+        lambda isCredit: 1 if isCredit else -1
+    )
 
     spend_txns = spend_txns[config.GLOBAL.COLUMNS]
     spend_txns.columns = config.GLOBAL.COLUMN_NAMES
     spend_txns = spend_txns.sort_values("Date", ascending=True)
 
-    # PC needs to negate amounts.
-    spend_txns.Amount = -1 * spend_txns.Amount
     spend_txns.Merchant = spend_txns.Merchant.fillna(spend_txns.Description)
 
     if config.GLOBAL.CLEAN_UP_OLD_TXNS:
@@ -184,7 +189,6 @@ def RetrieveTransactions(
     deduped_txns = combined.drop_duplicates(
         subset=config.GLOBAL.IDENTIFIER_COLUMNS, ignore_index=True
     )
-    breakpoint()
     return deduped_txns
 
 

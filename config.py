@@ -71,6 +71,8 @@ class Config:
         self.CLEAN_UP_OLD_TXNS: bool = False
         # After normalizations.
         self.SKIPPED_ACCOUNTS: List[Text] = [
+            "Ally Joint Savings",
+            "Sofi Savings",
             "Brokerage Ending In 5781",
             "CapitalOne Business Checking",
             "CapitalOne Business Savings Account",
@@ -144,7 +146,9 @@ class Config:
             "Transfers",
         ]
         # We look back these many number of TXNs to identify the start date.
-        self.NUM_TXN_FOR_CUTOFF: int = 1000
+        self.NUM_TXN_FOR_CUTOFF: int = 300
+        # This was a one-time. All txns after this date are pulled from PC, not mint.
+        self.PC_MIGRATION_DATE: str = "2023-12-08"
         # Ignore specific transactions.
         self.IGNORED_TXNS: List[str] = [
             "75164122_2980191656_0",

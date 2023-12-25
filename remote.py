@@ -167,7 +167,9 @@ def RetrieveTransactions(
     # Only keep txns from cutoff even if more returned by API.
     txns = txns[txns.transactionDate >= cutoff]
     # Only spending and non-investment txns.
-    spend_txns = txns[(txns.isSpending | txns.isCashOut) & txns.investmentType.isna()].copy()
+    spend_txns = txns[
+        (txns.isSpending | txns.isCashOut) & txns.investmentType.isna()
+    ].copy()
     # Get amounts correct. Credits are positive, everything else is negative.
     spend_txns.amount = spend_txns.amount * spend_txns.isCredit.map(
         lambda isCredit: 1 if isCredit else -1

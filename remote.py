@@ -7,6 +7,7 @@ import pygsheets  # type: ignore
 import socket
 
 from datetime import datetime
+from datetime import date
 
 from typing import (
     Optional,
@@ -154,9 +155,9 @@ def RetrieveTransactions(
     )
     old_txns: pd.DataFrame = all_txns_ws.get_as_df(numerize=False)
     cutoff: str = old_txns.Date[old_txns.Date.size - config.GLOBAL.NUM_TXN_FOR_CUTOFF]
-    start_date: datetime.datetime = max(
-        datetime.strptime(cutoff, "%Y-%m-%d"),
-        datetime.strptime(config.GLOBAL.PC_MIGRATION_DATE, "%Y-%m-%d"),
+    start_date: date = max(
+        datetime.strptime(cutoff, "%Y-%m-%d").date(),
+        datetime.strptime(config.GLOBAL.PC_MIGRATION_DATE, "%Y-%m-%d").date(),
     )
     txns = pd.json_normalize(
         conn.get_transaction_data(
@@ -175,7 +176,7 @@ def RetrieveTransactions(
     )
 
     spend_txns = spend_txns[config.GLOBAL.COLUMNS]
-    spend_txns.columns = config.GLOBAL.COLUMN_NAMES
+    spend_txns.columns = pd.Index(config.GLOBAL.COLUMN_NAMES)
     spend_txns = spend_txns.sort_values("Date", ascending=True)
 
     spend_txns.Merchant = spend_txns.Merchant.fillna(spend_txns.Description)

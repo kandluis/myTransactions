@@ -8,7 +8,7 @@ import remote
 import sys
 import utils
 
-from typing import Callable
+from typing import Callable, Optional
 
 
 def scrape_and_push(
@@ -35,14 +35,14 @@ def scrape_and_push(
         sys.stdout.flush()
         return f()
 
-    latestAccounts: pd.DataFrame = (
+    latestAccounts: Optional[pd.DataFrame] = (
         messageWrapper(
             "Retrieving accounts...", lambda: remote.RetrieveAccounts(connection)
         )
         if options.scrape_accounts
         else None
     )
-    latestTransactions: pd.DataFrame = (
+    latestTransactions: Optional[pd.DataFrame] = (
         messageWrapper(
             "Retrieving transactions...",
             lambda: remote.RetrieveTransactions(connection, sheet),

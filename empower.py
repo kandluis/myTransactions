@@ -105,15 +105,15 @@ class PersonalCapital:
             return False
 
         try:
-            self.get_accounts()
+            self.get_account_data()
             return True
         except PersonalCapitalSessionExpiredException:
             return False
 
     def get_transaction_data(
         self,
-        start_date: datetime.datetime,
-        end_date: datetime.datetime = date.today() + relativedelta(months=1),
+        start_date: datetime.date,
+        end_date: datetime.date = date.today() + relativedelta(months=1),
     ) -> list[dict[str, str]]:
         resp = self._api_request(
             "post",

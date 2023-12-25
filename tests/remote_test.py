@@ -31,10 +31,8 @@ def test_normalize_merchant(config: MonkeyPatch) -> None:
         # Spaces don't count.
         assert remote._NormalizeMerchant("Nor mal Merchant") == "Nor Mal Merchant"
         # Neither do special chars.
-        assert (
-            remote._NormalizeMerchant("N$%*@%*$or m$*%$a@$(%l Merchant")
-            == "Nor Mal Merchant"
-        )
+        res = remote._NormalizeMerchant("N$%*@%*$or m$*%$a@$(%l Merchant")
+        assert res == "Nor Mal Merchant"
 
     with config.context() as c:
         c.setattr(

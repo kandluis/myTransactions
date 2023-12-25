@@ -201,7 +201,7 @@ class PersonalCapital:
 
         password_endpoint = "/api/credential/authenticatePassword"
         password_data = {
-            "bindDevice": "true",
+            "bindDevice": "false",
             "deviceName": "API script",
             "passwd": password,
         }

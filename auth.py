@@ -11,8 +11,8 @@ class Credentials(NamedTuple):
     """Holds credential information needed to successfully run the scraper.
 
     Properties:
-      username: The username associated with the Mint/PC account.
-      password: The password for the Mint/PC account.
+      username: The username associated with the PC account.
+      password: The password for the PC account.
       emailPassword: The password for the email account.
       sheets: The credentials for the service account for Google Sheets.
 
@@ -42,7 +42,7 @@ def _getGoogleCredentials() -> service_account.Credentials:
 
 
 def GetCredentials() -> Credentials:
-    """Retrieves the crendentials for logging into Mint/PC from the environment.
+    """Retrieves the crendentials for logging into PC from the environment.
 
     This is necessary because they do not currently provide an API.
 

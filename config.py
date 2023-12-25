@@ -2,16 +2,18 @@ from typing import List, Optional, Text
 
 
 class Config:
-    """A class capturing configurable settings for the mint scraper."""
+    """A class capturing configurable settings for the scraper."""
 
     def __init__(self: "Config") -> None:
         """Initializes the config to the default values.
 
         Properties:
+          CLEAN_UP_OLD_TXNS: If set to true, also cleans up txns already uploaded to
+            sheets.
           SKIPPED_ACCOUNTS: The account names are to be skipped when uploading to
             Google Sheets.
           COLUMNS: The column names of the retrieved dataframe return by the
-            mintapi library.
+            Personal Capital library.
           COLUMN_NAMES: COLUMN_NAMES[i] is the column name in the Google sheet
             of the corresponding COLUMNs[i]
           UNIQUE_COLUMNs: These column names are used to uniquely identify txns
@@ -34,23 +36,14 @@ class Config:
           IMAP_SERVER: The IMAP server to use for MFA using email.
           WAIT_FOR_ACCOUNT_SYNC: Whether or not to wait for account syncing.
         """
-        self.SKIPPED_ACCOUNTS: List[Text] = [
-            "Citi®\xa0Double Cash Card",
-            "Citi® Double Cash Card",
-            "Citi Double Cash® Card",
-            "Citi Double Cash Card",
-            "Citi Double Cash Card",
-            "Wells Fargo College Checking",
-            "Total Checking",
-        ]
         self.COLUMNS: List[Text] = [
-            "fiData.date",
-            "fiData.inferredDescription",
-            "fiData.amount",
-            "fiData.inferredCategory.name",
-            "accountRef.name",
-            "id",
-            "fiData.inferredDescription",
+            "transactionDate",
+            "merchant",
+            "amount",
+            "categoryName",
+            "accountName",
+            "userTransactionId",
+            "description",
         ]
         self.COLUMN_NAMES: List[Text] = [
             "Date",
@@ -62,12 +55,12 @@ class Config:
             "Description",
         ]
         self.IDENTIFIER_COLUMNS = [
-            "Date",
-            "Merchant",
+            "Account",
             "Amount",
             "Category",
-            "Account",
+            "Date",
             "Description",
+            "Merchant",
         ]
 
         self.RAW_TRANSACTIONS_TITLE: Text = "Raw - All Transactions"
@@ -75,12 +68,29 @@ class Config:
         self.SETTINGS_SHEET_TITLE: Text = "Settings"
         self.WORKSHEET_TITLE: Text = "Transactions Worksheet"
 
+        self.CLEAN_UP_OLD_TXNS: bool = False
+        # After normalizations.
+        self.SKIPPED_ACCOUNTS: List[Text] = [
+            "Brokerage Ending In 5781",
+            "CapitalOne Business Checking",
+            "CapitalOne Business Savings Account",
+            "Citi Double Cash Card Mom",
+            "Everyday Checking Ending in 1557",
+            "Fidelity Meta Platforms Inc 401K Plan",
+            "Hsa Belinda",
+            "Lending Account",
+            "Visa Signature Business",
+            "Way2save Savings Ending in 7505",
+        ]
+
         # Paid for Luis' Family's phones are not counted.
         # Ignore SCPD Payments.
         self.IGNORED_MERCHANTS: List[Text] = [
+            "Amzstorecrdpmt Payment",
             "Anita Borg Institute",
-            "Chase Autopay Ppd",
-            "Chase Credit Crd Autopa",
+            "Chase Autopay",
+            "Chase Credit Card",
+            "Chase",
             "Check",
             "Citi Autopay Payment We",
             "Citi Autopay Web",
@@ -92,6 +102,8 @@ class Config:
             "Healthequity Inc Healt",
             "Higher One Cornellu",
             "Internet Transfer From Interest Checking Account",
+            "Lendingclub Bank",
+            "Preferred Item",
             "Project Fi",
             "Rental Income",
             "Stanford Cont Studies",
@@ -110,22 +122,27 @@ class Config:
             "Buy",
             "Check",
             "Credit Card Payment",
+            "Credit Card Payments",
             "Federal Tax",
             "Financial",
             "Income",
             "Interest Income",
             "Investments",
+            "Loan Payment",
             "Loan Principal",
-            "Mortgage  Rent",
+            "Loans",
+            "Mortgage",
+            "Mortgages",
             "Paycheck",
+            "Property Tax",
+            "Rent",
             "Rental Income",
             "State Tax",
             "Taxes",
             "Transfer For Cash Spending",
             "Transfer",
+            "Transfers",
         ]
-        # Merchant names are trimmed to at most these many characters.
-        self.MAX_MERCHANT_NAME_CHARS: int = 20
         # We look back these many number of TXNs to identify the start date.
         self.NUM_TXN_FOR_CUTOFF: int = 1000
         # Ignore specific transactions.
@@ -150,93 +167,27 @@ class Config:
             "Attbill",
             "Audiblecom",
             "Blueapron",
-            "Life Alive",
             "C T Wok",
             "Doordash",
+            "Life Alive",
             "Membership Fee",
             "Prime Video",
         ]
 
-        # These IDs are the old version of Mint (v1). They aren't complete, but
-        # we make our best guess.
-        self.V1_IGNORED_TXNS: List[int] = [
-            1246972549,
-            1276304584,
-            2461681673,
-            2482214183,
-            2504269103,
-            2509775672,
-            2510726212,
-            2553593280,
-            2553593281,
-            2556300742,
-            2559139111,
-            2566235034,
-            2573036964,
-            2618759691,
-            2651591652,
-            2675570707,
-            2683357551,
-            2683357555,
-            2683357558,
-            2688868455,
-            2699871142,
-            2700599726,
-            2701555871,
-            2702719675,
-            2722631725,
-            2728575778,
-            2902309919,
-            2910459335,
-            2917390750,
-            2920747715,
-            2920747716,
-            2926069610,
-            2926508879,
-            2926508937,
-            2940650110,
-            2944077407,
-            2945144150,
-            2947546107,
-            2949966496,
-            2950201581,
-            2952553369,
-            2953522507,
-            2953522508,
-            2953522509,
-            2953522510,
-            2953805206,
-            2953805219,
-            2953805221,
-            2959688556,
-            2959688563,
-            2959707325,
-            2959707326,
-            2959707327,
-            2959707328,
-            2960566083,
-            2960566088,
-            2960566089,
-            2960566090,
-            2960566091,
-            2960986889,
-            2963183492,
-            2966202025,
-            2966857485,
-            2970848199,
-            2972196882,
-            2972706829,
-            966664871,
-        ]
         self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
         self.WAIT_FOR_ACCOUNT_SYNC: bool = True
-        # substring to account type string mapping.
         self.ACCOUNT_NAME_TO_TYPE_MAP = [
+            ("2125 Banita Street", "Real Estate"),
+            ("2234 Ralmar Ave", "Real Estate"),
             ("401(K) SAVINGS PLAN", "Restricted Stock"),
+            ("46 Barcelona St", "Real Estate"),
             ("529 College Plan", "Restricted Stock"),
+            ("610-4 Pisgah Church Rd", "Real Estate"),
             ("Acorns", "Stock"),
             ("Ally", "Cash"),
+            ("Amazon Prime", "Credit"),
             ("Apple", "Credit"),
+            ("B Zeng - Ending in 2555", "Credit"),
             ("B. ZENG", "Credit"),
             ("Bank", "Cash"),
             ("Belinda and Luis", "Stock"),
@@ -245,9 +196,13 @@ class Config:
             ("C2012 RSU 10/05/2016 776.47 63 Class-C", "Stock"),
             ("Card", "Credit"),
             ("Cash", "Cash"),
+            ("Chase Amazon - Luis", "Credit"),
             ("Chase Business Unlimited - Belinda", "Credit"),
             ("Chase Business Unlimited - Luis", "Credit"),
+            ("Chase IHG - Luis", "Credit"),
+            ("Chase United - Luis", "Credit"),
             ("Checking", "Cash"),
+            ("Chris' 529 Account", "Restricted Stock"),
             ("Citi", "Credit"),
             ("College-GiftAccount", "Cash"),
             ("Credit", "Credit"),
@@ -256,10 +211,16 @@ class Config:
             ("Equity Awards", "Stock"),
             ("ESPP_31003770405", "Stock"),
             ("FACEBOOK", "Stock"),
+            ("Fidelity Roth", "Stock"),
             ("Freedom", "Credit"),
+            ("Google Schwab Stock Awards", "Stock"),
+            ("Google Vested Shares - Luis", "Stock"),
             ("GSU", "GOOG"),
             ("Health Savings", "Restricted Cash"),
+            ("House in Mexico", "Real Estate"),
             ("HSA Investment", "Restricted Stock"),
+            ("HSA", "Restricted Stock"),
+            ("IHG - Belinda", "Credit"),
             ("Individual          ", "Stock"),
             ("Individual", "Stock"),
             ("Investment", "Stock"),
@@ -267,31 +228,46 @@ class Config:
             ("JOINT WROS", "Bonds"),
             ("L. MARTINEZ", "Credit"),
             ("LemonBunny", "Credit"),
+            ("Lending Account - Ending in 7687", "Loan"),
+            ("Lending Account", "Loan"),
             ("LendingClub", "Loan"),
+            ("Loancare", "Loan"),
             ("LPFSA", "Restricted Cash"),
             ("M&T Mortgage", "Loan"),
             ("M1 Spend Plus", "Cash"),
             ("Marriott", "Credit"),
             ("META PLATFORMS", "Stock"),
+            ("Meta Schwab Stock Awards", "Stock"),
+            ("Metamask", "Crypto"),
+            ("Mr Cooper - Loan - Ending in 6055", "Loan"),
             ("Other Property", "Cash"),
             ("Preferred", "Credit"),
             ("Property", "Real Estate"),
             ("Quicksilver", "Credit"),
+            ("Ralmar Loan", "Loan"),
             ("Rewards", "Credit"),
+            ("Robinhood", "Stock"),
             ("Roth IRA", "Stock"),
             ("Savings", "Cash"),
+            ("Securities", "Stock"),
+            ("SEP IRA - Belinda", "Restricted Stock"),
             ("Smart Saver", "Stock"),
+            ("Southest Business - Belinda", "Credit"),
+            ("Southwest - Belinda", "Credit"),
+            ("Southwest Business - Luis", "Credit"),
             ("SpendAccount", "Cash"),
             ("Staked", "Crypto"),
-            ("Southest Business - Belinda", "Credit"),
-            ("Southwest Business - Luis", "Credit"),
             ("TAXABLE Account", "Stock"),
             ("TOTAL CHECKING", "Cash"),
             ("Traditional IRA", "Restricted Stock"),
+            ("United - Belinda", "Credit"),
+            ("Vested Units", "Stock"),
             ("Visa", "Credit"),
             ("Wallet", "Crypto"),
-            ("XXXXXX2351", "Loan"),
+            ("Waymo Vested", "Stock"),
+            ("Wmu Awards", "Stock"),
             ("XXXXX6055", "Loan"),
+            ("XXXXXX2351", "Loan"),
             ("XXXXXX7338", "Loan"),
         ]
 

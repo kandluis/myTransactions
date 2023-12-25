@@ -4,6 +4,11 @@ import getpass
 import json
 import re
 import os
+import datetime
+
+
+from dateutil.relativedelta import relativedelta
+from datetime import date
 
 from constants import TMFAMethod
 from typing import Mapping, Optional, Literal, get_args
@@ -56,7 +61,7 @@ class PersonalCapital:
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": PersonalCapital._USER_AGENT})
 
-    def api_request(
+    def _api_request(
         self, method: str, path: str, data: Mapping[str, str] = {}
     ) -> dict[str, str]:
         response = self.session.request(
@@ -71,7 +76,7 @@ class PersonalCapital:
         )
 
         if response.status_code != requests.codes.ok or not is_json_resp:
-            logger.error(f"_api_request failed response: {resp_txt}")
+            logger.error(f"__api_request failed response: {resp_txt}")
             raise RuntimeError(
                 f"Request for {path} {data} failed: \
                 {response.status_code} {response.headers}"
@@ -105,19 +110,24 @@ class PersonalCapital:
         except PersonalCapitalSessionExpiredException:
             return False
 
-    def get_transactions(
-        self, start_date: str = "2007-01-01", end_date: str = "2030-01-01"
+    def get_transaction_data(
+        self,
+        start_date: datetime.datetime,
+        end_date: datetime.datetime = date.today() + relativedelta(months=1),
     ) -> list[dict[str, str]]:
-        resp = self.api_request(
+        resp = self._api_request(
             "post",
             path="/api/transaction/getUserTransactions",
-            data={"startDate": start_date, "endDate": end_date},
+            data={
+                "startDate": start_date.strftime("%Y-%m-%d"),
+                "endDate": end_date.strftime("%Y-%m-%d"),
+            },
         )
 
         return resp["spData"]["transactions"]
 
-    def get_accounts(self) -> dict[str, str]:
-        resp = self.api_request("post", "/api/newaccount/getAccounts2")
+    def get_account_data(self) -> dict[str, str]:
+        resp = self._api_request("post", "/api/newaccount/getAccounts2")
 
         return resp["spData"]
 
@@ -136,11 +146,10 @@ class PersonalCapital:
             "challengeMethod": PersonalCapital._CHALLENGE_METHOD[mfa_method],
             "bindDevice": "false",
         }
-        self.api_request("post", challenge_endpoint, challenge_data)
+        self._api_request("post", challenge_endpoint, challenge_data)
         if mfa_method == "totp":
             if not mfa_token:
                 raise ValueError(f"Specified mfa_method: {mfa_method} without token.")
-            breakpoint()
             auth_data = {"totpCode": mintotp.totp(mfa_token, digest="sha512")}
         else:
             auth_data = {"code": getpass.getpass("Enter 2 factor code: ")}
@@ -152,7 +161,7 @@ class PersonalCapital:
             "bindDevice": "false",
             **auth_data,
         }
-        self.api_request("post", auth_endpoint, auth_data)
+        self._api_request("post", auth_endpoint, auth_data)
 
     def login(
         self,
@@ -184,7 +193,7 @@ class PersonalCapital:
 
         identify_endpoint = "/api/login/identifyUser"
         identify_data = {"username": email}
-        resp = self.api_request("post", identify_endpoint, identify_data)
+        resp = self._api_request("post", identify_endpoint, identify_data)
         self._csrf = resp.get("spHeader", {}).get("csrf")
 
         if resp.get("spHeader", {}).get("authLevel") != "USER_REMEMBERED":
@@ -196,7 +205,7 @@ class PersonalCapital:
             "deviceName": "API script",
             "passwd": password,
         }
-        resp = self.api_request("post", password_endpoint, password_data)
+        resp = self._api_request("post", password_endpoint, password_data)
 
         self._email = email
 

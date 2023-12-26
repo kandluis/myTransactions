@@ -4,4 +4,6 @@
 .mintapi
 .env
 .gitignore
+.mypy_cache
+.pytesh_cache
 chromedriver

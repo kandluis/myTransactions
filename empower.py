@@ -9,8 +9,7 @@ from dateutil.relativedelta import relativedelta
 from datetime import datetime, date
 
 from constants import TMFAMethod
-from typing import cast, Mapping, Optional, Literal, get_args, TypedDict, Union
-from typing_extensions import Self
+from typing import cast, Mapping, Optional, Literal, get_args, TypedDict, Union, Self
 import logging
 
 

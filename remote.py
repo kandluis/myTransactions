@@ -155,21 +155,23 @@ def RetrieveTransactions(
         title=config.GLOBAL.RAW_TRANSACTIONS_TITLE
     )
     old_txns: pd.DataFrame = all_txns_ws.get_as_df(numerize=False)
-    cutoff: str = old_txns.Date[old_txns.Date.size - config.GLOBAL.NUM_TXN_FOR_CUTOFF]
-    start_date: date = max(
-        datetime.strptime(cutoff, "%Y-%m-%d").date(),
+    cutoff: date = max(
+        datetime.strptime(
+            old_txns.Date[old_txns.Date.size - config.GLOBAL.NUM_TXN_FOR_CUTOFF],
+            "%Y-%m-%d",
+        ).date(),
         datetime.strptime(config.GLOBAL.PC_MIGRATION_DATE, "%Y-%m-%d").date(),
     )
     txns = pd.json_normalize(
         cast(
             list[dict[str, Any]],
             conn.get_transaction_data(
-                start_date=start_date,
+                start_date=cutoff,
             )["transactions"],
         )
     )
     # Only keep txns from cutoff even if more returned by API.
-    txns = txns[txns.transactionDate >= cutoff]
+    txns = txns[txns.transactionDate >= cutoff.strftime("%Y-%m-%d")]
     # Only spending and non-investment txns.
     spend_txns = txns[
         (txns.isSpending | txns.isCashOut) & txns.investmentType.isna()
@@ -186,11 +188,15 @@ def RetrieveTransactions(
     spend_txns.Merchant = spend_txns.Merchant.fillna(spend_txns.Description)
 
     if config.GLOBAL.CLEAN_UP_OLD_TXNS:
-        combined = pd.concat([old_txns[old_txns.Date < cutoff], spend_txns])
+        combined = pd.concat(
+            [old_txns[old_txns.Date < cutoff.strftime("%Y-%m-%d")], spend_txns]
+        )
         combined = _cleanTxns(combined)
     else:
         spend_txns = _cleanTxns(spend_txns)
-        combined = pd.concat([old_txns[old_txns.Date < cutoff], spend_txns])
+        combined = pd.concat(
+            [old_txns[old_txns.Date < cutoff.strftime("%Y-%m-%d")], spend_txns]
+        )
 
     deduped_txns = combined.drop_duplicates(
         subset=config.GLOBAL.IDENTIFIER_COLUMNS, ignore_index=True

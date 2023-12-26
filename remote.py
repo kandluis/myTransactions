@@ -2,11 +2,11 @@ import auth
 import utils
 import config
 import empower
-import pandas as pd  # type: ignore
+import pandas as pd
 import pygsheets  # type: ignore
 import socket
 
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from datetime import date
 
 from typing import (
@@ -229,7 +229,7 @@ def UpdateGoogleSheet(
 
     settings_ws = sheet.worksheet_by_title(title=config.GLOBAL.SETTINGS_SHEET_TITLE)
     # Update with current time.
-    today = datetime.datetime.now(tz=datetime.timezone(-datetime.timedelta(hours=8)))
+    today = datetime.now(tz=timezone(-timedelta(hours=8)))
     today_string = today.strftime("%d-%B-%Y %H:%M:%S %Z")
     hostname = socket.gethostname()
     settings_ws.set_dataframe(pd.DataFrame([today_string, hostname]), "D2")

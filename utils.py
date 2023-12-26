@@ -20,12 +20,6 @@ def ConstructArgumentParser() -> argparse.ArgumentParser:
         help='One of "all", "transactions", or "accounts" to specify what to ' "scrape",
         default="all",
     )
-    parser.add_argument(
-        "--cookies_path",
-        type=str,
-        default=None,
-        help="The location of the cookies file to load and also update.",
-    )
     return parser
 
 
@@ -37,38 +31,33 @@ class ScraperError(Exception):
 
 @dataclass
 class ScraperOptions:
-    """Options on how to scrape mint.
+    """Options on how to scrape Personal Capital.
 
     Properties:
       show_browser: bool, property specifying whether to show the brownser
-      when logging into mint.
+      when logging into PC.
       scrape_transactions: bool. If true, we scrape txns. Default true.
       scrape_accounts: bool, if true, we scrape account data. Default true.
     """
 
     # When true, do all read operations but don't write data to sheets.
-    dry_run: bool = False
-    # When true, browser head is shown. Useful for debugging.
-    show_browser: bool = False
+    dry_run: bool
     # When true, scrape txn data from Mint.
-    scrape_transactions: bool = True
+    scrape_transactions: bool
     # When true, scrape account data from Mint.
-    scrape_accounts: bool = True
-    # Path where we store the chrome session (speed up scraping).
-    session_path: str = os.path.join(os.getcwd(), ".mintapi", "session")
+    scrape_accounts: bool
     # MFA Method to use.
-    mfa_method: TMFAMethod = "sms"
+    mfa_method: TMFAMethod
     # Required when using 'soft-token' method.
-    mfa_token: Optional[str] = None
-    # If set, expects chromedriver to be available in PATH.
-    use_chromedriver_on_path = False
-    # Only used when `use_chromedriver_on_path` is False. If so, this specifies
-    # the directory where the latest version of chromedriver will be downloaded.
-    chromedriver_download_path = os.getcwd()
+    mfa_token: Optional[str]
 
     def __init__(self) -> None:
         """Initialize an options object. Options are the defaults."""
-        pass
+        self.dry_run = False
+        self.scrape_accounts = True
+        self.scrape_transactions = True
+        self.mfa_method = "sms"
+        self.mfa_token = None
 
     @classmethod
     def fromArgsAndEnv(cls, args: argparse.Namespace) -> "ScraperOptions":
@@ -88,20 +77,12 @@ class ScraperOptions:
 
         options = ScraperOptions()
         options.dry_run = args.dry_run
-        options.show_browser = args.debug
         options.scrape_transactions = (
             types.lower() == "all" or types.lower() == "transactions"
         )
         options.scrape_accounts = types.lower() == "all" or types.lower() == "accounts"
 
-        options.session_path = os.getenv("CHROME_SESSION_PATH", options.session_path)
         options.mfa_method = "totp" if os.getenv("MFA_TOKEN") else "sms"
         options.mfa_token = os.getenv("MFA_TOKEN", options.mfa_token)
-        options.use_chromedriver_on_path = os.getenv(
-            "USE_CHROMEDRIVER_ON_PATH", default="False"
-        ).lower() in ["true", "t", "1", "y", "yes"]
-        options.chromedriver_download_path = os.getenv(
-            "CHROMEDRIVER_PATH", options.chromedriver_download_path
-        )
 
         return options

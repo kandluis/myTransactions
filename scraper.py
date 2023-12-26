@@ -19,7 +19,6 @@ def scrape_and_push(
     Args:
       options: Scraper options to use for this run.
       creds: Credentials for logging into Personal Capital and Google Sheets.
-      cookies: Cookies to load, if any.
 
     Returns:
       Personal Capital session.

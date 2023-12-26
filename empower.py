@@ -9,7 +9,7 @@ from dateutil.relativedelta import relativedelta
 from datetime import datetime, date
 
 from constants import TMFAMethod
-from typing import cast, Mapping, Optional, Literal, get_args, TypedDict, Union, Self
+from typing import cast, Mapping, Optional, Literal, get_args, TypedDict, Self
 import logging
 
 
@@ -374,7 +374,7 @@ class TransactionData(TypedDict):
 
 class Response(TypedDict):
     spHeader: SPHeader
-    spData: Union[AccountsData, TransactionData]
+    spData: AccountsData | TransactionData
 
 
 class PersonalCapitalSessionExpiredException(RuntimeError):

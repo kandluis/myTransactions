@@ -9,8 +9,6 @@ First, a `.env` file at the top-level directory needs to exists. It should look 
 ```sh
 ACCOUNT_USERNAME=<TODO>
 PASSWORD=<TODO>
-EMAIL_PASSWORD=<TODO>
-CHROME_DRIVER_PATH=<TODO>  // Defaults to os.getcwd() if not provided.
 MFA_TOKEN=<TODO>
 GOOGLE_SHEETS_CREDENTIALS=<TODO> // The keys.json file for the Google sheets service, as a string.
 ```
@@ -52,15 +50,6 @@ To run the script with these installs, or you can jump into the installed Python
 ```sh
 pipenv shell
 ````
-
-
-## Chrome Driver
-The Chrome driver used is, by default, located in the current working directory of the script. However, for running in Heroku, install the `heroku-buildpack-chromedriver` and `heroku-buildpack-google-chrome` and set the following:
-
-```sh
-CHROMEDRIVER_PATH=/app/.chromedriver/bin
-GOOGLE_CHROME_BIN=/app/.apt/usr/bin/google_chrome
-```
 
 # Type Checking
 
@@ -117,7 +106,7 @@ docker build -t mint_scraper .
 
 Once built, you can test locally by running the image. Note that it might fail due to binary incompatibitlies between the driver versions.
 ```sh
-docker run --env-file=.env -e USE_CHROMEDRIVER_ON_PATH=1 mint_scraper:latest python scraper.py --type='all'
+docker run --env-file=.env -e mint_scraper:latest python scraper.py --type='all'
 ```
 
 ## Debugging
@@ -134,4 +123,4 @@ For the last command, you can replace `mint-scraper-fly` with the name of the ap
 
 # Version
 
-2.0.0
+3.0.0

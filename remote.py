@@ -55,6 +55,14 @@ def _NormalizeMerchant(merchant: str) -> str:
 
 
 def _cleanTxns(txns: pd.DataFrame) -> pd.DataFrame:
+    """Cleans the txns given.
+
+    Args:
+        txns: The txns to clean. A copy is made.
+
+    Returns:
+        The cleaned txns with normalized data.
+    """
     cleaned = txns[:]
     cleaned.Category = cleaned.Category.map(_Normalize)
     cleaned.Merchant = cleaned.Merchant.map(_NormalizeMerchant)
@@ -147,6 +155,7 @@ def RetrieveTransactions(
 
     Args:
       conn: The connection object to the active session.
+      sheet: The sheet object from which to fetch old txns.
 
     Returns:
       A data frame of all transactions.
@@ -213,7 +222,8 @@ def UpdateGoogleSheet(
 
     Args:
       sheet: The sheet containing our transaction analysis and visualization.
-      data: The new, cleaned, raw transaction data to analyze.
+      transactions: The new, cleaned, raw transaction data to analyze.
+      accounts: The new, cleaned, raw accounts.
     """
     if transactions is not None:
         all_transactions_ws = sheet.worksheet_by_title(

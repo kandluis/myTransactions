@@ -30,7 +30,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ['3.9.13']
+        python-version: ['3.12.1']
 
     steps:
       - uses: actions/checkout@v3

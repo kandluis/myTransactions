@@ -553,7 +553,6 @@ class PersonalCapital:
         identify_endpoint = "/api/login/identifyUser"
         identify_data = {"username": email}
         resp = self._api_request("post", identify_endpoint, identify_data)
-        breakpoint()
         self._csrf = resp.get("spHeader", {}).get("csrf")
 
         if resp.get("spHeader", {}).get("authLevel") != "USER_REMEMBERED":

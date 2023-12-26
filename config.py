@@ -1,42 +1,59 @@
-from typing import List, Optional, Text
-
-
 class Config:
     """A class capturing configurable settings for the scraper."""
+
+    COLUMNS: list[str]
+    COLUMN_NAMES: list[str]
+    IDENTIFIER_COLUMNS: list[str]
+    RAW_TRANSACTIONS_TITLE: str
+    RAW_ACCOUNTS_TITLE: str
+    SETTINGS_SHEET_TITLE: str
+    WORKSHEET_TITLE: str
+    CLEAN_UP_OLD_TXNS: bool
+    SKIPPED_ACCOUNTS: list[str]
+    IGNORED_MERCHANTS: list[str]
+    IGNORED_CATEGORIES: list[str]
+    NUM_TXN_FOR_CUTOFF: int
+    PC_MIGRATION_DATE: str
+    IGNORED_TXNS: list[str]
+    MERCHANT_NORMALIZATION: list[str]
+    ACCOUNT_NAME_TO_TYPE_MAP: list[tuple[str, str]]
 
     def __init__(self: "Config") -> None:
         """Initializes the config to the default values.
 
         Properties:
-          CLEAN_UP_OLD_TXNS: If set to true, also cleans up txns already uploaded to
-            sheets.
-          SKIPPED_ACCOUNTS: The account names are to be skipped when uploading to
-            Google Sheets.
           COLUMNS: The column names of the retrieved dataframe return by the
             Personal Capital library.
           COLUMN_NAMES: COLUMN_NAMES[i] is the column name in the Google sheet
             of the corresponding COLUMNs[i]
-          UNIQUE_COLUMNs: These column names are used to uniquely identify txns
+          IDENTIFIER_COLUMNS: These column names are used to uniquely identify txns
             insted of the txn id. This aids in de-duplicating accidentally
             duplicated txns from Mint API.
+
           RAW_SHEET_TITLE: The name of the sheet which contains the raw
             transactions.
           SETTINGS_SHEET_TITLE: The name of the sheet containing the setting
             page.
-          KEYS_FILE: The file path (relative) of the keys to use when using the
-            Google Sheets API
           WORKSHEET_TITLE: The title of the worksheet in Google Drive where
             transactions are uploaded.
+
+          CLEAN_UP_OLD_TXNS: If set to true, also cleans up txns already uploaded to
+            sheets.
+          SKIPPED_ACCOUNTS: The account names are to be skipped when uploading to
+            Google Sheets.
           IGNORED_MERCHANTS: A list of merchants which are filtered out when
             processing transactions.
           IGNORED_CATEGORIES: A list of categories which are filtered out when
             processing transactions.
-          SESSION_PATH: The full path to where Chrome session data can be
-            stored and retrieved from.
-          IMAP_SERVER: The IMAP server to use for MFA using email.
-          WAIT_FOR_ACCOUNT_SYNC: Whether or not to wait for account syncing.
+          NUM_TXN_FOR_CUTOFF: The number of txns to update (if already on sheet).
+          PC_MIGRATION_DATE: Migration date. All TXNs after this date are from PC.
+          IGNORED_TXNS: A list of txns which are filtered out/skiped when uploading.
+
+          MERCHANT_NORMALIZATION: If any merchant includes this in their name is
+            normalized to that value.
+          ACCOUNT_NAME_TO_TYPE_MAP: Maps account names to their type in google sheets.
         """
-        self.COLUMNS: List[Text] = [
+        self.COLUMNS = [
             "transactionDate",
             "merchant",
             "amount",
@@ -45,7 +62,7 @@ class Config:
             "userTransactionId",
             "description",
         ]
-        self.COLUMN_NAMES: List[Text] = [
+        self.COLUMN_NAMES = [
             "Date",
             "Merchant",
             "Amount",
@@ -63,14 +80,13 @@ class Config:
             "Merchant",
         ]
 
-        self.RAW_TRANSACTIONS_TITLE: Text = "Raw - All Transactions"
+        self.RAW_TRANSACTIONS_TITLE = "Raw - All Transactions"
         self.RAW_ACCOUNTS_TITLE = "Raw - All Accounts"
-        self.SETTINGS_SHEET_TITLE: Text = "Settings"
-        self.WORKSHEET_TITLE: Text = "Transactions Worksheet"
+        self.SETTINGS_SHEET_TITLE = "Settings"
+        self.WORKSHEET_TITLE = "Transactions Worksheet"
 
-        self.CLEAN_UP_OLD_TXNS: bool = False
-        # After normalizations.
-        self.SKIPPED_ACCOUNTS: List[Text] = [
+        self.CLEAN_UP_OLD_TXNS = False
+        self.SKIPPED_ACCOUNTS = [
             "Ally Joint Savings",
             "Sofi Savings",
             "Brokerage Ending In 5781",
@@ -84,10 +100,7 @@ class Config:
             "Visa Signature Business",
             "Way2save Savings Ending in 7505",
         ]
-
-        # Paid for Luis' Family's phones are not counted.
-        # Ignore SCPD Payments.
-        self.IGNORED_MERCHANTS: List[Text] = [
+        self.IGNORED_MERCHANTS = [
             "Amzstorecrdpmt Payment",
             "Anita Borg Institute",
             "Chase Autopay",
@@ -118,8 +131,7 @@ class Config:
             "Wealthfront Edi Pymnts",
             "Wealthfront Inc",
         ]
-        # Credit card payments are redundant.
-        self.IGNORED_CATEGORIES: List[Text] = [
+        self.IGNORED_CATEGORIES = [
             "Auto Payment",
             "Buy",
             "Check",
@@ -145,12 +157,9 @@ class Config:
             "Transfer",
             "Transfers",
         ]
-        # We look back these many number of TXNs to identify the start date.
-        self.NUM_TXN_FOR_CUTOFF: int = 300
-        # This was a one-time. All txns after this date are pulled from PC, not mint.
-        self.PC_MIGRATION_DATE: str = "2023-12-08"
-        # Ignore specific transactions.
-        self.IGNORED_TXNS: List[str] = [
+        self.NUM_TXN_FOR_CUTOFF = 300
+        self.PC_MIGRATION_DATE = "2023-12-08"
+        self.IGNORED_TXNS = [
             "75164122_2980191656_0",
             "75164122_2983818168_0",
             "75164122_2993888406_0",
@@ -163,8 +172,8 @@ class Config:
             "75164122_3065157443_0",  # NYC Hotel.
             "75164122_3061064481_0",  # Afrotech.
         ]
-        # If any merchant includes this in their name is normalized to that value.
-        self.MERCHANT_NORMALIZATION: List[str] = [
+
+        self.MERCHANT_NORMALIZATION = [
             "Advisor Autopilot",
             "Airbnb",
             "Amazoncom",
@@ -178,8 +187,6 @@ class Config:
             "Prime Video",
         ]
 
-        self.IMAP_SERVER: Optional[Text] = "imap.gmail.com"
-        self.WAIT_FOR_ACCOUNT_SYNC: bool = True
         self.ACCOUNT_NAME_TO_TYPE_MAP = [
             ("2125 Banita Street", "Real Estate"),
             ("2234 Ralmar Ave", "Real Estate"),

@@ -13,14 +13,12 @@ class Credentials(NamedTuple):
     Properties:
       username: The username associated with the PC account.
       password: The password for the PC account.
-      emailPassword: The password for the email account.
       sheets: The credentials for the service account for Google Sheets.
 
     """
 
     username: str
     password: str
-    emailPassword: str
     sheets: service_account.Credentials
 
 
@@ -57,13 +55,9 @@ def GetCredentials() -> Credentials:
     password = os.getenv("PASSWORD")
     if not password:
         raise utils.ScraperError("Unable to find password from var %s!" % "PASSWORD")
-    emailPassword = os.getenv("EMAIL_PASSWORD")
-    if not emailPassword:
-        raise utils.ScraperError("Unable to find pass from var %s!" % "EMAIL_PASSWORD")
     sheets_creds = _getGoogleCredentials()
     return Credentials(
         username=username,
         password=password,
-        emailPassword=emailPassword,
         sheets=sheets_creds,
     )

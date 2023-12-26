@@ -8,7 +8,6 @@ from typing import Dict, Iterator
 _REQUIRED_ENV_KEYS: Dict[str, str] = {
     "ACCOUNT_USERNAME": "TEST_USERNAME",
     "PASSWORD": "TEST_PASSWORD",
-    "EMAIL_PASSWORD": "TEST_EMAIL_PASSWORD",
     # This needs to be valued JSON.
     "GOOGLE_SHEETS_CREDENTIALS": """{
       "key" : "value",
@@ -43,6 +42,5 @@ def test_credentials_success(env: MonkeyPatch) -> None:
     assert auth.GetCredentials() == auth.Credentials(
         username="TEST_USERNAME",
         password="TEST_PASSWORD",
-        emailPassword="TEST_EMAIL_PASSWORD",
         sheets=None,
     )

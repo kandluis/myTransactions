@@ -18,4 +18,4 @@ kill_timeout = "5s"
   USE_CHROMEDRIVER_ON_PATH = 1
 
 [processes]
-  scraper = "./serve.sh"
+  scraper = "/app/serve.sh"

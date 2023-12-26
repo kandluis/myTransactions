@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 from datetime import date
 
 from constants import TMFAMethod
-from typing import Mapping, Optional, Literal, get_args, TypedDict
+from typing import cast, Mapping, Optional, Literal, get_args, TypedDict, Union
 from typing_extensions import Self
 import logging
 
@@ -129,50 +129,50 @@ class Account(AccountBase, total=False):
     accountProperties: list[int]
     accountRefetchDate: str  # mm/dd/yyyy
     accountType: Literal[
-        "Investment",
         "401K",
-        "ESOP",
         "401K, Former Employer",
-        "Individual Account",
-        "IRA - Roth",
-        "Crypto Currency",
-        "SEP IRA",
+        "529",
+        "Assets",
+        "Business",
+        "Checking",
         "Credit",
-        "Personal",
+        "Crypto Currency",
+        "ESOP",
+        "Individual Account",
+        "Investment",
+        "IRA - Roth",
         "IRA - Traditional",
         "Loan",
         "Mortgage",
-        "529",
-        "Assets",
-        "Checking",
-        "Business",
+        "Personal",
         "Savings",
+        "SEP IRA",
     ]
     accountTypeGroup: Literal[
         "",
         "BANK",
-        "INVESTMENT",
         "CREDIT_CARD",
-        "ESOP",
-        "RETIREMENT",
-        "HEALTH",
-        "MORTGAGE",
         "CRYPTO_CURRENCY",
         "EDUCATIONAL",
+        "ESOP",
+        "HEALTH",
+        "INVESTMENT",
+        "MORTGAGE",
+        "RETIREMENT",
     ]
     accountTypeNew: Literal[
+        "401K",
+        "529",
         "BUSINESS",
         "CHECKING",
+        "CRYPTO_CURRENCY",
+        "ESOP",
+        "HSA",
         "INVESTMENT",
         "IRA",
-        "401K",
-        "SAVINGS",
-        "PERSONAL",
-        "ESOP",
-        "529",
-        "HSA",
         "MORTGAGE",
-        "CRYPTO_CURRENCY",
+        "PERSONAL",
+        "SAVINGS",
     ]
     accountTypeSubtype: Literal["ROTH", "TRADITIONAL", "SEP"]
     accruedInterest: float
@@ -282,9 +282,101 @@ class AccountsData(TypedDict):
     otherLiabilitiesAccountsTotal: float
 
 
+class TransactionBase(TypedDict):
+    accountId: str
+    accountName: str
+    amount: float
+    categoryId: int
+    categoryName: str
+    categoryType: Literal[
+        "UNCATEGORIZE", "INCOME", "EXPENSE", "DEFERRED_COMPENSATION", "TRANSFER"
+    ]
+    currency: Literal["USD"]
+    description: str
+    hasViewed: bool
+    includeInCashManager: bool
+    isCashIn: bool
+    isCashOut: bool
+    isCost: bool
+    isCredit: bool
+    isDuplicate: bool
+    isEditable: bool
+    isIncome: bool
+    isInterest: bool
+    isNew: bool
+    isSpending: bool
+    originalAmount: float
+    originalDescription: str
+    price: float
+    status: Literal["pending", "posted"]
+    transactionDate: str  # yyyy-mm-dd
+    transactionType: Literal[
+        "Account Fee",
+        "Buy",
+        "Capital Gains Reinvest",
+        "Contribution",
+        "Credit",
+        "Deposit Credits",
+        "Dividend Received",
+        "Interest",
+        "LT CG Dist",
+        "Payment",
+        "Purchase",
+        "Refund",
+        "Reinvest Dividend",
+        "ST CG Dist",
+        "Stock Dividend",
+        "Transfer",
+        "Unknown",
+    ]
+    transactionTypeId: int
+    userAccountId: int
+    userTransactionId: int
+    merchantId: str
+
+
+class Transaction(TransactionBase, total=False):
+    cusipNumber: str
+    intermediary: str
+    investmentType: Literal["Transfer", "Dividend", "Buy", "Sell"]
+    merchant: str
+    merchantType: Literal["SUBSCRIPTTION", "OTHERS", "BILLERS"]
+    originalCategoryId: int
+    quantity: float
+    runningBalance: float
+    simpleDescription: str
+    subType: Literal[
+        "CREDIT",
+        "CREDIT_CARD_PAYMENT",
+        "DEPOSIT",
+        "DIRECT_DEPOSIT_SALARY",
+        "INTEREST",
+        "ONLINE_PURCHASE",
+        "PAYMENT",
+        "PURCHASE",
+        "REFUND",
+        "REWARDS",
+        "TRANSFER",
+        "UTILITIES_PAYMENT",
+    ]
+    symbol: int
+
+
+class TransactionData(TypedDict):
+    intervalType: Literal["WEEK"]
+    endDate: str  # yyyy-mm-dd
+    moneyIn: float
+    transactions: list[Transaction]
+    netCashflow: float
+    averageOut: float
+    moneyOut: float
+    startDate: str  # yyyy-mm-dd
+    averageIn: float
+
+
 class Response(TypedDict):
     spHeader: SPHeader
-    spData: AccountsData
+    spData: Union[AccountsData, TransactionData]
 
 
 class PersonalCapitalSessionExpiredException(RuntimeError):
@@ -379,7 +471,7 @@ class PersonalCapital:
         self,
         start_date: datetime.date,
         end_date: datetime.date = date.today() + relativedelta(months=1),
-    ) -> list[dict[str, str]]:
+    ) -> TransactionData:
         resp = self._api_request(
             "post",
             path="/api/transaction/getUserTransactions",
@@ -388,13 +480,12 @@ class PersonalCapital:
                 "endDate": end_date.strftime("%Y-%m-%d"),
             },
         )
-
+        breakpoint()
         return resp["spData"]["transactions"]
 
     def get_account_data(self) -> AccountsData:
         resp = self._api_request("post", "/api/newaccount/getAccounts2")
-        breakpoint()
-        return resp["spData"]
+        return cast(AccountsData, resp["spData"])
 
     def _handle_mfa(self, mfa_method: TMFAMethod, mfa_token: Optional[str]) -> None:
         """Handles MFA.

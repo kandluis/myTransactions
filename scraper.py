@@ -58,7 +58,9 @@ def scrape_and_push(
         )
         print("Sheets update complate!")
     else:
-        print("Dry run successful")
+        latestAccounts.to_csv("accounts.csv")
+        latestTransactions.to_csv("transactions.csv")
+        print("Dry run successful. Output written.")
 
     return connection
 

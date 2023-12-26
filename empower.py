@@ -471,7 +471,10 @@ class PersonalCapital:
     def get_transaction_data(
         self,
         start_date: datetime.date,
-        end_date: datetime.date = date.today() + relativedelta(months=1),
+        end_date: datetime.date = datetime.datetime.now(
+            tz=datetime.timezone(-datetime.timedelta(hours=8))
+        )
+        + relativedelta(months=1),
     ) -> TransactionData:
         resp = self._api_request(
             "post",

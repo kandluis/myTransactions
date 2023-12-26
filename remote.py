@@ -229,7 +229,7 @@ def UpdateGoogleSheet(
 
     settings_ws = sheet.worksheet_by_title(title=config.GLOBAL.SETTINGS_SHEET_TITLE)
     # Update with current time.
-    today = datetime.today()
+    today = datetime.datetime.now(tz=datetime.timezone(-datetime.timedelta(hours=8)))
     today_string = today.strftime("%d-%B-%Y %H:%M:%S %Z")
     hostname = socket.gethostname()
     settings_ws.set_dataframe(pd.DataFrame([today_string, hostname]), "D2")

@@ -120,8 +120,8 @@ def RetrieveAccounts(conn: empower.PersonalCapital) -> pd.DataFrame:
         print("No account type for account with type: %s" % originalType)
         return "Unknown - %s" % (originalType)
 
-    account_data: dict = conn.get_account_data()
-    accounts = account_data["accounts"]
+    accounts_data: empower.AccountsData = conn.get_account_data()
+    accounts = accounts_data["accounts"]
     return pd.DataFrame(
         [
             {

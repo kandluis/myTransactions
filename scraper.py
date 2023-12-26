@@ -3,7 +3,7 @@ import argparse
 import config
 import empower
 import pandas as pd
-import pygsheets  # type: ignore
+import pygsheets
 import remote
 import sys
 import utils

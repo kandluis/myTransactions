@@ -21,6 +21,7 @@ black = "*"
 pandas-stubs = "*"
 types-requests = "*"
 types-python-dateutil = "*"
+google-auth-stubs = "*"
 
 [requires]
 python_version = "3.12.1"

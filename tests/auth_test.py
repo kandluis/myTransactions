@@ -34,13 +34,16 @@ def test_get_credentials_invalid(env: MonkeyPatch) -> None:
 
 
 def test_credentials_success(env: MonkeyPatch) -> None:
+    google_creds = auth.service_account.Credentials(
+        "signer", "service_account_email", "token_uri"
+    )
     env.setattr(
         auth.service_account.Credentials,
         "from_service_account_info",
-        lambda *args, **kwargs: None,
+        lambda *args, **kwargs: google_creds,
     )
     assert auth.GetCredentials() == auth.Credentials(
         username="TEST_USERNAME",
         password="TEST_PASSWORD",
-        sheets=None,
+        sheets=google_creds,
     )

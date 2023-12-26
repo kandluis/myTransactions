@@ -3,7 +3,7 @@ import utils
 import config
 import empower
 import pandas as pd
-import pygsheets  # type: ignore
+import pygsheets
 import socket
 
 from datetime import datetime, timezone, timedelta

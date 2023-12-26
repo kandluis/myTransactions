@@ -2,7 +2,7 @@ import json
 import os
 import utils
 
-from google.oauth2 import service_account  # type: ignore
+from google.oauth2 import service_account
 
 from typing import Dict, NamedTuple
 

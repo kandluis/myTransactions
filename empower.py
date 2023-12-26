@@ -1,4 +1,4 @@
-import mintotp  # type: ignore
+import mintotp
 import requests
 import getpass
 import json

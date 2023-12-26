@@ -45,6 +45,7 @@ class Error(TypedDict, total=False):
 
 
 class SPHeader(SPHeaderBase, total=False):
+    csrf: str
     errors: list[Error]
 
 
@@ -480,8 +481,7 @@ class PersonalCapital:
                 "endDate": end_date.strftime("%Y-%m-%d"),
             },
         )
-        breakpoint()
-        return resp["spData"]["transactions"]
+        return cast(TransactionData, resp["spData"])
 
     def get_account_data(self) -> AccountsData:
         resp = self._api_request("post", "/api/newaccount/getAccounts2")
@@ -543,13 +543,17 @@ class PersonalCapital:
         if mfa_method not in get_args(TMFAMethod):
             raise ValueError(f"Auth method {mfa_method} is not supported")
 
-        self._csrf = re.search(
+        match = re.search(
             "csrf *= *'([-a-z0-9]+)'", self.session.get(PersonalCapital._ROOT_URL).text
-        ).groups()[0]
+        )
+        if match is None:
+            raise RuntimeError("Failed to extract csrf from session")
+        self._csrf = match.groups()[0]
 
         identify_endpoint = "/api/login/identifyUser"
         identify_data = {"username": email}
         resp = self._api_request("post", identify_endpoint, identify_data)
+        breakpoint()
         self._csrf = resp.get("spHeader", {}).get("csrf")
 
         if resp.get("spHeader", {}).get("authLevel") != "USER_REMEMBERED":

@@ -10,6 +10,8 @@ from datetime import datetime
 from datetime import date
 
 from typing import (
+    Any,
+    cast,
     Optional,
 )
 
@@ -120,8 +122,7 @@ def RetrieveAccounts(conn: empower.PersonalCapital) -> pd.DataFrame:
         print("No account type for account with type: %s" % originalType)
         return "Unknown - %s" % (originalType)
 
-    accounts_data: empower.AccountsData = conn.get_account_data()
-    accounts = accounts_data["accounts"]
+    accounts = conn.get_account_data()["accounts"]
     return pd.DataFrame(
         [
             {
@@ -160,8 +161,11 @@ def RetrieveTransactions(
         datetime.strptime(config.GLOBAL.PC_MIGRATION_DATE, "%Y-%m-%d").date(),
     )
     txns = pd.json_normalize(
-        conn.get_transaction_data(
-            start_date=start_date,
+        cast(
+            list[dict[str, Any]],
+            conn.get_transaction_data(
+                start_date=start_date,
+            )["transactions"],
         )
     )
     # Only keep txns from cutoff even if more returned by API.

@@ -4,18 +4,12 @@
 #
 
 app = "mint-scraper"
-primary_region = "sjc"
+primary_region = "sea"
 kill_signal = "SIGINT"
 kill_timeout = "5s"
 
-[experimental]
-  auto_rollback = true
-
 [env]
-  GOOGLE_CHROME_BIN = "/app/.apt/usr/bin/google_chrome"
-  GOOGLE_CHROME_CHANNEL = "beta"
-  PRIMARY_REGION = "sjc"
-  USE_CHROMEDRIVER_ON_PATH = 1
-
+  PRIMARY_REGION = "sea"
+  
 [processes]
   scraper = "/app/serve.sh"

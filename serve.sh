@@ -1,2 +1,2 @@
 #!/bin/bash
-pipenv run python scraper.py --type='all'
+python scraper.py --type='all'

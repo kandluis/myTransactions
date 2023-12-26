@@ -4,11 +4,9 @@ import getpass
 import json
 import re
 import os
-import datetime
-
 
 from dateutil.relativedelta import relativedelta
-from datetime import date
+from datetime import datetime, date
 
 from constants import TMFAMethod
 from typing import cast, Mapping, Optional, Literal, get_args, TypedDict, Union
@@ -470,11 +468,8 @@ class PersonalCapital:
 
     def get_transaction_data(
         self,
-        start_date: datetime.date,
-        end_date: datetime.date = datetime.datetime.now(
-            tz=datetime.timezone(-datetime.timedelta(hours=8))
-        )
-        + relativedelta(months=1),
+        start_date: date,
+        end_date: date = datetime.now() + relativedelta(months=1),
     ) -> TransactionData:
         resp = self._api_request(
             "post",

@@ -2,7 +2,7 @@ import auth
 import argparse
 import config
 import empower
-import pandas as pd  # type: ignore
+import pandas as pd
 import pygsheets  # type: ignore
 import remote
 import sys
@@ -58,8 +58,10 @@ def scrape_and_push(
         )
         print("Sheets update complate!")
     else:
-        latestAccounts.to_csv("accounts.csv")
-        latestTransactions.to_csv("transactions.csv")
+        if latestAccounts:
+            latestAccounts.to_csv("accounts.csv")
+        if latestTransactions:
+            latestTransactions.to_csv("transactions.csv")
         print("Dry run successful. Output written.")
 
     return connection

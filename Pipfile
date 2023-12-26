@@ -7,7 +7,6 @@ name = "pypi"
 pygsheets = "*"
 pandas = "*"
 numpy = "*"
-mintapi = "*"
 mintotp = "*"
 
 [dev-packages]

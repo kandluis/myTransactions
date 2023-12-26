@@ -72,8 +72,7 @@ jobs:
         run: |
           pipenv run pytest --doctest-modules
   deploy:
-    needs: changes
-    if: ${{ needs.changes.outputs.backend == 'true' }}
+    needs: build
     name: Deploy to fly.io
     runs-on: ubuntu-latest
     env:

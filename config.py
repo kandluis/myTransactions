@@ -85,7 +85,7 @@ class Config:
         self.SETTINGS_SHEET_TITLE = "Settings"
         self.WORKSHEET_TITLE = "Transactions Worksheet"
 
-        self.CLEAN_UP_OLD_TXNS = False
+        self.CLEAN_UP_OLD_TXNS = True
         self.SKIPPED_ACCOUNTS = [
             "Ally Joint Savings",
             "Sofi Savings",

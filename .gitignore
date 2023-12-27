@@ -118,3 +118,7 @@ cookies.pkl
 
 # Don't commit binary -- no longer needed.
 chromedriver
+
+# Debug outputs
+accounts.csv
+transactions.csv

@@ -17,7 +17,7 @@ class Config:
     IGNORED_TXNS: list[str]
     MERCHANT_NORMALIZATION: list[str]
     ACCOUNT_NAME_TO_TYPE_MAP: list[tuple[str, str]]
-    MERCHANT_NORMALIZATION: list[tuple[str, str]]
+    MERCHANT_NORMALIZATION_PAIRS: list[tuple[str, str]]
 
     def __init__(self: "Config") -> None:
         """Initializes the config to the default values.

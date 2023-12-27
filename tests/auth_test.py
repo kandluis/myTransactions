@@ -3,47 +3,22 @@ import pytest
 import utils
 from _pytest.monkeypatch import MonkeyPatch
 
-from typing import Dict, Iterator
-
-_REQUIRED_ENV_KEYS: Dict[str, str] = {
-    "ACCOUNT_USERNAME": "TEST_USERNAME",
-    "PASSWORD": "TEST_PASSWORD",
-    # This needs to be valued JSON.
-    "GOOGLE_SHEETS_CREDENTIALS": """{
-      "key" : "value",
-      "key2" : "value2"
-    }""",
-}
+from google.oauth2 import service_account
 
 
-@pytest.fixture()
-def env(monkeypatch: MonkeyPatch) -> Iterator[MonkeyPatch]:
-    """Mocks out a default environment and yields the monkeypatch."""
-    for key, value in _REQUIRED_ENV_KEYS.items():
-        monkeypatch.setenv(key, value)
-
-    yield monkeypatch
-
-
-def test_get_credentials_invalid(env: MonkeyPatch) -> None:
+def test_get_credentials_invalid(test_env: MonkeyPatch) -> None:
     # Delete any of keys raises an error.
-    for key in _REQUIRED_ENV_KEYS:
-        with env.context() as m, pytest.raises(utils.ScraperError):
+    for key in ("ACCOUNT_USERNAME", "PASSWORD", "GOOGLE_SHEETS_CREDENTIALS"):
+        with test_env.context() as m, pytest.raises(utils.ScraperError):
             m.delenv(key)
             auth.GetCredentials()
 
 
-def test_credentials_success(env: MonkeyPatch) -> None:
-    google_creds = auth.service_account.Credentials(
-        "signer", "service_account_email", "token_uri"
-    )
-    env.setattr(
-        auth.service_account.Credentials,
-        "from_service_account_info",
-        lambda *args, **kwargs: google_creds,
-    )
+def test_credentials_success(
+    test_env: MonkeyPatch, test_creds: service_account.Credentials
+) -> None:
     assert auth.GetCredentials() == auth.Credentials(
         username="TEST_USERNAME",
         password="TEST_PASSWORD",
-        sheets=google_creds,
+        sheets=test_creds,
     )

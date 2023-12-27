@@ -5,21 +5,6 @@ import utils
 from _pytest.monkeypatch import MonkeyPatch
 
 
-from typing import Iterator
-
-
-_ENV_VARS = [
-    "MFA_TOKEN",
-]
-
-
-@pytest.fixture()
-def test_env(monkeypatch: MonkeyPatch) -> Iterator[MonkeyPatch]:
-    for envName in _ENV_VARS:
-        monkeypatch.delenv(envName, raising=False)
-    yield monkeypatch
-
-
 def test_scraper_options_failure() -> None:
     parser: argparse.ArgumentParser = utils.ConstructArgumentParser()
     args: argparse.Namespace = parser.parse_args(["--types=invalid"])

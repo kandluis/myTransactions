@@ -467,14 +467,14 @@ class PersonalCapital:
 
     def get_transaction_data(
         self,
-        start_date: date,
+        start_date: Optional[date],
         end_date: date = datetime.now() + relativedelta(months=1),
     ) -> TransactionData:
         resp = self._api_request(
             "post",
             path="/api/transaction/getUserTransactions",
             data={
-                "startDate": start_date.strftime("%Y-%m-%d"),
+                "startDate": start_date.strftime("%Y-%m-%d") if start_date else "",
                 "endDate": end_date.strftime("%Y-%m-%d"),
             },
         )

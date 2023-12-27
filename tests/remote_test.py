@@ -1,9 +1,20 @@
 # We test several internal-only details. Its easier this way.
 import remote
+
+import argparse
+import auth
+import empower
 import pandas as pd
+import pickle
 import pytest
+import utils
+
+from unittest.mock import call
+
+from google.oauth2 import service_account
 
 from _pytest.monkeypatch import MonkeyPatch
+
 
 from typing import Iterator
 
@@ -12,6 +23,18 @@ from typing import Iterator
 def config(monkeypatch: MonkeyPatch) -> Iterator[MonkeyPatch]:
     monkeypatch.setattr(remote.config.GLOBAL, "MERCHANT_NORMALIZATION", [])
     yield monkeypatch
+
+
+@pytest.fixture()
+def txn_response() -> empower.TransactionData:
+    with open("tests/txns.out", "rb") as f:
+        data = pickle.load(f)
+    return data
+
+
+@pytest.fixture()
+def old_txns() -> pd.DataFrame:
+    return pd.read_csv("tests/old_txns.csv")
 
 
 def test_normalize() -> None:
@@ -25,6 +48,9 @@ def test_normalize_merchant(config: MonkeyPatch) -> None:
     assert remote._NormalizeMerchant("wEirD CasES") == "Weird Cases"
     assert remote._NormalizeMerchant("  Extra   Spaces ") == "Extra Spaces"
     assert remote._NormalizeMerchant("Non-#%23&@(%C%*@4)ha$#2%(s") == "Nonchas"
+    assert remote._NormalizeMerchant("aPLpay merchant xxxx") == "Merchant"
+    assert remote._NormalizeMerchant("gGLpay merchant xxxx") == "Merchant"
+    assert remote._NormalizeMerchant("Amzn Mktp MEr424cHant") == "Amazon"
 
     with config.context() as c:
         assert remote._NormalizeMerchant("Normal Merchant") == "Normal Merchant"
@@ -43,7 +69,345 @@ def test_normalize_merchant(config: MonkeyPatch) -> None:
         assert remote._NormalizeMerchant("Chi#$%$#%124potle Tx14x435") == "Chipotle"
 
 
-def test_retrieve_accounts(monkeypatch, mocker) -> None:
+def test_authenticate(
+    mocker, test_env: MonkeyPatch, test_creds: service_account.Credentials
+) -> None:
+    mocker.patch.object(
+        empower.PersonalCapital, "_api_request", return_value=mocker.MagicMock()
+    )
+    parser: argparse.ArgumentParser = utils.ConstructArgumentParser()
+    args = parser.parse_args([])
+    with test_env.context() as env:
+        env.setenv("MFA_TOKEN", "GEZDGNBV")
+        options = utils.ScraperOptions.fromArgsAndEnv(args)
+
+    creds = auth.GetCredentials()
+    remote.Authenticate(creds, options)
+
+
+def test_retrieve_accounts_txns(
+    config: MonkeyPatch, txn_response: pd.DataFrame, old_txns: pd.DataFrame, mocker
+) -> None:
+    mockApi = mocker.MagicMock()
+    mockApi.get_transaction_data.return_value = txn_response
+
+    mockWs = mocker.MagicMock()
+    mockWs.get_as_df.return_value = old_txns
+    mockSheet = mocker.MagicMock()
+    mockSheet.worksheet_by_title.return_value = mockWs
+
+    # Only new txns.
+    with config.context() as c:
+        c.setattr(remote.config.GLOBAL, "PC_MIGRATION_DATE", "1970-01-01")
+        data = remote.RetrieveTransactions(mockApi, mockSheet)
+        compare = data.compare(
+            pd.DataFrame(
+                [
+                    {
+                        "Date": "2023-12-08",
+                        "Merchant": "Alcatraz Cruises",
+                        "Amount": -90.50,
+                        "Category": "Travel",
+                        "Account": "Citi Double Cash Card",
+                        "ID": 13500164302,
+                        "Description": "Alcatraz Cruises",
+                    },
+                    {
+                        "Date": "2023-12-09",
+                        "Merchant": "Waterbar",
+                        "Amount": -64.46,
+                        "Category": "Restaurantsdining",
+                        "Account": "Platinum Card Belinda",
+                        "ID": 13500164328,
+                        "Description": "Waterbar",
+                    },
+                    {
+                        "Date": "2023-12-10",
+                        "Merchant": "Disney Plus",
+                        "Amount": 7.99,
+                        "Category": "Entertainment",
+                        "Account": "Platinum Card Luis",
+                        "ID": 13500164304,
+                        "Description": "Disney Plus",
+                    },
+                    {
+                        "Date": "2023-12-10",
+                        "Merchant": "Whole Foods Market",
+                        "Amount": -65.28,
+                        "Category": "Groceries",
+                        "Account": "Chase Amazon Luis",
+                        "ID": 13568745214,
+                        "Description": "Whole Foods Market",
+                    },
+                    {
+                        "Date": "2023-12-10",
+                        "Merchant": "Taj Campton Psan Francisco Ca",
+                        "Amount": -34.88,
+                        "Category": "Restaurantsdining",
+                        "Account": "Platinum Card Belinda",
+                        "ID": 13500164330,
+                        "Description": "Gglpay Taj Campton Psan Francisco Ca",
+                    },
+                    {
+                        "Date": "2023-12-10",
+                        "Merchant": "Chargepoint",
+                        "Amount": -2.95,
+                        "Category": "Gasolinefuel",
+                        "Account": "Citi Double Cash Card",
+                        "ID": 13507386301,
+                        "Description": "Chargepoint",
+                    },
+                    {
+                        "Date": "2023-12-10",
+                        "Merchant": "Parteaspoon Saratoga San Jose Ca",
+                        "Amount": -6.25,
+                        "Category": "Restaurantsdining",
+                        "Account": "Citi Double Cash Card",
+                        "ID": 13500164298,
+                        "Description": "Parteaspoon Saratoga San Jose Ca",
+                    },
+                    {
+                        "Date": "2023-12-11",
+                        "Merchant": "Walmart",
+                        "Amount": -19.18,
+                        "Category": "General Merchandise",
+                        "Account": "Citi Double Cash Card",
+                        "ID": 13507386299,
+                        "Description": "Walmart",
+                    },
+                    {
+                        "Date": "2023-12-11",
+                        "Merchant": "Chickfila",
+                        "Amount": -6.97,
+                        "Category": "Restaurantsdining",
+                        "Account": "Citi Double Cash Card",
+                        "ID": 13514522240,
+                        "Description": "Chickfila",
+                    },
+                    {
+                        "Date": "2023-12-11",
+                        "Merchant": "Costco",
+                        "Amount": -97.66,
+                        "Category": "General Merchandise",
+                        "Account": "Chase Amazon Luis",
+                        "ID": 13568745207,
+                        "Description": "Costco",
+                    },
+                ]
+            )
+        )
+        assert compare.empty, compare
+
+
+def test_retrieve_accounts_txns_old_and_new_cleanup(
+    config: MonkeyPatch, txn_response: pd.DataFrame, old_txns: pd.DataFrame, mocker
+) -> None:
+    mockApi = mocker.MagicMock()
+    mockApi.get_transaction_data.return_value = txn_response
+
+    mockWs = mocker.MagicMock()
+    mockWs.get_as_df.return_value = old_txns
+    mockSheet = mocker.MagicMock()
+    mockSheet.worksheet_by_title.return_value = mockWs
+
+    # Include both new and old.
+    with config.context() as c:
+        c.setattr(remote.config.GLOBAL, "PC_MIGRATION_DATE", "1970-01-01")
+        c.setattr(remote.config.GLOBAL, "NUM_TXN_FOR_CUTOFF", 0)
+        c.setattr(remote.config.GLOBAL, "CLEAN_UP_OLD_TXNS", True)
+        data = remote.RetrieveTransactions(mockApi, mockSheet)
+        compare = data.compare(
+            pd.DataFrame(
+                [
+                    {
+                        "Date": "2015-09-30",
+                        "Merchant": "Amazon",
+                        "Amount": -9.07,
+                        "Category": "Shopping",
+                        "Account": "Amazon Store Card",
+                        "ID": 799439640,
+                        "Description": "Amazon",
+                    },
+                    {
+                        "Date": "2015-10-04",
+                        "Merchant": "Yogurt Land",
+                        "Amount": -11.92,
+                        "Category": "Business Services",
+                        "Account": "Citi Dividend Miles",
+                        "ID": 799426716,
+                        "Description": "Yogurt Land",
+                    },
+                    {
+                        "Date": "2015-10-04",
+                        "Merchant": "Crimson Services Ma",
+                        "Amount": -10.00,
+                        "Category": "Education",
+                        "Account": "Citi Dividend Miles",
+                        "ID": 799426706,
+                        "Description": "Crimson Services Ma",
+                    },
+                    {
+                        "Date": "2015-10-04",
+                        "Merchant": "Din Tai Fung",
+                        "Amount": -37.00,
+                        "Category": "Restaurants",
+                        "Account": "Citi Dividend Miles",
+                        "ID": 799426710,
+                        "Description": "Din Tai Fung",
+                    },
+                    {
+                        "Date": "2015-10-05",
+                        "Merchant": "Typhoon Streets Asia",
+                        "Amount": -2.00,
+                        "Category": "Restaurants",
+                        "Account": "Citi Dividend Miles",
+                        "ID": 799426669,
+                        "Description": "Typhoon Streets Asia",
+                    },
+                    {
+                        "Date": "2015-10-05",
+                        "Merchant": "Typhoon Streets Asia",
+                        "Amount": -8.40,
+                        "Category": "Restaurants",
+                        "Account": "Citi Dividend Miles",
+                        "ID": 799426720,
+                        "Description": "Typhoon Streets Asia",
+                    },
+                    {
+                        "Date": "2015-10-13",
+                        "Merchant": "Mbta Harvard",
+                        "Amount": -10.00,
+                        "Category": "Public Transportation",
+                        "Account": "Citi Dividend Miles",
+                        "ID": 799426664,
+                        "Description": "Mbta Harvard",
+                    },
+                    {
+                        "Date": "2015-10-16",
+                        "Merchant": "Mbta Harvard",
+                        "Amount": -10.00,
+                        "Category": "Public Transportation",
+                        "Account": "Citi Dividend Miles",
+                        "ID": 799426691,
+                        "Description": "Mbta Harvard",
+                    },
+                    {
+                        "Date": "2015-10-16",
+                        "Merchant": "Cvs",
+                        "Amount": -19.08,
+                        "Category": "Pharmacy",
+                        "Account": "Citi Dividend Miles",
+                        "ID": 799426723,
+                        "Description": "Cvs",
+                    },
+                    {
+                        "Date": "2015-10-20",
+                        "Merchant": "Campus Services",
+                        "Amount": -3.95,
+                        "Category": "Music",
+                        "Account": "Citi Dividend Miles",
+                        "ID": 799426671,
+                        "Description": "Campus Services",
+                    },
+                    {
+                        "Date": "2023-12-08",
+                        "Merchant": "Alcatraz Cruises",
+                        "Amount": -90.50,
+                        "Category": "Travel",
+                        "Account": "Citi Double Cash Card",
+                        "ID": 13500164302,
+                        "Description": "Alcatraz Cruises",
+                    },
+                    {
+                        "Date": "2023-12-09",
+                        "Merchant": "Waterbar",
+                        "Amount": -64.46,
+                        "Category": "Restaurantsdining",
+                        "Account": "Platinum Card Belinda",
+                        "ID": 13500164328,
+                        "Description": "Waterbar",
+                    },
+                    {
+                        "Date": "2023-12-10",
+                        "Merchant": "Disney Plus",
+                        "Amount": 7.99,
+                        "Category": "Entertainment",
+                        "Account": "Platinum Card Luis",
+                        "ID": 13500164304,
+                        "Description": "Disney Plus",
+                    },
+                    {
+                        "Date": "2023-12-10",
+                        "Merchant": "Whole Foods Market",
+                        "Amount": -65.28,
+                        "Category": "Groceries",
+                        "Account": "Chase Amazon Luis",
+                        "ID": 13568745214,
+                        "Description": "Whole Foods Market",
+                    },
+                    {
+                        "Date": "2023-12-10",
+                        "Merchant": "Taj Campton Psan Francisco Ca",
+                        "Amount": -34.88,
+                        "Category": "Restaurantsdining",
+                        "Account": "Platinum Card Belinda",
+                        "ID": 13500164330,
+                        "Description": "Gglpay Taj Campton Psan Francisco Ca",
+                    },
+                    {
+                        "Date": "2023-12-10",
+                        "Merchant": "Chargepoint",
+                        "Amount": -2.95,
+                        "Category": "Gasolinefuel",
+                        "Account": "Citi Double Cash Card",
+                        "ID": 13507386301,
+                        "Description": "Chargepoint",
+                    },
+                    {
+                        "Date": "2023-12-10",
+                        "Merchant": "Parteaspoon Saratoga San Jose Ca",
+                        "Amount": -6.25,
+                        "Category": "Restaurantsdining",
+                        "Account": "Citi Double Cash Card",
+                        "ID": 13500164298,
+                        "Description": "Parteaspoon Saratoga San Jose Ca",
+                    },
+                    {
+                        "Date": "2023-12-11",
+                        "Merchant": "Walmart",
+                        "Amount": -19.18,
+                        "Category": "General Merchandise",
+                        "Account": "Citi Double Cash Card",
+                        "ID": 13507386299,
+                        "Description": "Walmart",
+                    },
+                    {
+                        "Date": "2023-12-11",
+                        "Merchant": "Chickfila",
+                        "Amount": -6.97,
+                        "Category": "Restaurantsdining",
+                        "Account": "Citi Double Cash Card",
+                        "ID": 13514522240,
+                        "Description": "Chickfila",
+                    },
+                    {
+                        "Date": "2023-12-11",
+                        "Merchant": "Costco",
+                        "Amount": -97.66,
+                        "Category": "General Merchandise",
+                        "Account": "Chase Amazon Luis",
+                        "ID": 13568745207,
+                        "Description": "Costco",
+                    },
+                ]
+            )
+        )
+        assert compare.empty, compare
+
+    pass
+
+
+def test_retrieve_accounts(monkeypatch: MonkeyPatch, mocker) -> None:
     _MOCK_ACCOUNTS = {
         "accounts": [
             {
@@ -180,3 +544,65 @@ def test_retrieve_accounts(monkeypatch, mocker) -> None:
         ]
     )
     assert data.compare(expected).empty
+
+
+def test_update_google_sheets(mocker) -> None:
+    with mocker.MagicMock() as mockWs, mocker.MagicMock() as mockSheet:
+        mockSheet.worksheet_by_title.return_value = mockWs
+        remote.UpdateGoogleSheet(mockSheet, transactions=None, accounts=None)
+
+        mockSheet.worksheet_by_title.assert_called_with(
+            title=remote.config.GLOBAL.SETTINGS_SHEET_TITLE
+        )
+        mockWs.set_dataframe.assert_called_once()
+
+
+def test_update_google_sheets_txns(mocker) -> None:
+    with mocker.MagicMock() as mockWs, mocker.MagicMock() as mockSheet:
+        mockSheet.worksheet_by_title.return_value = mockWs
+        remote.UpdateGoogleSheet(
+            mockSheet, transactions=pd.DataFrame(["test"]), accounts=None
+        )
+        mockSheet.worksheet_by_title.assert_has_calls(
+            [
+                call(title=remote.config.GLOBAL.RAW_TRANSACTIONS_TITLE),
+                call(title=remote.config.GLOBAL.SETTINGS_SHEET_TITLE),
+            ],
+            any_order=True,
+        )
+        assert mockWs.set_dataframe.call_count == 2
+
+
+def test_update_google_sheets_accounts(mocker) -> None:
+    with mocker.MagicMock() as mockWs, mocker.MagicMock() as mockSheet:
+        mockSheet.worksheet_by_title.return_value = mockWs
+        remote.UpdateGoogleSheet(
+            mockSheet, transactions=None, accounts=pd.DataFrame(["test"])
+        )
+        mockSheet.worksheet_by_title.assert_has_calls(
+            [
+                call(title=remote.config.GLOBAL.RAW_ACCOUNTS_TITLE),
+                call(title=remote.config.GLOBAL.SETTINGS_SHEET_TITLE),
+            ],
+            any_order=True,
+        )
+        assert mockWs.set_dataframe.call_count == 2
+
+
+def test_update_google_sheets_all(mocker) -> None:
+    with mocker.MagicMock() as mockWs, mocker.MagicMock() as mockSheet:
+        mockSheet.worksheet_by_title.return_value = mockWs
+        remote.UpdateGoogleSheet(
+            mockSheet,
+            transactions=pd.DataFrame(["test2"]),
+            accounts=pd.DataFrame(["test"]),
+        )
+        mockSheet.worksheet_by_title.assert_has_calls(
+            [
+                call(title=remote.config.GLOBAL.RAW_TRANSACTIONS_TITLE),
+                call(title=remote.config.GLOBAL.RAW_ACCOUNTS_TITLE),
+                call(title=remote.config.GLOBAL.SETTINGS_SHEET_TITLE),
+            ],
+            any_order=True,
+        )
+        assert mockWs.set_dataframe.call_count == 3

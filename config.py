@@ -17,6 +17,7 @@ class Config:
     IGNORED_TXNS: list[str]
     MERCHANT_NORMALIZATION: list[str]
     ACCOUNT_NAME_TO_TYPE_MAP: list[tuple[str, str]]
+    MERCHANT_NORMALIZATION: list[tuple[str, str]]
 
     def __init__(self: "Config") -> None:
         """Initializes the config to the default values.
@@ -52,6 +53,7 @@ class Config:
           MERCHANT_NORMALIZATION: If any merchant includes this in their name is
             normalized to that value.
           ACCOUNT_NAME_TO_TYPE_MAP: Maps account names to their type in google sheets.
+          MERCHANT_NORMALIZATION: Names that cleaned up for merchants to disambiguate.
         """
         self.COLUMNS = [
             "transactionDate",
@@ -280,6 +282,25 @@ class Config:
             ("XXXXX6055", "Loan"),
             ("XXXXXX2351", "Loan"),
             ("XXXXXX7338", "Loan"),
+        ]
+
+        self.MERCHANT_NORMALIZATION_PAIRS = [
+            ("Parteaspoon", "teaspoon"),
+            ("Saratoga", ""),
+            ("San Jose", ""),
+            (" Usa", ""),
+            (" Ca", ""),
+            (" Clara", ""),
+            (" Francisco", ""),
+            ("Grubhub", ""),
+            ("Www", ""),
+            ("Los A", ""),
+            ("Osanta", ""),
+            ("Sasanta Cl", ""),
+            (" Arling", ""),
+            ("Nacogdoches Tx", ""),
+            ("Nacogdoc ", ""),
+            ("Nacogdo ", ""),
         ]
 
 

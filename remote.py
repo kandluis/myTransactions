@@ -39,19 +39,35 @@ def _NormalizeMerchant(merchant: str) -> str:
     Returns:
       The normalized merchant.
     """
-    if merchant.lower().startswith("aplpay") or merchant.lower().startswith("gglpay"):
-        merchant = merchant[7:]
-    if merchant.lower().startswith("amzn mktp "):
-        merchant = "Amazon"
-    trimmed = []
-    for ch in merchant:
-        if ch.isalpha() or ch.isspace():
-            trimmed.append(ch)
-    normalized = " ".join("".join(trimmed).lower().replace("xx", "").split()).title()
-    for simpleName in config.GLOBAL.MERCHANT_NORMALIZATION:
-        if simpleName in normalized:
-            return simpleName
-    return normalized
+
+    def normalize(merchant: str) -> str:
+        if merchant.lower().startswith("aplpay") or merchant.lower().startswith(
+            "gglpay"
+        ):
+            merchant = merchant[7:]
+        if merchant.lower().startswith("amzn mktp "):
+            merchant = "Amazon"
+        for src, dst in config.GLOBAL.MERCHANT_NORMALIZATION_PAIRS:
+            merchant = merchant.replace(src, dst)
+        trimmed = []
+        for ch in merchant:
+            if ch.isalpha() or ch.isspace():
+                trimmed.append(ch)
+        normalized = " ".join(
+            "".join(trimmed).lower().replace("xx", "").split()
+        ).title()
+        for simpleName in config.GLOBAL.MERCHANT_NORMALIZATION:
+            if simpleName in normalized:
+                return simpleName
+        return normalized
+
+    # Keep normalizing until stable.
+    changed = True
+    while changed:
+        norm = normalize(merchant)
+        changed = norm != merchant
+        merchant = norm
+    return merchant
 
 
 def _cleanTxns(txns: pd.DataFrame) -> pd.DataFrame:

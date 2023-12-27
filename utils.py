@@ -42,14 +42,16 @@ class ScraperOptions:
 
     # When true, do all read operations but don't write data to sheets.
     dry_run: bool
-    # When true, scrape txn data from Mint.
+    # When true, scrape txn data from Personal Capital.
     scrape_transactions: bool
-    # When true, scrape account data from Mint.
+    # When true, scrape account data from Personal Capital.
     scrape_accounts: bool
     # MFA Method to use.
     mfa_method: TMFAMethod
     # Required when using 'soft-token' method.
     mfa_token: Optional[str]
+    # When true, dump copy of txns locally.
+    debug: bool
 
     def __init__(self) -> None:
         """Initialize an options object. Options are the defaults."""
@@ -58,6 +60,7 @@ class ScraperOptions:
         self.scrape_transactions = True
         self.mfa_method = "sms"
         self.mfa_token = None
+        self.debug = False
 
     @classmethod
     def fromArgsAndEnv(cls, args: argparse.Namespace) -> "ScraperOptions":
@@ -77,6 +80,7 @@ class ScraperOptions:
 
         options = ScraperOptions()
         options.dry_run = args.dry_run
+        options.debug = args.debug
         options.scrape_transactions = (
             types.lower() == "all" or types.lower() == "transactions"
         )

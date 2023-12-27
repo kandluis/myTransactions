@@ -27,12 +27,14 @@ def test_scraper_option_args(test_env: MonkeyPatch) -> None:
     expected = utils.ScraperOptions()
     expected.scrape_accounts = True
     expected.scrape_transactions = False
+    expected.debug = True
     assert utils.ScraperOptions.fromArgsAndEnv(args) == expected
 
     args = parser.parse_args(["--types=transactions", "--debug"])
     expected = utils.ScraperOptions()
     expected.scrape_accounts = False
     expected.scrape_transactions = True
+    expected.debug = True
     assert utils.ScraperOptions.fromArgsAndEnv(args) == expected
 
     del test_env
@@ -43,7 +45,7 @@ def test_scraper_option_env(test_env: MonkeyPatch) -> None:
     args = parser.parse_args([])
 
     with test_env.context() as env:
-        env.setenv("MFA_TOKEN", "12345")
+        env.setenv("MFA_TOKEN", "GEZDGNBV")
         options = utils.ScraperOptions.fromArgsAndEnv(args)
         assert options.mfa_method == "totp"
-        assert options.mfa_token == "12345"
+        assert options.mfa_token == "GEZDGNBV"

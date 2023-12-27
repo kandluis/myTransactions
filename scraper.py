@@ -50,26 +50,24 @@ def scrape_and_push(
         else None
     )
 
-    print("Retrieval complete. Uploading to sheets...")
+    print(f"Retrieval complete.{'' if options.dry_run else 'Uploading to sheets...'}")
     if not options.dry_run:
         remote.UpdateGoogleSheet(
             sheet=sheet, transactions=latestTransactions, accounts=latestAccounts
         )
         print("Sheets update complate!")
-    else:
-        if latestAccounts:
-            latestAccounts.to_csv("accounts.csv")
-        if latestTransactions:
-            latestTransactions.to_csv("transactions.csv")
-        print("Dry run successful. Output written.")
+    if latestAccounts is not None and options.debug:
+        latestAccounts.to_csv("accounts.csv")
+    if latestTransactions is not None and options.debug:
+        latestTransactions.to_csv("transactions.csv")
 
     return connection
 
 
-def main() -> None:
+def main(argv=None) -> None:
     """Main function for the script."""
     parser: argparse.ArgumentParser = utils.ConstructArgumentParser()
-    args: argparse.Namespace = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args(argv)
     options = utils.ScraperOptions.fromArgsAndEnv(args)
     creds: auth.Credentials = auth.GetCredentials()
 

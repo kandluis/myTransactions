@@ -3,13 +3,12 @@ import remote
 
 import argparse
 import auth
-import empower
 import pandas as pd
-import pickle
 import pytest
 import utils
 
-from unittest.mock import call
+
+from unittest.mock import call, MagicMock
 
 from google.oauth2 import service_account
 
@@ -23,18 +22,6 @@ from typing import Iterator
 def config(monkeypatch: MonkeyPatch) -> Iterator[MonkeyPatch]:
     monkeypatch.setattr(remote.config.GLOBAL, "MERCHANT_NORMALIZATION", [])
     yield monkeypatch
-
-
-@pytest.fixture()
-def txn_response() -> empower.TransactionData:
-    with open("tests/txns.out", "rb") as f:
-        data = pickle.load(f)
-    return data
-
-
-@pytest.fixture()
-def old_txns() -> pd.DataFrame:
-    return pd.read_csv("tests/old_txns.csv")
 
 
 def test_normalize() -> None:
@@ -72,9 +59,6 @@ def test_normalize_merchant(config: MonkeyPatch) -> None:
 def test_authenticate(
     mocker, test_env: MonkeyPatch, test_creds: service_account.Credentials
 ) -> None:
-    mocker.patch.object(
-        empower.PersonalCapital, "_api_request", return_value=mocker.MagicMock()
-    )
     parser: argparse.ArgumentParser = utils.ConstructArgumentParser()
     args = parser.parse_args([])
     with test_env.context() as env:
@@ -82,20 +66,14 @@ def test_authenticate(
         options = utils.ScraperOptions.fromArgsAndEnv(args)
 
     creds = auth.GetCredentials()
-    remote.Authenticate(creds, options)
+    conn = remote.Authenticate(creds, options)
+
+    assert conn.is_logged_in()
 
 
 def test_retrieve_accounts_txns(
-    config: MonkeyPatch, txn_response: pd.DataFrame, old_txns: pd.DataFrame, mocker
+    config: MonkeyPatch, mockApi: MagicMock, mockSheet: MagicMock
 ) -> None:
-    mockApi = mocker.MagicMock()
-    mockApi.get_transaction_data.return_value = txn_response
-
-    mockWs = mocker.MagicMock()
-    mockWs.get_as_df.return_value = old_txns
-    mockSheet = mocker.MagicMock()
-    mockSheet.worksheet_by_title.return_value = mockWs
-
     # Only new txns.
     with config.context() as c:
         c.setattr(remote.config.GLOBAL, "PC_MIGRATION_DATE", "1970-01-01")
@@ -200,16 +178,8 @@ def test_retrieve_accounts_txns(
 
 
 def test_retrieve_accounts_txns_old_and_new_cleanup(
-    config: MonkeyPatch, txn_response: pd.DataFrame, old_txns: pd.DataFrame, mocker
+    config: MonkeyPatch, mockApi: MagicMock, mockSheet: MagicMock
 ) -> None:
-    mockApi = mocker.MagicMock()
-    mockApi.get_transaction_data.return_value = txn_response
-
-    mockWs = mocker.MagicMock()
-    mockWs.get_as_df.return_value = old_txns
-    mockSheet = mocker.MagicMock()
-    mockSheet.worksheet_by_title.return_value = mockWs
-
     # Include both new and old.
     with config.context() as c:
         c.setattr(remote.config.GLOBAL, "PC_MIGRATION_DATE", "1970-01-01")
@@ -407,66 +377,9 @@ def test_retrieve_accounts_txns_old_and_new_cleanup(
     pass
 
 
-def test_retrieve_accounts(monkeypatch: MonkeyPatch, mocker) -> None:
-    _MOCK_ACCOUNTS = {
-        "accounts": [
-            {
-                "name": "Amazon Store Card",
-                "balance": 0.0,
-                "closedDate": "",
-                "accountType": "Credit",
-            },
-            {
-                "name": "Amazon Store",
-                "balance": 40723.74,
-                "closedDate": "",
-                "accountType": "Credit",
-            },
-            {
-                "name": "Investment_101",
-                "balance": 17950.9,
-                "closedDate": "",
-                "accountType": "Stock",
-            },
-            {
-                "name": "Roth IRA",
-                "balance": 32873.9,
-                "closedDate": "",
-                "accountType": "Roth",
-            },
-            {
-                "name": "LendingClub",
-                "balance": 957.39,
-                "closedDate": "",
-                "accountType": "Loan",
-            },
-            # Will be dropped because it's not active.
-            {
-                "name": "GOOGLE INC.",
-                "balance": 58447.76,
-                "closedDate": "2022-10-01",
-                "accountType": "Stock",
-            },
-            {
-                "name": "Brokerage Account",
-                "balance": 0.0,
-                "closedDate": "",
-                "accountType": "Stock",
-            },
-            {
-                "name": "Brokerage Account - Luis",
-                "balance": 0.0,
-                "closedDate": "",
-                "accountType": "Stock",
-            },
-            {
-                "name": "Traditional IRA",
-                "balance": 0.0,
-                "closedDate": "",
-                "accountType": "IRA",
-            },
-        ]
-    }
+def test_retrieve_accounts(
+    monkeypatch: MonkeyPatch, mockApi: MagicMock, mocker
+) -> None:
     # We should match more specific to least specific.
     monkeypatch.setattr(
         remote.config.GLOBAL,
@@ -485,8 +398,6 @@ def test_retrieve_accounts(monkeypatch: MonkeyPatch, mocker) -> None:
             # (Traditional, Other)
         ],
     )
-    mockApi = mocker.MagicMock()
-    mockApi.get_account_data.return_value = _MOCK_ACCOUNTS
 
     data = remote.RetrieveAccounts(mockApi)
     data.sort_values(by=["Name"], inplace=True, ignore_index=True)

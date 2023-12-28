@@ -37,7 +37,7 @@ def test_normalize_merchant(config: MonkeyPatch) -> None:
     assert remote._NormalizeMerchant("Non-#%23&@(%C%*@4)ha$#2%(s") == "Nonchas"
     assert remote._NormalizeMerchant("aPLpay merchant xxxx") == "Merchant"
     assert remote._NormalizeMerchant("gGLpay merchant xxxx") == "Merchant"
-    assert remote._NormalizeMerchant("Amzn Mktp MEr424cHant") == "Amazon"
+    assert remote._NormalizeMerchant("Amzn Mktp MEr424cHant") == "Amazon Merchant"
 
     with config.context() as c:
         assert remote._NormalizeMerchant("Normal Merchant") == "Normal Merchant"
@@ -119,7 +119,7 @@ def test_retrieve_accounts_txns(
                     },
                     {
                         "Date": "2023-12-10",
-                        "Merchant": "Taj Campton Psan Francisco Ca",
+                        "Merchant": "Taj Campton Psan Francisco",
                         "Amount": -34.88,
                         "Category": "Restaurantsdining",
                         "Account": "Platinum Card Belinda",
@@ -137,7 +137,7 @@ def test_retrieve_accounts_txns(
                     },
                     {
                         "Date": "2023-12-10",
-                        "Merchant": "Parteaspoon Saratoga San Jose Ca",
+                        "Merchant": "Parteaspoon",
                         "Amount": -6.25,
                         "Category": "Restaurantsdining",
                         "Account": "Citi Double Cash Card",
@@ -317,7 +317,7 @@ def test_retrieve_accounts_txns_old_and_new_cleanup(
                     },
                     {
                         "Date": "2023-12-10",
-                        "Merchant": "Taj Campton Psan Francisco Ca",
+                        "Merchant": "Taj Campton Psan Francisco",
                         "Amount": -34.88,
                         "Category": "Restaurantsdining",
                         "Account": "Platinum Card Belinda",
@@ -335,7 +335,7 @@ def test_retrieve_accounts_txns_old_and_new_cleanup(
                     },
                     {
                         "Date": "2023-12-10",
-                        "Merchant": "Parteaspoon Saratoga San Jose Ca",
+                        "Merchant": "Parteaspoon",
                         "Amount": -6.25,
                         "Category": "Restaurantsdining",
                         "Account": "Citi Double Cash Card",

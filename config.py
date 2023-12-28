@@ -18,6 +18,8 @@ class Config:
     MERCHANT_NORMALIZATION: list[str]
     ACCOUNT_NAME_TO_TYPE_MAP: list[tuple[str, str]]
     MERCHANT_NORMALIZATION_PAIRS: list[tuple[str, str]]
+    STARTS_WITH_REMOVAL: list[str]
+    ENDS_WITH_REMOVAL: list[str]
 
     def __init__(self: "Config") -> None:
         """Initializes the config to the default values.
@@ -53,7 +55,9 @@ class Config:
           MERCHANT_NORMALIZATION: If any merchant includes this in their name is
             normalized to that value.
           ACCOUNT_NAME_TO_TYPE_MAP: Maps account names to their type in google sheets.
-          MERCHANT_NORMALIZATION: Names that cleaned up for merchants to disambiguate.
+          MERCHANT_NORMALIZATION_PAIRS: Names that cleaned up for merchants to disambiguate.
+          STARTS_WITH_REMOVAL: If merchnt starts with this, remove the prefix.
+          ENDS_WITH_REMOVAL: If merchands ends with this, remove the suffix.
         """
         self.COLUMNS = [
             "transactionDate",
@@ -178,15 +182,55 @@ class Config:
         self.MERCHANT_NORMALIZATION = [
             "Advisor Autopilot",
             "Airbnb",
+            "Amazon",
             "Amazoncom",
             "Attbill",
             "Audiblecom",
             "Blueapron",
             "C T Wok",
+            "Chevron",
+            "Chickfila",
+            "Circle K",
+            "Comcast",
+            "Costco",
+            "Disney Plus",
+            "Dollar Tree",
             "Doordash",
+            "Durham Sister",
+            "Eonmobil",
+            "Five Guys",
+            "Groupon",
+            "Happy Lamb",
+            "Hertz",
+            "In N Out",
+            "Instacart",
+            "Kura Revolving",
             "Life Alive",
+            "Lucky",
+            "Marina Food",
+            "Mcdonalds",
             "Membership Fee",
+            "Mod Pizza",
+            "Onemedgoogle",
+            "Palo Alto Gas",
+            "Panda Express",
+            "Panera Bread",
             "Prime Video",
+            "Primepantry",
+            "Starbucks",
+            "Steam",
+            "Super Yummy",
+            "Sweetgreen",
+            "Tancha",
+            "Target",
+            "Teaspoon",
+            "Temucom",
+            "The Body Shop",
+            "The City Fish",
+            "Uscustoms",
+            "Walgreen",
+            "Walmart",
+            "Whole Foods",
         ]
 
         self.ACCOUNT_NAME_TO_TYPE_MAP = [
@@ -285,22 +329,30 @@ class Config:
         ]
 
         self.MERCHANT_NORMALIZATION_PAIRS = [
-            ("Parteaspoon", "teaspoon"),
-            ("Saratoga", ""),
-            ("San Jose", ""),
-            (" Usa", ""),
-            (" Ca", ""),
-            (" Clara", ""),
-            (" Francisco", ""),
-            ("Grubhub", ""),
-            ("Www", ""),
-            ("Los A", ""),
-            ("Osanta", ""),
-            ("Sasanta Cl", ""),
-            (" Arling", ""),
+            ("Amazoncom", "Amazon"),
+            ("combill", ""),
+            ("Grubhub ", ""),
             ("Nacogdoches Tx", ""),
-            ("Nacogdoc ", ""),
-            ("Nacogdo ", ""),
+            ("San Jose", ""),
+            ("Saratoga", ""),
+            ("Walmartcom", "Walmart"),
+            ("Www", ""),
+            ("Wholefds", "Whole Foods Market"),
+            ("Elis I", "Elis"),
+            ("Elis N", "Elis"),
+            ("Targetcom", "Target"),
+            ("Parteaspoon", "Teaspoon")
+        ]
+        self.STARTS_WITH_REMOVAL = [
+            "aplpay ",
+            "gglpay ",
+            "Tst ",
+            "Square ",
+            "Squ ",
+            "Sq ",
+        ]
+        self.ENDS_WITH_REMOVAL = [
+          " Ca",
         ]
 
 

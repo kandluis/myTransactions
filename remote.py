@@ -41,32 +41,35 @@ def _NormalizeMerchant(merchant: str) -> str:
     """
 
     def normalize(merchant: str) -> str:
-        if merchant.lower().startswith("aplpay") or merchant.lower().startswith(
-            "gglpay"
-        ):
-            merchant = merchant[7:]
-        if merchant.lower().startswith("amzn mktp "):
-            merchant = "Amazon"
+        merchant = merchant.lower()
+        for prefix in config.GLOBAL.STARTS_WITH_REMOVAL:
+            if merchant.startswith(prefix.lower()):
+                merchant = merchant[len(prefix) :]
+        if merchant.startswith("amzn mktp "):
+            merchant = f"Amazon {merchant[10:]}"
+        for suffix in config.GLOBAL.ENDS_WITH_REMOVAL:
+            if merchant.endswith(suffix.lower()):
+                merchant = merchant[:len(merchant) - len(suffix)]
         for src, dst in config.GLOBAL.MERCHANT_NORMALIZATION_PAIRS:
-            merchant = merchant.replace(src, dst)
+            merchant = merchant.replace(src.lower(), dst.lower())
         trimmed = []
         for ch in merchant:
             if ch.isalpha() or ch.isspace():
                 trimmed.append(ch)
-        normalized = " ".join(
-            "".join(trimmed).lower().replace("xx", "").split()
-        ).title()
+        normalized = " ".join("".join(trimmed).replace("xx", "").split()).title()
         for simpleName in config.GLOBAL.MERCHANT_NORMALIZATION:
-            if simpleName in normalized:
+            if simpleName.lower() in normalized.lower():
                 return simpleName
         return normalized
 
-    # Keep normalizing until stable.
-    changed = True
-    while changed:
+    # Keep normalizing until stable or if we'll end up empty.
+    maxGoes = 30
+    while maxGoes > 0:
         norm = normalize(merchant)
-        changed = norm != merchant
+        maxGoes = 0 if norm == merchant or len(norm) > 0 else maxGoes - 1
         merchant = norm
+        if maxGoes > 0 and maxGoes < 5:
+            print(f"Might enter a cycle with {merchant}")
     return merchant
 
 

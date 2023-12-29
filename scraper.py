@@ -50,7 +50,7 @@ def scrape_and_push(
         else None
     )
 
-    print(f"Retrieval complete.{'' if options.dry_run else 'Uploading to sheets...'}")
+    print(f"Retrieval complete.{'' if options.dry_run else ' Uploading to sheets...'}")
     if not options.dry_run:
         remote.UpdateGoogleSheet(
             sheet=sheet, transactions=latestTransactions, accounts=latestAccounts

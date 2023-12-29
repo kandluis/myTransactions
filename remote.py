@@ -26,7 +26,7 @@ def _Normalize(value: str) -> str:
       The normalized str.
     """
     return " ".join(
-        "".join(ch for ch in value if ch.isalnum() or ch.isspace()).split()
+        "".join(ch for ch in value if ch.isalnum() or ch.isspace() or ch in ('/')).split()
     ).title()
 
 

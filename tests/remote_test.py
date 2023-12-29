@@ -27,7 +27,7 @@ def config(monkeypatch: MonkeyPatch) -> Iterator[MonkeyPatch]:
 def test_normalize() -> None:
     assert remote._Normalize("Title String 123") == "Title String 123"
     assert remote._Normalize("title string 123") == "Title String 123"
-    assert remote._Normalize("T$it^&le str90/4ing 123") == "Title Str904Ing 123"
+    assert remote._Normalize("T$it^&le str90/4ing 123") == "Title Str90/4Ing 123"
 
 
 def test_normalize_merchant(config: MonkeyPatch) -> None:
@@ -94,7 +94,7 @@ def test_retrieve_accounts_txns(
                         "Date": "2023-12-09",
                         "Merchant": "Waterbar",
                         "Amount": -64.46,
-                        "Category": "Restaurantsdining",
+                        "Category": "Restaurants/Dining",
                         "Account": "Platinum Card Belinda",
                         "ID": 13500164328,
                         "Description": "Waterbar",
@@ -121,7 +121,7 @@ def test_retrieve_accounts_txns(
                         "Date": "2023-12-10",
                         "Merchant": "Taj Campton Psan Francisco",
                         "Amount": -34.88,
-                        "Category": "Restaurantsdining",
+                        "Category": "Restaurants/Dining",
                         "Account": "Platinum Card Belinda",
                         "ID": 13500164330,
                         "Description": "Gglpay Taj Campton Psan Francisco Ca",
@@ -130,7 +130,7 @@ def test_retrieve_accounts_txns(
                         "Date": "2023-12-10",
                         "Merchant": "Chargepoint",
                         "Amount": -2.95,
-                        "Category": "Gasolinefuel",
+                        "Category": "Gasoline/Fuel",
                         "Account": "Citi Double Cash Card",
                         "ID": 13507386301,
                         "Description": "Chargepoint",
@@ -139,7 +139,7 @@ def test_retrieve_accounts_txns(
                         "Date": "2023-12-10",
                         "Merchant": "Parteaspoon",
                         "Amount": -6.25,
-                        "Category": "Restaurantsdining",
+                        "Category": "Restaurants/Dining",
                         "Account": "Citi Double Cash Card",
                         "ID": 13500164298,
                         "Description": "Parteaspoon Saratoga San Jose Ca",
@@ -157,7 +157,7 @@ def test_retrieve_accounts_txns(
                         "Date": "2023-12-11",
                         "Merchant": "Chickfila",
                         "Amount": -6.97,
-                        "Category": "Restaurantsdining",
+                        "Category": "Restaurants/Dining",
                         "Account": "Citi Double Cash Card",
                         "ID": 13514522240,
                         "Description": "Chickfila",
@@ -292,7 +292,7 @@ def test_retrieve_accounts_txns_old_and_new_cleanup(
                         "Date": "2023-12-09",
                         "Merchant": "Waterbar",
                         "Amount": -64.46,
-                        "Category": "Restaurantsdining",
+                        "Category": "Restaurants/Dining",
                         "Account": "Platinum Card Belinda",
                         "ID": 13500164328,
                         "Description": "Waterbar",
@@ -319,7 +319,7 @@ def test_retrieve_accounts_txns_old_and_new_cleanup(
                         "Date": "2023-12-10",
                         "Merchant": "Taj Campton Psan Francisco",
                         "Amount": -34.88,
-                        "Category": "Restaurantsdining",
+                        "Category": "Restaurants/Dining",
                         "Account": "Platinum Card Belinda",
                         "ID": 13500164330,
                         "Description": "Gglpay Taj Campton Psan Francisco Ca",
@@ -328,7 +328,7 @@ def test_retrieve_accounts_txns_old_and_new_cleanup(
                         "Date": "2023-12-10",
                         "Merchant": "Chargepoint",
                         "Amount": -2.95,
-                        "Category": "Gasolinefuel",
+                        "Category": "Gasoline/Fuel",
                         "Account": "Citi Double Cash Card",
                         "ID": 13507386301,
                         "Description": "Chargepoint",
@@ -337,7 +337,7 @@ def test_retrieve_accounts_txns_old_and_new_cleanup(
                         "Date": "2023-12-10",
                         "Merchant": "Parteaspoon",
                         "Amount": -6.25,
-                        "Category": "Restaurantsdining",
+                        "Category": "Restaurants/Dining",
                         "Account": "Citi Double Cash Card",
                         "ID": 13500164298,
                         "Description": "Parteaspoon Saratoga San Jose Ca",
@@ -355,7 +355,7 @@ def test_retrieve_accounts_txns_old_and_new_cleanup(
                         "Date": "2023-12-11",
                         "Merchant": "Chickfila",
                         "Amount": -6.97,
-                        "Category": "Restaurantsdining",
+                        "Category": "Restaurants/Dining",
                         "Account": "Citi Double Cash Card",
                         "ID": 13514522240,
                         "Description": "Chickfila",

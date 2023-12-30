@@ -26,7 +26,9 @@ def _Normalize(value: str) -> str:
       The normalized str.
     """
     return " ".join(
-        "".join(ch for ch in value if ch.isalnum() or ch.isspace() or ch in ('/')).split()
+        "".join(
+            ch for ch in value if ch.isalnum() or ch.isspace() or ch in ("/")
+        ).split()
     ).title()
 
 
@@ -49,7 +51,7 @@ def _NormalizeMerchant(merchant: str) -> str:
             merchant = f"Amazon {merchant[10:]}"
         for suffix in config.GLOBAL.ENDS_WITH_REMOVAL:
             if merchant.endswith(suffix.lower()):
-                merchant = merchant[:len(merchant) - len(suffix)]
+                merchant = merchant[: len(merchant) - len(suffix)]
         for src, dst in config.GLOBAL.MERCHANT_NORMALIZATION_PAIRS:
             merchant = merchant.replace(src.lower(), dst.lower())
         trimmed = []

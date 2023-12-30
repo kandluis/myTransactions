@@ -341,7 +341,7 @@ class Config:
             ("Elis I", "Elis"),
             ("Elis N", "Elis"),
             ("Targetcom", "Target"),
-            ("Parteaspoon", "Teaspoon")
+            ("Parteaspoon", "Teaspoon"),
         ]
         self.STARTS_WITH_REMOVAL = [
             "aplpay ",
@@ -352,7 +352,7 @@ class Config:
             "Sq ",
         ]
         self.ENDS_WITH_REMOVAL = [
-          " Ca",
+            " Ca",
         ]
 
 

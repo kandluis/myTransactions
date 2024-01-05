@@ -116,6 +116,7 @@ class Config:
             "Citi Autopay Payment We",
             "Citi Autopay Web",
             "City Of Nacogdoc",
+            "City Of Greensboro",
             "Fairway Independent Mortgage Corp",
             "Federal Tax",
             "Foremost",

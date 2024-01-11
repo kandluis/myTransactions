@@ -125,6 +125,7 @@ class Config:
             "Higher One Cornellu",
             "Internet Transfer From Interest Checking Account",
             "Lendingclub Bank",
+            "Palo Alto Park Mutual Water Co",
             "Preferred Item",
             "Project Fi",
             "Rental Income",

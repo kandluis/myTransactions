@@ -94,7 +94,6 @@ class Config:
         self.CLEAN_UP_OLD_TXNS = True
         self.SKIPPED_ACCOUNTS = [
             "Ally Joint Savings",
-            "Sofi Savings",
             "Brokerage Ending In 5781",
             "CapitalOne Business Checking",
             "CapitalOne Business Savings Account",
@@ -103,6 +102,8 @@ class Config:
             "Fidelity Meta Platforms Inc 401K Plan",
             "Hsa Belinda",
             "Lending Account",
+            "Sofi Savings",
+            "Spark Cash Select Ending In 0527",
             "Visa Signature Business",
             "Way2save Savings Ending in 7505",
         ]
@@ -236,12 +237,13 @@ class Config:
         ]
 
         self.ACCOUNT_NAME_TO_TYPE_MAP = [
-            ("2125 Banita Street", "Real Estate"),
-            ("2234 Ralmar Ave", "Real Estate"),
+            ("2125 Banita St", "Real Estate"),
+            ("2234 Ralmar", "Real Estate"),
             ("401(K) SAVINGS PLAN", "Restricted Stock"),
             ("46 Barcelona St", "Real Estate"),
             ("529 College Plan", "Restricted Stock"),
-            ("610-4 Pisgah Church Rd", "Real Estate"),
+            ("610-4 Pisgah Church", "Real Estate"),
+            ("610 Pisgah Church", "Real Estate"),
             ("Acorns", "Stock"),
             ("Ally", "Cash"),
             ("Amazon Prime", "Credit"),

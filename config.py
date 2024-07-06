@@ -238,11 +238,14 @@ class Config:
         ]
 
         self.ACCOUNT_NAME_TO_TYPE_MAP = [
+            ("2125 Banita St", "Real Estate"),
             ("2125 Banita Street", "Real Estate"),
             ("2234 Ralmar Ave", "Real Estate"),
+            ("2234 Ralmar", "Real Estate"),
             ("401(K) SAVINGS PLAN", "Restricted Stock"),
             ("46 Barcelona St", "Real Estate"),
             ("529 College Plan", "Restricted Stock"),
+            ("610 Pisgah Church #4", "Real Estate"),
             ("610-4 Pisgah Church Rd", "Real Estate"),
             ("Acorns", "Stock"),
             ("Ally", "Cash"),
@@ -301,6 +304,7 @@ class Config:
             ("Meta Schwab Stock Awards", "Stock"),
             ("Metamask", "Crypto"),
             ("Mr Cooper - Loan - Ending in 6055", "Loan"),
+            ("My Hawaiianmiles - Ending in 1643", "Credit"),
             ("Other Property", "Cash"),
             ("Preferred", "Credit"),
             ("Property", "Real Estate"),

@@ -93,6 +93,7 @@ class Config:
 
         self.CLEAN_UP_OLD_TXNS = True
         self.SKIPPED_ACCOUNTS = [
+            "360 Checking Ending In 8812",
             "Ally Joint Savings",
             "Brokerage Ending In 5781",
             "CapitalOne Business Checking",
@@ -102,6 +103,7 @@ class Config:
             "Fidelity Meta Platforms Inc 401K Plan",
             "Hsa Belinda",
             "Lending Account",
+            "Smartly Card Ending In 3855",
             "Sofi Savings",
             "Spark Cash Select Ending In 0527",
             "Visa Signature Business",

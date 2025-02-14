@@ -16,6 +16,33 @@ from typing import (
 )
 
 
+def _trim(merchant: str) -> str:
+    trimmed = []
+    for ch in merchant:
+        if ch.isalpha() or ch.isspace():
+            trimmed.append(ch)
+    return " ".join("".join(trimmed).replace("xx", "").split()).title()
+
+
+def _normalize(merchant: str) -> str:
+    merchant = merchant.lower()
+    for prefix in config.GLOBAL.STARTS_WITH_REMOVAL:
+        if merchant.startswith(prefix.lower()):
+            merchant = merchant[len(prefix):]
+    if merchant.startswith("amzn mktp "):
+        merchant = f"Amazon {merchant[10:]}"
+    for suffix in config.GLOBAL.ENDS_WITH_REMOVAL:
+        if merchant.endswith(suffix.lower()):
+            merchant = merchant[: len(merchant) - len(suffix)]
+    for src, dst in config.GLOBAL.MERCHANT_NORMALIZATION_PAIRS:
+        merchant = merchant.replace(src.lower(), dst.lower())
+    normalized = _trim(merchant)
+    for simpleName in config.GLOBAL.MERCHANT_NORMALIZATION:
+        if simpleName.lower() in normalized.lower():
+            return simpleName
+    return normalized
+
+
 def _Normalize(value: str) -> str:
     """Normalizes the str value
 
@@ -41,34 +68,11 @@ def _NormalizeMerchant(merchant: str) -> str:
     Returns:
       The normalized merchant.
     """
-
-    def normalize(merchant: str) -> str:
-        merchant = merchant.lower()
-        for prefix in config.GLOBAL.STARTS_WITH_REMOVAL:
-            if merchant.startswith(prefix.lower()):
-                merchant = merchant[len(prefix) :]
-        if merchant.startswith("amzn mktp "):
-            merchant = f"Amazon {merchant[10:]}"
-        for suffix in config.GLOBAL.ENDS_WITH_REMOVAL:
-            if merchant.endswith(suffix.lower()):
-                merchant = merchant[: len(merchant) - len(suffix)]
-        for src, dst in config.GLOBAL.MERCHANT_NORMALIZATION_PAIRS:
-            merchant = merchant.replace(src.lower(), dst.lower())
-        trimmed = []
-        for ch in merchant:
-            if ch.isalpha() or ch.isspace():
-                trimmed.append(ch)
-        normalized = " ".join("".join(trimmed).replace("xx", "").split()).title()
-        for simpleName in config.GLOBAL.MERCHANT_NORMALIZATION:
-            if simpleName.lower() in normalized.lower():
-                return simpleName
-        return normalized
-
     # Keep normalizing until stable or if we'll end up empty.
     maxGoes = 30
     while maxGoes > 0:
-        norm = normalize(merchant)
-        maxGoes = 0 if norm == merchant or len(norm) > 0 else maxGoes - 1
+        norm = _normalize(merchant)
+        maxGoes = 0 if norm == merchant or len(norm) == 0 else maxGoes - 1
         merchant = norm
         if maxGoes > 0 and maxGoes < 5:
             print(f"Might enter a cycle with {merchant}")

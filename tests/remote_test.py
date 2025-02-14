@@ -137,7 +137,7 @@ def test_retrieve_accounts_txns(
                     },
                     {
                         "Date": "2023-12-10",
-                        "Merchant": "Parteaspoon",
+                        "Merchant": "Teaspoon",
                         "Amount": -6.25,
                         "Category": "Restaurants/Dining",
                         "Account": "Citi Double Cash Card",
@@ -335,7 +335,7 @@ def test_retrieve_accounts_txns_old_and_new_cleanup(
                     },
                     {
                         "Date": "2023-12-10",
-                        "Merchant": "Parteaspoon",
+                        "Merchant": "Teaspoon",
                         "Amount": -6.25,
                         "Category": "Restaurants/Dining",
                         "Account": "Citi Double Cash Card",

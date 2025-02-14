@@ -55,7 +55,8 @@ class Config:
           MERCHANT_NORMALIZATION: If any merchant includes this in their name is
             normalized to that value.
           ACCOUNT_NAME_TO_TYPE_MAP: Maps account names to their type in google sheets.
-          MERCHANT_NORMALIZATION_PAIRS: Names that cleaned up for merchants to disambiguate.
+          MERCHANT_NORMALIZATION_PAIRS: Names that cleaned up for merchants
+            to disambiguate.
           STARTS_WITH_REMOVAL: If merchnt starts with this, remove the prefix.
           ENDS_WITH_REMOVAL: If merchands ends with this, remove the suffix.
         """

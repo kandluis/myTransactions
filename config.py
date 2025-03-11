@@ -14,7 +14,7 @@ class Config:
     IGNORED_CATEGORIES: list[str]
     NUM_TXN_FOR_CUTOFF: int
     PC_MIGRATION_DATE: str
-    IGNORED_TXNS: list[str]
+    IGNORED_TXNS: list[str | int]
     MERCHANT_NORMALIZATION: list[str]
     ACCOUNT_NAME_TO_TYPE_MAP: list[tuple[str, str]]
     MERCHANT_NORMALIZATION_PAIRS: list[tuple[str, str]]

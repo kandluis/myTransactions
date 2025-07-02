@@ -109,6 +109,7 @@ class Config:
             "Spark Cash Select Ending In 0527",
             "Visa Signature Business",
             "Way2save Savings Ending in 7505",
+            "Wealthfront Cash Account",
         ]
         self.IGNORED_MERCHANTS = [
             "Amzstorecrdpmt Payment",

@@ -2,55 +2,55 @@ from _typeshed import Incomplete
 from enum import Enum
 
 class WorkSheetProperty(Enum):
-    TITLE: str
-    ID: str
-    INDEX: str
+    TITLE = 'TITLE'
+    ID = 'ID'
+    INDEX = 'INDEX'
 
 class ValueRenderOption(Enum):
-    FORMATTED_VALUE: str
-    UNFORMATTED_VALUE: str
-    FORMULA: str
+    FORMATTED_VALUE = 'FORMATTED_VALUE'
+    UNFORMATTED_VALUE = 'UNFORMATTED_VALUE'
+    FORMULA = 'FORMULA'
 
 class DateTimeRenderOption(Enum):
-    SERIAL_NUMBER: str
-    FORMATTED_STRING: str
+    SERIAL_NUMBER = 'SERIAL_NUMBER'
+    FORMATTED_STRING = 'FORMATTED_STRING'
 
 class FormatType(Enum):
     CUSTOM: Incomplete
-    TEXT: str
-    NUMBER: str
-    PERCENT: str
-    CURRENCY: str
-    DATE: str
-    TIME: str
-    DATE_TIME: str
-    SCIENTIFIC: str
+    TEXT = 'TEXT'
+    NUMBER = 'NUMBER'
+    PERCENT = 'PERCENT'
+    CURRENCY = 'CURRENCY'
+    DATE = 'DATE'
+    TIME = 'TIME'
+    DATE_TIME = 'DATE_TIME'
+    SCIENTIFIC = 'SCIENTIFIC'
 
 class ExportType(Enum):
-    XLS: str
-    ODT: str
-    PDF: str
-    CSV: str
-    TSV: str
-    HTML: str
+    XLS = 'XLS'
+    ODT = 'ODT'
+    PDF = 'PDF'
+    CSV = 'CSV'
+    TSV = 'TSV'
+    HTML = 'HTML'
 
 class HorizontalAlignment(Enum):
-    LEFT: str
-    RIGHT: str
-    CENTER: str
+    LEFT = 'LEFT'
+    RIGHT = 'RIGHT'
+    CENTER = 'CENTER'
     NONE: Incomplete
 
 class VerticalAlignment(Enum):
-    TOP: str
-    MIDDLE: str
-    BOTTOM: str
+    TOP = 'TOP'
+    MIDDLE = 'MIDDLE'
+    BOTTOM = 'BOTTOM'
     NONE: Incomplete
 
 class ChartType(Enum):
-    BAR: str
-    LINE: str
-    AREA: str
-    COLUMN: str
-    SCATTER: str
-    COMBO: str
-    STEPPED_AREA: str
+    BAR = 'BAR'
+    LINE = 'LINE'
+    AREA = 'AREA'
+    COLUMN = 'COLUMN'
+    SCATTER = 'SCATTER'
+    COMBO = 'COMBO'
+    STEPPED_AREA = 'STEPPED_AREA'

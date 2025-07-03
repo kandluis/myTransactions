@@ -9,7 +9,7 @@ from dateutil.relativedelta import relativedelta
 from datetime import datetime, date
 
 from constants import TMFAMethod
-from typing import cast, Mapping, get_args
+from typing import cast, Mapping, get_args, Self
 import logging
 
 from empower_types import (
@@ -52,8 +52,8 @@ class PersonalCapital:
         "totp": "TOTP",
     }
 
-    _csrf: Optional[str]
-    _email: Optional[str]  # Only set on successful login.
+    _csrf: str | None
+    _email: str | None  # Only set on successful login.
     session: requests.Session
 
     def __init__(self) -> None:
@@ -113,7 +113,7 @@ class PersonalCapital:
 
     def get_transaction_data(
         self,
-        start_date: Optional[date],
+        start_date: date | None,
         end_date: date = datetime.now() + relativedelta(months=1),
     ) -> TransactionData:
         resp = self._api_request(
@@ -130,7 +130,7 @@ class PersonalCapital:
         resp = self._api_request("post", "/api/newaccount/getAccounts2")
         return cast(AccountsData, resp["spData"])
 
-    def _handle_mfa(self, mfa_method: TMFAMethod, mfa_token: Optional[str]) -> None:
+    def _handle_mfa(self, mfa_method: TMFAMethod, mfa_token: str | None) -> None:
         """Handles MFA.
 
         Args:
@@ -167,7 +167,7 @@ class PersonalCapital:
         email: str,
         password: str,
         mfa_method: TMFAMethod = "totp",
-        mfa_token: Optional[str] = None,
+        mfa_token: str | None = None,
     ) -> Self:
         """
         Login using API calls.

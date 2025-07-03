@@ -1,8 +1,5 @@
 import empower
 import pytest
-import re
-
-from unittest.mock import MagicMock
 
 
 def test_api_request_non_ok_status(mocker):

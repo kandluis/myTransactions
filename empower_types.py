@@ -1,4 +1,4 @@
-from typing import Literal, TypedDict, Self, Optional
+from typing import Literal, TypedDict
 
 
 TChallengeMethod = Literal["OP", "TP", "TOTP"]

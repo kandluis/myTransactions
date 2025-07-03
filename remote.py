@@ -33,7 +33,8 @@ def _normalize(merchant: str) -> str:
     merchant = merchant.lower()
     for prefix in config.GLOBAL.STARTS_WITH_REMOVAL:
         if merchant.startswith(prefix.lower()):
-            merchant = merchant[len(prefix) :]
+            n = len(prefix)
+            merchant = merchant[n:]
     if merchant.startswith("amzn mktp "):
         merchant = f"Amazon {merchant[10:]}"
     for suffix in config.GLOBAL.ENDS_WITH_REMOVAL:

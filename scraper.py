@@ -11,9 +11,10 @@ import utils
 
 from typing import Callable, Optional
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
-
 
 
 def scrape_and_push(
@@ -55,7 +56,9 @@ def scrape_and_push(
         else None
     )
 
-    logger.info(f"Retrieval complete.{'' if options.dry_run else ' Uploading to sheets...'}")
+    logger.info(
+        f"Retrieval complete.{'' if options.dry_run else ' Uploading to sheets...'}"
+    )
     if not options.dry_run:
         remote.UpdateGoogleSheet(
             sheet=sheet, transactions=latestTransactions, accounts=latestAccounts

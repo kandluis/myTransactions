@@ -188,7 +188,9 @@ def RetrieveAccounts(conn: empower.PersonalCapital) -> pd.DataFrame:
     )
 
 
-def _get_old_transactions(sheet: pygsheets.Spreadsheet) -> tuple[pd.DataFrame, Optional[date]]:
+def _get_old_transactions(
+    sheet: pygsheets.Spreadsheet,
+) -> tuple[pd.DataFrame, Optional[date]]:
     """Fetches old transactions from the Google Sheet and determines the cutoff date."""
     all_txns_ws: pygsheets.Worksheet = sheet.worksheet_by_title(
         title=config.GLOBAL.RAW_TRANSACTIONS_TITLE
@@ -211,7 +213,9 @@ def _get_old_transactions(sheet: pygsheets.Spreadsheet) -> tuple[pd.DataFrame, O
     return old_txns, cutoff
 
 
-def _get_new_transactions(conn: empower.PersonalCapital, cutoff: Optional[date]) -> pd.DataFrame:
+def _get_new_transactions(
+    conn: empower.PersonalCapital, cutoff: Optional[date]
+) -> pd.DataFrame:
     """Fetches new transactions from Personal Capital."""
     resp = conn.get_transaction_data(start_date=cutoff)
     txns = pd.json_normalize(cast(list[dict[str, Any]], resp["transactions"]))

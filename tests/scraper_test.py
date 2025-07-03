@@ -24,6 +24,7 @@ def test_scraper(
 
     del test_creds
 
+
 def test_scraper_debug(
     test_env: MonkeyPatch,
     test_creds: service_account.Credentials,
@@ -39,6 +40,7 @@ def test_scraper_debug(
     scraper.main(["--debug"])
 
     del test_creds
+
 
 def test_main_entrypoint(mocker):
     mocker.patch.object(scraper, "main")

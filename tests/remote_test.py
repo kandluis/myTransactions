@@ -524,12 +524,16 @@ def test_normalize_merchant_cycle(config: MonkeyPatch, mocker) -> None:
     remote._NormalizeMerchant("g")
 
 
-def test_retrieve_accounts_unknown_type(monkeypatch: MonkeyPatch, mockApi: MagicMock, mocker) -> None:
+def test_retrieve_accounts_unknown_type(
+    monkeypatch: MonkeyPatch, mockApi: MagicMock, mocker
+) -> None:
     monkeypatch.setattr(remote.config.GLOBAL, "ACCOUNT_NAME_TO_TYPE_MAP", [])
     remote.RetrieveAccounts(mockApi)
 
 
-def test_retrieve_transactions_no_cleanup(config: MonkeyPatch, mockApi: MagicMock, mockSheet: MagicMock) -> None:
+def test_retrieve_transactions_no_cleanup(
+    config: MonkeyPatch, mockApi: MagicMock, mockSheet: MagicMock
+) -> None:
     with config.context() as c:
         c.setattr(remote.config.GLOBAL, "CLEAN_UP_OLD_TXNS", False)
         remote.RetrieveTransactions(mockApi, mockSheet)

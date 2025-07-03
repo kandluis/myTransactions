@@ -1,7 +1,8 @@
-import auth
 import argparse
+import auth
 import config
 import empower
+import logging
 import pandas as pd
 import pygsheets
 import remote
@@ -9,6 +10,10 @@ import sys
 import utils
 
 from typing import Callable, Optional
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
 
 
 def scrape_and_push(
@@ -23,14 +28,14 @@ def scrape_and_push(
     Returns:
       Personal Capital session.
     """
-    print("Logging in...")
+    logger.info("Logging in...")
     connection: empower.PersonalCapital = remote.Authenticate(creds, options)
-    print("Connecting to sheets.")
+    logger.info("Connecting to sheets.")
     client = pygsheets.authorize(custom_credentials=creds.sheets)
     sheet = client.open(config.GLOBAL.WORKSHEET_TITLE)
 
     def messageWrapper(msg: str, f: Callable[[], pd.DataFrame]) -> pd.DataFrame:
-        print(msg)
+        logger.info(msg)
         sys.stdout.flush()
         return f()
 
@@ -50,12 +55,12 @@ def scrape_and_push(
         else None
     )
 
-    print(f"Retrieval complete.{'' if options.dry_run else ' Uploading to sheets...'}")
+    logger.info(f"Retrieval complete.{'' if options.dry_run else ' Uploading to sheets...'}")
     if not options.dry_run:
         remote.UpdateGoogleSheet(
             sheet=sheet, transactions=latestTransactions, accounts=latestAccounts
         )
-        print("Sheets update complate!")
+        logger.info("Sheets update complate!")
     if latestAccounts is not None and options.debug:
         latestAccounts.to_csv("accounts.csv")
     if latestTransactions is not None and options.debug:

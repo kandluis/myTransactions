@@ -517,3 +517,19 @@ def test_update_google_sheets_all(mocker) -> None:
             any_order=True,
         )
         assert mockWs.set_dataframe.call_count == 3
+
+
+def test_normalize_merchant_cycle(config: MonkeyPatch, mocker) -> None:
+    mocker.patch.object(remote, "_normalize", side_effect=lambda x: x + "a")
+    remote._NormalizeMerchant("g")
+
+
+def test_retrieve_accounts_unknown_type(monkeypatch: MonkeyPatch, mockApi: MagicMock, mocker) -> None:
+    monkeypatch.setattr(remote.config.GLOBAL, "ACCOUNT_NAME_TO_TYPE_MAP", [])
+    remote.RetrieveAccounts(mockApi)
+
+
+def test_retrieve_transactions_no_cleanup(config: MonkeyPatch, mockApi: MagicMock, mockSheet: MagicMock) -> None:
+    with config.context() as c:
+        c.setattr(remote.config.GLOBAL, "CLEAN_UP_OLD_TXNS", False)
+        remote.RetrieveTransactions(mockApi, mockSheet)

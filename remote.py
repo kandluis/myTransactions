@@ -4,6 +4,7 @@ import config
 import empower
 import pandas as pd
 import pygsheets
+import logging
 import socket
 
 from datetime import datetime, timezone, timedelta
@@ -15,8 +16,11 @@ from typing import (
     Optional,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _trim(merchant: str) -> str:
+    """Removes non-alphanumeric characters from a string and titles it."""
     trimmed = []
     for ch in merchant:
         if ch.isalpha() or ch.isspace():
@@ -25,6 +29,7 @@ def _trim(merchant: str) -> str:
 
 
 def _normalize(merchant: str) -> str:
+    """Normalizes a merchant string by applying a series of cleaning rules."""
     merchant = merchant.lower()
     for prefix in config.GLOBAL.STARTS_WITH_REMOVAL:
         if merchant.startswith(prefix.lower()):
@@ -44,13 +49,13 @@ def _normalize(merchant: str) -> str:
 
 
 def _Normalize(value: str) -> str:
-    """Normalizes the str value
+    """Normalizes a string by removing special characters and title-casing it.
 
     Args:
-      value: The str to be normalized.
+      value: The string to be normalized.
 
     Returns:
-      The normalized str.
+      The normalized string.
     """
     return " ".join(
         "".join(
@@ -60,13 +65,18 @@ def _Normalize(value: str) -> str:
 
 
 def _NormalizeMerchant(merchant: str) -> str:
-    """Normalizes the str merchant of a merchant.
+    """Normalizes a merchant string by repeatedly applying cleaning rules.
+
+    This function repeatedly applies the `_normalize` function to a merchant
+    string until the string is stable (i.e., no more changes are made) or
+    a maximum number of iterations is reached. This is to handle cases
+    where multiple cleaning rules need to be applied in sequence.
 
     Args:
-      merchant: The str to be normalized.
+      merchant: The merchant string to be normalized.
 
     Returns:
-      The normalized merchant.
+      The normalized merchant string.
     """
     # Keep normalizing until stable or if we'll end up empty.
     maxGoes = 30
@@ -75,18 +85,23 @@ def _NormalizeMerchant(merchant: str) -> str:
         maxGoes = 0 if norm == merchant or len(norm) == 0 else maxGoes - 1
         merchant = norm
         if maxGoes > 0 and maxGoes < 5:
-            print(f"Might enter a cycle with {merchant}")
+            logger.warning(f"Might enter a cycle with {merchant}")
     return merchant
 
 
 def _cleanTxns(txns: pd.DataFrame) -> pd.DataFrame:
-    """Cleans the txns given.
+    """Cleans a DataFrame of transactions by normalizing data and filtering out ignored transactions.
+
+    This function performs the following cleaning steps:
+    1.  Normalizes the 'Category', 'Merchant', 'Account', and 'Description' columns.
+    2.  Filters out transactions based on ignored categories, merchants, transaction IDs, and accounts
+        as defined in the global configuration.
 
     Args:
-        txns: The txns to clean. A copy is made.
+        txns: The DataFrame of transactions to clean. A copy is made.
 
     Returns:
-        The cleaned txns with normalized data.
+        The cleaned DataFrame of transactions.
     """
     cleaned = txns[:]
     cleaned.Category = cleaned.Category.map(_Normalize)
@@ -133,13 +148,16 @@ def Authenticate(
 
 
 def RetrieveAccounts(conn: empower.PersonalCapital) -> pd.DataFrame:
-    """Retrieves the latest account information.
+    """Retrieves the latest account information from Personal Capital.
+
+    This function fetches the account data, determines the account type based on a
+    pre-defined mapping, and returns a cleaned DataFrame of the accounts.
 
     Args:
-      conn: The account from which to retrieve account info.
+      conn: The active PersonalCapital connection object.
 
     Returns:
-      DataFrame containing cleaned account information.
+      A DataFrame containing the cleaned account information.
     """
 
     def getAccountType(originalType: str) -> str:
@@ -152,7 +170,7 @@ def RetrieveAccounts(conn: empower.PersonalCapital) -> pd.DataFrame:
         ):
             if substring.lower() in originalType.lower():
                 return accountType
-        print("No account type for account with type: %s" % originalType)
+        logger.warning("No account type for account with type: %s" % originalType)
         return "Unknown - %s" % (originalType)
 
     accounts = conn.get_account_data()["accounts"]
@@ -170,21 +188,8 @@ def RetrieveAccounts(conn: empower.PersonalCapital) -> pd.DataFrame:
     )
 
 
-def RetrieveTransactions(
-    conn: empower.PersonalCapital, sheet: pygsheets.Spreadsheet
-) -> pd.DataFrame:
-    """Retrieves all transactions using the given credentials.
-
-    The functions also cleans and prepares the transactions to match
-    the format expected by Google sheets.
-
-    Args:
-      conn: The connection object to the active session.
-      sheet: The sheet object from which to fetch old txns.
-
-    Returns:
-      A data frame of all transactions.
-    """
+def _get_old_transactions(sheet: pygsheets.Spreadsheet) -> tuple[pd.DataFrame, Optional[date]]:
+    """Fetches old transactions from the Google Sheet and determines the cutoff date."""
     all_txns_ws: pygsheets.Worksheet = sheet.worksheet_by_title(
         title=config.GLOBAL.RAW_TRANSACTIONS_TITLE
     )
@@ -203,22 +208,41 @@ def RetrieveTransactions(
         if config.GLOBAL.NUM_TXN_FOR_CUTOFF > 0
         else None
     )
-    resp = conn.get_transaction_data(
-        start_date=cutoff,
-    )
-    txns = pd.json_normalize(
-        cast(
-            list[dict[str, Any]],
-            resp["transactions"],
-        )
-    )
-    # Only keep txns from cutoff even if more returned by API.
-    txns = txns[txns.transactionDate >= cutoff.strftime("%Y-%m-%d")] if cutoff else txns
-    # Only spending and non-investment txns.
-    spend_txns = txns[
-        (txns.isSpending | txns.isCashOut) & txns.investmentType.isna()
+    return old_txns, cutoff
+
+
+def _get_new_transactions(conn: empower.PersonalCapital, cutoff: Optional[date]) -> pd.DataFrame:
+    """Fetches new transactions from Personal Capital."""
+    resp = conn.get_transaction_data(start_date=cutoff)
+    txns = pd.json_normalize(cast(list[dict[str, Any]], resp["transactions"]))
+    if cutoff:
+        txns = txns[txns.transactionDate >= cutoff.strftime("%Y-%m-%d")]
+    return txns
+
+
+def RetrieveTransactions(
+    conn: empower.PersonalCapital, sheet: pygsheets.Spreadsheet
+) -> pd.DataFrame:
+    """Retrieves all transactions, cleans them, and merges them with old transactions.
+
+    This function orchestrates the process of fetching old transactions from the
+    Google Sheet, fetching new transactions from Personal Capital, cleaning the
+    new transactions, and then merging the two sets of transactions into a
+    single, deduplicated DataFrame.
+
+    Args:
+      conn: The active PersonalCapital connection object.
+      sheet: The Google Sheet object from which to fetch old transactions.
+
+    Returns:
+      A DataFrame of all transactions, cleaned and deduplicated.
+    """
+    old_txns, cutoff = _get_old_transactions(sheet)
+    new_txns = _get_new_transactions(conn, cutoff)
+
+    spend_txns = new_txns[
+        (new_txns.isSpending | new_txns.isCashOut) & new_txns.investmentType.isna()
     ].copy()
-    # Get amounts correct. Credits are positive, everything else is negative.
     spend_txns.amount = spend_txns.amount * spend_txns.isCredit.map(
         lambda isCredit: 1 if isCredit else -1
     )
@@ -226,12 +250,11 @@ def RetrieveTransactions(
     spend_txns = spend_txns[config.GLOBAL.COLUMNS]
     spend_txns.columns = pd.Index(config.GLOBAL.COLUMN_NAMES)
     spend_txns = spend_txns.sort_values("Date", ascending=True)
-
     spend_txns.Merchant = spend_txns.Merchant.fillna(spend_txns.Description)
 
-    old_txns = (
-        old_txns[old_txns.Date < cutoff.strftime("%Y-%m-%d")] if cutoff else old_txns
-    )
+    if cutoff:
+        old_txns = old_txns[old_txns.Date < cutoff.strftime("%Y-%m-%d")]
+
     if config.GLOBAL.CLEAN_UP_OLD_TXNS:
         combined = pd.concat([old_txns, spend_txns])
         combined = _cleanTxns(combined)
@@ -250,12 +273,16 @@ def UpdateGoogleSheet(
     transactions: Optional[pd.DataFrame],
     accounts: Optional[pd.DataFrame],
 ) -> None:
-    """Updates the given transactions sheet with the transactions data
+    """Updates the Google Sheet with the latest transaction and account data.
+
+    This function updates the "Raw - All Transactions" and "Raw - All Accounts"
+    sheets with the provided DataFrames. It also updates a "Settings" sheet
+    with the current timestamp and hostname.
 
     Args:
-      sheet: The sheet containing our transaction analysis and visualization.
-      transactions: The new, cleaned, raw transaction data to analyze.
-      accounts: The new, cleaned, raw accounts.
+      sheet: The Google Sheet object to update.
+      transactions: The DataFrame of transactions to upload.
+      accounts: The DataFrame of accounts to upload.
     """
     if transactions is not None:
         all_transactions_ws = sheet.worksheet_by_title(

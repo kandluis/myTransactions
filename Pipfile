@@ -9,6 +9,7 @@ pandas = "*"
 numpy = "*"
 mintotp = "*"
 google-auth = "*"
+pyyaml = "*"
 
 [dev-packages]
 flake8 = "*"

@@ -90,12 +90,15 @@ def _NormalizeMerchant(merchant: str) -> str:
 
 
 def _cleanTxns(txns: pd.DataFrame) -> pd.DataFrame:
-    """Cleans a DataFrame of transactions by normalizing data and filtering out ignored transactions.
+    """Cleans a DataFrame of transactions.
+
+    This function normalizes data and filters out ignored transactions.
 
     This function performs the following cleaning steps:
-    1.  Normalizes the 'Category', 'Merchant', 'Account', and 'Description' columns.
-    2.  Filters out transactions based on ignored categories, merchants, transaction IDs, and accounts
-        as defined in the global configuration.
+    1.  Normalizes the 'Category', 'Merchant', 'Account', and 'Description'
+        columns.
+    2.  Filters out transactions based on ignored categories, merchants,
+        transaction IDs, and accounts as defined in the global configuration.
 
     Args:
         txns: The DataFrame of transactions to clean. A copy is made.

@@ -23,6 +23,7 @@ pandas-stubs = "*"
 types-requests = "*"
 types-python-dateutil = "*"
 google-auth-stubs = "*"
+types-pyyaml = "*"
 
 [requires]
 python_version = "3.12.1"

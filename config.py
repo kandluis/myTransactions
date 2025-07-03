@@ -1,5 +1,5 @@
 import yaml
-from typing import Any, cast, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 
 class Config:

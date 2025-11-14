@@ -40,12 +40,3 @@ def test_scraper_option_args(test_env: MonkeyPatch) -> None:
     del test_env
 
 
-def test_scraper_option_env(test_env: MonkeyPatch) -> None:
-    parser: argparse.ArgumentParser = utils.ConstructArgumentParser()
-    args = parser.parse_args([])
-
-    with test_env.context() as env:
-        env.setenv("MFA_TOKEN", "GEZDGNBV")
-        options = utils.ScraperOptions.fromArgsAndEnv(args)
-        assert options.mfa_method == "totp"
-        assert options.mfa_token == "GEZDGNBV"

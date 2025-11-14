@@ -56,47 +56,47 @@ def test_api_request_expired_session(mocker):
         pc._api_request("get", "/test")
 
 
-def test_login_invalid_mfa_method():
+def test_login(mocker):
     pc = empower.PersonalCapital()
-    with pytest.raises(ValueError, match="Auth method invalid is not supported"):
-        pc.login("test", "test", mfa_method="invalid")
+    mock_session = mocker.MagicMock()
+    pc.session = mock_session
 
+    # Mock Step 1: Initial Authentication
+    mock_auth_response = mocker.MagicMock()
+    mock_auth_response.json.return_value = {"success": True, "idToken": "test_token"}
+    mock_session.post.return_value = mock_auth_response
 
-def test_handle_mfa_totp_no_token(mocker):
-    pc = empower.PersonalCapital()
-    mocker.patch.object(pc, "_api_request")
-    with pytest.raises(ValueError, match="Specified mfa_method: totp without token."):
-        pc._handle_mfa(mfa_method="totp", mfa_token=None)
+    # Mock Step 2: Token Authentication
+    mock_token_response = {
+        "spHeader": {
+            "success": False,
+            "errors": [{"code": 200, "message": "Authorization required."}],
+            "csrf": "test_csrf",
+        }
+    }
+    mocker.patch.object(pc, "_api_request", return_value=mock_token_response)
 
+    # Mock Step 4: Authenticate SMS
+    mocker.patch("empower.input", return_value="123456")
 
-def test_handle_mfa_interactive(mocker):
-    pc = empower.PersonalCapital()
-    mocker.patch.object(pc, "_api_request")
-    mocker.patch("empower.getpass.getpass", return_value="123456")
-    pc._handle_mfa(mfa_method="sms", mfa_token=None)
-    empower.getpass.getpass.assert_called_once_with("Enter 2 factor code: ")
+    pc.login("test_email", "test_password")
+
+    # Assertions
+    mock_session.post.assert_called_once()
     pc._api_request.assert_any_call(
         "post",
-        "/api/credential/authenticateSms",
-        {
-            "challengeReason": "DEVICE_AUTH",
-            "challengeMethod": "OP",
-            "bindDevice": "false",
-            "code": "123456",
-        },
+        "/api/credential/authenticateToken",
+        data={"idToken": "test_token"},
+        check_success=False,
     )
-
-
-def test_login_no_csrf(mocker):
-    session = mocker.MagicMock()
-    response = mocker.MagicMock()
-    response.text = ""
-    session.get.return_value = response
-    pc = empower.PersonalCapital()
-    pc.session = session
-
-    with pytest.raises(RuntimeError, match="Failed to extract csrf from session"):
-        pc.login("test", "test", mfa_method="sms")
+    pc._api_request.assert_any_call(
+        "post", "/api/credential/challengeSmsFreemium", mocker.ANY
+    )
+    pc._api_request.assert_any_call(
+        "post", "/api/credential/authenticateSmsFreemium", mocker.ANY
+    )
+    assert pc._email == "test_email"
+    assert pc._csrf == "test_csrf"
 
 
 def test_is_logged_in_false():

@@ -61,14 +61,16 @@ def test_authenticate(
 ) -> None:
     parser: argparse.ArgumentParser = utils.ConstructArgumentParser()
     args = parser.parse_args([])
-    with test_env.context() as env:
-        env.setenv("MFA_TOKEN", "GEZDGNBV")
-        options = utils.ScraperOptions.fromArgsAndEnv(args)
-
+    options = utils.ScraperOptions.fromArgsAndEnv(args)
     creds = auth.GetCredentials()
+
+    mock_pc = mocker.patch("empower.PersonalCapital").return_value
     conn = remote.Authenticate(creds, options)
 
-    assert conn.is_logged_in()
+    mock_pc.login.assert_called_once_with(
+        email=creds.username, password=creds.password
+    )
+    assert conn == mock_pc
 
 
 def test_retrieve_accounts_txns(

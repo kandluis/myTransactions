@@ -142,12 +142,7 @@ def Authenticate(
       The PersonalCapital connection object.
     """
     pc = empower.PersonalCapital()
-    pc.login(
-        email=creds.username,
-        password=creds.password,
-        mfa_method=options.mfa_method,
-        mfa_token=options.mfa_token,
-    )
+    pc.login(email=creds.username, password=creds.password)
     return pc
 
 

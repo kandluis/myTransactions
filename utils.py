@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 
 from typing import Optional
-from constants import TMFAMethod
 
 
 def ConstructArgumentParser() -> argparse.ArgumentParser:
@@ -46,10 +45,6 @@ class ScraperOptions:
     scrape_transactions: bool
     # When true, scrape account data from Personal Capital.
     scrape_accounts: bool
-    # MFA Method to use.
-    mfa_method: TMFAMethod
-    # Required when using 'soft-token' method.
-    mfa_token: Optional[str]
     # When true, dump copy of txns locally.
     debug: bool
 
@@ -58,8 +53,6 @@ class ScraperOptions:
         self.dry_run = False
         self.scrape_accounts = True
         self.scrape_transactions = True
-        self.mfa_method = "sms"
-        self.mfa_token = None
         self.debug = False
 
     @classmethod
@@ -85,8 +78,5 @@ class ScraperOptions:
             types.lower() == "all" or types.lower() == "transactions"
         )
         options.scrape_accounts = types.lower() == "all" or types.lower() == "accounts"
-
-        options.mfa_method = "totp" if os.getenv("MFA_TOKEN") else "sms"
-        options.mfa_token = os.getenv("MFA_TOKEN", options.mfa_token)
 
         return options

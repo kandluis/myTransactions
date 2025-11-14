@@ -8,7 +8,6 @@ import os
 from dateutil.relativedelta import relativedelta
 from datetime import datetime, date
 
-from constants import TMFAMethod
 from typing import cast, Mapping, get_args, Self
 import logging
 
@@ -28,29 +27,11 @@ class PersonalCapitalSessionExpiredException(RuntimeError):
 
 
 class PersonalCapital:
-    _ROOT_URL: str = "https://home.personalcapital.com"
+    _ROOT_URL: str = "https://pc-api.empower-retirement.com"
     _USER_AGENT: str = (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
     )
-    _CHALLENGE_METHOD: dict[TMFAMethod, TChallengeMethod] = {
-        "email": "OP",
-        "phone": "OP",
-        "sms": "OP",
-        "totp": "TP",
-    }
-    _AUTH_ENDPOINT: dict[TMFAMethod, str] = {
-        "email": "authenticateEmailByCode",
-        "phone": "authenticatePhone",
-        "sms": "authenticateSms",
-        "totp": "authenticateTotpCode",
-    }
-    _AUTH_METHOD: dict[TMFAMethod, TChallengeMethod] = {
-        "email": "OP",
-        "phone": "OP",
-        "sms": "OP",
-        "totp": "TOTP",
-    }
 
     _csrf: str | None
     _email: str | None  # Only set on successful login.
@@ -63,7 +44,11 @@ class PersonalCapital:
         self.session.headers.update({"User-Agent": PersonalCapital._USER_AGENT})
 
     def _api_request(
-        self, method: str, path: str, data: Mapping[str, str] = {}
+        self,
+        method: str,
+        path: str,
+        data: Mapping[str, str] = {},
+        check_success: bool = True,
     ) -> Response:
         response = self.session.request(
             method=method,
@@ -85,7 +70,7 @@ class PersonalCapital:
 
         json_res: Response = json.loads(resp_txt)
 
-        if json_res.get("spHeader", {}).get("success", False) is False:
+        if check_success and json_res.get("spHeader", {}).get("success", False) is False:
             resp_code = (
                 json_res.get("spHeader", {}).get("errors", [{}])[0].get("code", None)
             )
@@ -130,44 +115,10 @@ class PersonalCapital:
         resp = self._api_request("post", "/api/newaccount/getAccounts2")
         return cast(AccountsData, resp["spData"])
 
-    def _handle_mfa(self, mfa_method: TMFAMethod, mfa_token: str | None) -> None:
-        """Handles MFA.
-
-        Args:
-            mfa_method: The method to use. Fully automated option is 'totp'.
-                All other methods required some user input.
-            mfa_token: The secret token to use. Required if mfa_method is 'totp',
-                otherwise ignored.
-        """
-        challenge_endpoint = f"/api/credential/challenge{mfa_method.capitalize()}"
-        challenge_data = {
-            "challengeReason": "DEVICE_AUTH",
-            "challengeMethod": PersonalCapital._CHALLENGE_METHOD[mfa_method],
-            "bindDevice": "false",
-        }
-        self._api_request("post", challenge_endpoint, challenge_data)
-        if mfa_method == "totp":
-            if not mfa_token:
-                raise ValueError(f"Specified mfa_method: {mfa_method} without token.")
-            auth_data = {"totpCode": mintotp.totp(mfa_token, digest="sha512")}
-        else:
-            auth_data = {"code": getpass.getpass("Enter 2 factor code: ")}
-
-        auth_endpoint = f"/api/credential/{PersonalCapital._AUTH_ENDPOINT[mfa_method]}"
-        auth_data = {
-            "challengeReason": "DEVICE_AUTH",
-            "challengeMethod": PersonalCapital._AUTH_METHOD[mfa_method],
-            "bindDevice": "false",
-            **auth_data,
-        }
-        self._api_request("post", auth_endpoint, auth_data)
-
     def login(
         self,
         email: str,
         password: str,
-        mfa_method: TMFAMethod = "totp",
-        mfa_token: str | None = None,
     ) -> Self:
         """
         Login using API calls.
@@ -175,39 +126,93 @@ class PersonalCapital:
         Args:
             email: The email (username) to use for logging in.
             password: The password for the account. Unencrypted.
-            mfa_method: The MFA method to use for 2-factor. 'totp' is fully automated.
-                The other methods required interactively inputting the generated code.
-            mfa_token: Required if MFA method is 'totp'. This is the secret usd to
-                generate the TOPT token.
 
         Returns:
             Instance of class after logging in.
         """
-        if mfa_method not in get_args(TMFAMethod):
-            raise ValueError(f"Auth method {mfa_method} is not supported")
-
-        match = re.search(
-            "csrf *= *'([-a-z0-9]+)'", self.session.get(PersonalCapital._ROOT_URL).text
+        # Step 1: Initial Authentication
+        auth_url = (
+            "https://pc-api.empower-retirement.com/api/auth/multiauth/noauth/authenticate"
         )
-        if match is None:
-            raise RuntimeError("Failed to extract csrf from session")
-        self._csrf = match.groups()[0]
-
-        identify_endpoint = "/api/login/identifyUser"
-        identify_data = {"username": email}
-        resp = self._api_request("post", identify_endpoint, identify_data)
-        self._csrf = resp.get("spHeader", {}).get("csrf")
-
-        if resp.get("spHeader", {}).get("authLevel") != "USER_REMEMBERED":
-            self._handle_mfa(mfa_method, mfa_token)
-
-        password_endpoint = "/api/credential/authenticatePassword"
-        password_data = {
-            "bindDevice": "false",
-            "deviceName": "API script",
-            "passwd": password,
+        auth_payload = {
+            "deviceFingerPrint": "f48762cc9379ddfb9bcd07c8d3cce772",
+            "userAgent": PersonalCapital._USER_AGENT,
+            "language": "en-US",
+            "hasLiedLanguages": False,
+            "hasLiedResolution": False,
+            "hasLiedOs": False,
+            "hasLiedBrowser": False,
+            "userName": email,
+            "password": password,
+            "flowName": "mfa",
+            "accu": "MYERIRA",
         }
-        resp = self._api_request("post", password_endpoint, password_data)
+        response = self.session.post(auth_url, json=auth_payload)
+        response.raise_for_status()
+        auth_response = response.json()
+
+        if not auth_response.get("success"):
+            raise RuntimeError(f"Initial authentication failed: {auth_response}")
+
+        id_token = auth_response.get("idToken")
+        if not id_token:
+            raise RuntimeError(
+                f"Could not get idToken from auth response: {auth_response}"
+            )
+
+        # Step 2: Token Authentication
+        token_auth_endpoint = "/api/credential/authenticateToken"
+        # This request is expected to fail with "Authorization required"
+        resp = self._api_request(
+            "post",
+            token_auth_endpoint,
+            data={"idToken": id_token},
+            check_success=False,
+        )
+
+        sp_header = resp.get("spHeader", {})
+        if sp_header.get("success") is True:
+            # It means 2FA is not needed, which is unlikely but possible.
+            self._email = email
+            self._csrf = sp_header.get("csrf")
+            return self
+
+        errors = sp_header.get("errors", [])
+        auth_required = any(
+            e.get("code") == 200 and "Authorization required" in e.get("message", "")
+            for e in errors
+        )
+
+        if not auth_required:
+            raise RuntimeError(
+                f"Token authentication failed for an unexpected reason: {sp_header}"
+            )
+
+        self._csrf = sp_header.get("csrf")
+        if not self._csrf:
+            raise RuntimeError(
+                f"Could not get CSRF token from token auth response: {sp_header}"
+            )
+
+        # Step 3: Challenge SMS
+        challenge_endpoint = "/api/credential/challengeSmsFreemium"
+        challenge_data = {
+            "challengeReason": "DEVICE_AUTH",
+            "challengeMethod": "OP",
+            "bindDevice": "false",
+        }
+        self._api_request("post", challenge_endpoint, challenge_data)
+
+        # Step 4: Authenticate SMS
+        sms_code = os.getenv("SMS_CODE") or input("Enter SMS code: ")
+        auth_sms_endpoint = "/api/credential/authenticateSmsFreemium"
+        auth_sms_data = {
+            "code": sms_code,
+            "challengeReason": "DEVICE_AUTH",
+            "challengeMethod": "OP",
+            "bindDevice": "false",
+        }
+        self._api_request("post", auth_sms_endpoint, auth_sms_data)
 
         self._email = email
 

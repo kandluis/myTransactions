@@ -180,7 +180,8 @@ class PersonalCapital:
 
         errors = sp_header.get("errors", [])
         auth_required = any(
-            e.get("code") == 200 and "Authorization required" in e.get("message", "")
+            e.get("code") == 200
+            and "Authorization required" in str(e.get("message", ""))
             for e in errors
         )
 

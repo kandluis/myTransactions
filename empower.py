@@ -70,7 +70,10 @@ class PersonalCapital:
 
         json_res: Response = json.loads(resp_txt)
 
-        if check_success and json_res.get("spHeader", {}).get("success", False) is False:
+        if (
+            check_success
+            and json_res.get("spHeader", {}).get("success", False) is False
+        ):
             resp_code = (
                 json_res.get("spHeader", {}).get("errors", [{}])[0].get("code", None)
             )
@@ -131,9 +134,7 @@ class PersonalCapital:
             Instance of class after logging in.
         """
         # Step 1: Initial Authentication
-        auth_url = (
-            "https://pc-api.empower-retirement.com/api/auth/multiauth/noauth/authenticate"
-        )
+        auth_url = "https://pc-api.empower-retirement.com/api/auth/multiauth/noauth/authenticate"
         auth_payload = {
             "deviceFingerPrint": "f48762cc9379ddfb9bcd07c8d3cce772",
             "userAgent": PersonalCapital._USER_AGENT,

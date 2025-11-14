@@ -1,6 +1,4 @@
-import mintotp
 import requests
-import getpass
 import json
 import re
 import os
@@ -8,13 +6,12 @@ import os
 from dateutil.relativedelta import relativedelta
 from datetime import datetime, date
 
-from typing import cast, Mapping, get_args, Self
+from typing import cast, Mapping, Self
 import logging
 
 from empower_types import (
     AccountsData,
     Response,
-    TChallengeMethod,
     TransactionData,
 )
 
@@ -70,10 +67,7 @@ class PersonalCapital:
 
         json_res: Response = json.loads(resp_txt)
 
-        if (
-            check_success
-            and json_res.get("spHeader", {}).get("success", False) is False
-        ):
+        if check_success and not json_res.get("spHeader", {}).get("success", False):
             resp_code = (
                 json_res.get("spHeader", {}).get("errors", [{}])[0].get("code", None)
             )
@@ -134,7 +128,10 @@ class PersonalCapital:
             Instance of class after logging in.
         """
         # Step 1: Initial Authentication
-        auth_url = "https://pc-api.empower-retirement.com/api/auth/multiauth/noauth/authenticate"
+        auth_url = (
+            "https://pc-api.empower-retirement.com/api/auth/multiauth/noauth/"
+            "authenticate"
+        )
         auth_payload = {
             "deviceFingerPrint": "f48762cc9379ddfb9bcd07c8d3cce772",
             "userAgent": PersonalCapital._USER_AGENT,
@@ -181,7 +178,7 @@ class PersonalCapital:
         errors = sp_header.get("errors", [])
         auth_required = any(
             e.get("code") == 200
-            and "Authorization required" in str(e.get("message", ""))
+            and "Authorization required" in str(e.get("message", ""))  # noqa: W503
             for e in errors
         )
 

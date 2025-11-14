@@ -67,9 +67,7 @@ def test_authenticate(
     mock_pc = mocker.patch("empower.PersonalCapital").return_value
     conn = remote.Authenticate(creds, options)
 
-    mock_pc.login.assert_called_once_with(
-        email=creds.username, password=creds.password
-    )
+    mock_pc.login.assert_called_once_with(email=creds.username, password=creds.password)
     assert conn == mock_pc
 
 

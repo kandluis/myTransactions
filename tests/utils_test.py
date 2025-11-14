@@ -38,5 +38,3 @@ def test_scraper_option_args(test_env: MonkeyPatch) -> None:
     assert utils.ScraperOptions.fromArgsAndEnv(args) == expected
 
     del test_env
-
-

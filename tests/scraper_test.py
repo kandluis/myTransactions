@@ -43,12 +43,12 @@ def test_scraper_debug(
     del test_creds
 
 
-def test_main_entrypoint(mocker, test_env: MonkeyPatch):
-    test_env.setenv("SMS_CODE", "123456")
+def _setup_mocks(mocker):
     mocker.patch.object(scraper, "main")
     mock_creds = mocker.patch("auth.GetCredentials")
     mock_creds.return_value.username = "test_user"
     mock_creds.return_value.password = "test_pass"
+
     mock_pc = mocker.patch("empower.PersonalCapital")
     mock_pc.return_value.get_transaction_data.return_value = {
         "transactions": [
@@ -67,6 +67,7 @@ def test_main_entrypoint(mocker, test_env: MonkeyPatch):
             }
         ]
     }
+
     mock_pygsheets = mocker.patch("pygsheets.authorize")
     mock_worksheet = mocker.MagicMock()
     mock_worksheet.get_as_df.return_value = pd.DataFrame(
@@ -83,6 +84,11 @@ def test_main_entrypoint(mocker, test_env: MonkeyPatch):
     mock_pygsheets.return_value.open.return_value.worksheet_by_title.return_value = (
         mock_worksheet
     )
+
+
+def test_main_entrypoint(mocker, test_env: MonkeyPatch):
+    test_env.setenv("SMS_CODE", "123456")
+    _setup_mocks(mocker)
     # Clear argv to avoid pytest args being passed to scraper
     sys.argv = ["scraper.py"]
     runpy.run_module("scraper", run_name="__main__")

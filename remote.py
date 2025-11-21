@@ -142,7 +142,15 @@ def Authenticate(
       The PersonalCapital connection object.
     """
     pc = empower.PersonalCapital()
+    session_file = ".session.pkl"
+
+    if pc.load_session(session_file) and pc.is_logged_in():
+        logger.info("Restored session from file.")
+        return pc
+
+    logger.info("Session not found or expired. Logging in...")
     pc.login(email=creds.username, password=creds.password)
+    pc.save_session(session_file)
     return pc
 
 

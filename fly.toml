@@ -10,7 +10,7 @@ kill_timeout = "5s"
 
 [env]
   PRIMARY_REGION = "sea"
-  SESSION_FILE_PATH = "/data/.sessions.pkl"
+  SESSION_FILE_PATH = "/data/.session.pkl"
   
 [processes]
   scraper = "/app/serve.sh"

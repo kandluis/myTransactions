@@ -10,6 +10,12 @@ kill_timeout = "5s"
 
 [env]
   PRIMARY_REGION = "sea"
+  SESSION_FILE_PATH = "/data/.sessions.pkl"
   
 [processes]
   scraper = "/app/serve.sh"
+
+
+[mounts]
+  source = "mint_session_data"
+  destination = "data"

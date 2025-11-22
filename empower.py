@@ -143,6 +143,42 @@ class PersonalCapital:
         resp = self._api_request("post", "/api/newaccount/getAccounts2")
         return cast(AccountsData, resp["spData"])
 
+    def _perform_sms_challenge(self, bind_device: bool) -> None:
+        # Step 3: Challenge SMS
+        challenge_endpoint = "/api/credential/challengeSmsFreemium"
+        challenge_data = {
+            "challengeReason": "DEVICE_AUTH",
+            "challengeMethod": "OP",
+            "bindDevice": str(bind_device).lower(),
+        }
+        self._api_request("post", challenge_endpoint, challenge_data)
+
+        # Step 4: Authenticate SMS
+        sms_code = os.getenv("SMS_CODE")
+        if not sms_code:
+            sms_command = os.getenv("SMS_COMMAND")
+            if sms_command:
+                try:
+                    sms_code = (
+                        subprocess.check_output(sms_command, shell=True)
+                        .decode()
+                        .strip()
+                    )
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"SMS_COMMAND failed: {e}")
+
+        if not sms_code:
+            sms_code = input("Enter SMS code: ")
+
+        auth_sms_endpoint = "/api/credential/authenticateSmsFreemium"
+        auth_sms_data = {
+            "code": sms_code,
+            "challengeReason": "DEVICE_AUTH",
+            "challengeMethod": "OP",
+            "bindDevice": str(bind_device).lower(),
+        }
+        self._api_request("post", auth_sms_endpoint, auth_sms_data)
+
     def login(
         self,
         email: str,
@@ -224,41 +260,7 @@ class PersonalCapital:
                 f"Could not get CSRF token from token auth response: {sp_header}"
             )
 
-        # Step 3: Challenge SMS
-        challenge_endpoint = "/api/credential/challengeSmsFreemium"
-        challenge_data = {
-            "challengeReason": "DEVICE_AUTH",
-            "challengeMethod": "OP",
-            "bindDevice": "true",
-        }
-        self._api_request("post", challenge_endpoint, challenge_data)
-
-        # Step 4: Authenticate SMS
-        sms_code = os.getenv("SMS_CODE")
-        if not sms_code:
-            sms_command = os.getenv("SMS_COMMAND")
-            if sms_command:
-                try:
-                    sms_code = (
-                        subprocess.check_output(sms_command, shell=True)
-                        .decode()
-                        .strip()
-                    )
-                except subprocess.CalledProcessError as e:
-                    logger.error(f"SMS_COMMAND failed: {e}")
-
-        if not sms_code:
-            sms_code = input("Enter SMS code: ")
-
-        auth_sms_endpoint = "/api/credential/authenticateSmsFreemium"
-        auth_sms_data = {
-            "code": sms_code,
-            "challengeReason": "DEVICE_AUTH",
-            "challengeMethod": "OP",
-            "bindDevice": "true",
-        }
-        self._api_request("post", auth_sms_endpoint, auth_sms_data)
-
+        self._perform_sms_challenge(bind_device=True)
         self._email = email
 
         return self

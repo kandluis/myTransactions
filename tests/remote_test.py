@@ -65,9 +65,27 @@ def test_authenticate(
     creds = auth.GetCredentials()
 
     mock_pc = mocker.patch("empower.PersonalCapital").return_value
+    mock_pc.load_session.return_value = False
     conn = remote.Authenticate(creds, options)
 
     mock_pc.login.assert_called_once_with(email=creds.username, password=creds.password)
+    assert conn == mock_pc
+
+
+def test_authenticate_with_session(
+    mocker, test_env: MonkeyPatch, test_creds: service_account.Credentials
+) -> None:
+    parser: argparse.ArgumentParser = utils.ConstructArgumentParser()
+    args = parser.parse_args([])
+    options = utils.ScraperOptions.fromArgsAndEnv(args)
+    creds = auth.GetCredentials()
+
+    mock_pc = mocker.patch("empower.PersonalCapital").return_value
+    mock_pc.load_session.return_value = True
+    mock_pc.is_logged_in.return_value = True
+    conn = remote.Authenticate(creds, options)
+
+    mock_pc.login.assert_not_called()
     assert conn == mock_pc
 
 

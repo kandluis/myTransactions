@@ -142,7 +142,7 @@ def Authenticate(
       The PersonalCapital connection object.
     """
     pc = empower.PersonalCapital()
-    session_file = ".session.pkl"
+    session_file = os.getenv("SESSION_FILE_PATH", ".session.pkl")
 
     if pc.load_session(session_file) and pc.is_logged_in():
         logger.info("Restored session from file.")

@@ -42,6 +42,7 @@ SKIPPED_ACCOUNTS:
   - "Smartly Card Ending In 3855"
   - "Sofi Savings"
   - "Spark Cash Select Ending In 0527"
+  - "Trust Sp 500 Direct Portfolio"
   - "Visa Signature Business"
   - "Way2save Savings Ending in 7505"
   - "Wealthfront Cash Account"
@@ -273,6 +274,41 @@ IGNORED_TXNS:
   - 10000481047079
   - 10000482031961
   - 10000493040975
+  - 10000533991279
+  - 10000510385754
+  - 10000526914082
+  - 10000593566185
+  - 10000636085667
+  - 10000648285663
+  - 100002579408188
+  - 100002582464052
+  - 100003701537757
+  - 100003701537756
+  - 100003785448561
+  - 100004103238943
+  - 100004198915165
+  - 100004044197103
+  - 100004572850497
+  - 100004969421086
+  - 100006266466473
+  - 100005324738057
+  - 100005645642374
+  - 100005826501041
+  - 100005960491259
+  - 100006100156190
+  - 100006240988050
+  - 100006248571947
+  - 100006039239129
+  - 100007040518667
+  - 100007007134265
+  - 100007007134266
+  - 100006762653144
+  - 100006606071238
+  - 100006860099826
+  - 100006844939390
+  - 100007035630082
+  - 100007687590704
+  - 100008076768826
 MERCHANT_NORMALIZATION:
   - "Advisor Autopilot"
   - "Airbnb"
@@ -342,6 +378,7 @@ ACCOUNT_NAME_TO_TYPE_MAP:
   - ["Ally", "Cash"]
   - ["Amazon Prime", "Credit"]
   - ["Apple", "Credit"]
+  - ["Asher - Ending in 01", "Stock"]
   - ["B Zeng - Ending in 2555", "Credit"]
   - ["B. ZENG", "Credit"]
   - ["Bank", "Cash"]
@@ -360,6 +397,7 @@ ACCOUNT_NAME_TO_TYPE_MAP:
   - ["Chris' 529 Account", "Restricted Stock"]
   - ["Citi", "Credit"]
   - ["College-GiftAccount", "Cash"]
+  - ["Contributory - Ending in 874", "Restricted Stock"]
   - ["Credit", "Credit"]
   - ["Deferred Comp", "Restricted Cash"]
   - ["Discover", "Credit"]

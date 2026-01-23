@@ -6,6 +6,7 @@ import pandas as pd
 import pygsheets
 import logging
 import socket
+import os
 
 from datetime import datetime, timezone, timedelta
 from datetime import date
@@ -142,7 +143,15 @@ def Authenticate(
       The PersonalCapital connection object.
     """
     pc = empower.PersonalCapital()
+    session_file = os.getenv("SESSION_FILE_PATH", ".session.pkl")
+
+    if pc.load_session(session_file) and pc.is_logged_in():
+        logger.info("Restored session from file.")
+        return pc
+
+    logger.info("Session not found or expired. Logging in...")
     pc.login(email=creds.username, password=creds.password)
+    pc.save_session(session_file)
     return pc
 
 

@@ -109,6 +109,35 @@ Once built, you can test locally by running the image. Note that it might fail d
 docker run --env-file=.env -e mint_scraper:latest python scraper.py --type='all'
 ```
 
+## Managing 2FA Session on Fly.io
+
+The scraper relies on a persistent session file to bypass 2FA. If the session expires, you need to refresh it manually.
+
+1.  **Run Locally:** Execute the scraper locally to complete the 2FA challenge. This generates a valid `.session.pkl` file in your directory.
+2.  **Find VM:** Identify the Fly Machine attached to your volume:
+    ```sh
+    fly volumes list
+    ```
+    Copy the `ATTACHED VM` ID (e.g., `9080e52b`).
+3.  **Sleep Machine:** Update the machine to run a sleep command so it stays alive for maintenance:
+    ```sh
+    fly machine update <VM_ID> --entrypoint /bin/sleep --command infinity
+    ```
+4.  **Start Machine:**
+    ```sh
+    fly machine start <VM_ID>
+    ```
+5.  **Upload Session:** Connect via SFTP and upload the new session file:
+    ```sh
+    fly sftp shell -s <VM_ID>
+    >> put .session.pkl /data/.session.pkl
+    >> exit
+    ```
+6.  **Restore:** Redeploy the app to reset the machine to its normal scraper command:
+    ```sh
+    fly deploy
+    ```
+
 ## Debugging
 
 If you're running into issues, you want to debug by ssh'ing into the machine. 

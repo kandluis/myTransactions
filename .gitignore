@@ -122,3 +122,4 @@ chromedriver
 # Debug outputs
 accounts.csv
 transactions.csv
+.session.pkl

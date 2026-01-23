@@ -39,6 +39,7 @@ SKIPPED_ACCOUNTS:
   - "Fidelity Meta Platforms Inc 401K Plan"
   - "Hsa Belinda"
   - "Lending Account"
+  - "Trust Sp 500 Direct Portfolio"
   - "Smartly Card Ending In 3855"
   - "Sofi Savings"
   - "Spark Cash Select Ending In 0527"
@@ -375,6 +376,7 @@ ACCOUNT_NAME_TO_TYPE_MAP:
   - ["610-4 Pisgah Church Rd", "Real Estate"]
   - ["610-4 Pisgah Church", "Real Estate"]
   - ["Acorns", "Stock"]
+  - ["Asher - Ending in 01", "Stock"]
   - ["Ally", "Cash"]
   - ["Amazon Prime", "Credit"]
   - ["Apple", "Credit"]

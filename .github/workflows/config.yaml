@@ -26,6 +26,7 @@ jobs:
               - '*.toml'
               - 'Pipfile*'
               - '*.sh'
+              - '*.yaml'
   build:
     needs: changes
     if: ${{ needs.changes.outputs.backend == 'true' }}

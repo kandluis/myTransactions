@@ -143,18 +143,22 @@ def ApplyCategoryRules(txns: pd.DataFrame) -> pd.DataFrame:
     if updated.empty:
         return updated
 
-    # 1. Apply Merchant to Category Map (using normalized merchant names for matching)
+    # 1. Apply Merchant to Category Map (using keyword matching)
     merchant_to_cat = getattr(config.GLOBAL, "MERCHANT_TO_CATEGORY_MAP", {})
     if merchant_to_cat:
-        # Match normalized merchant name against normalized merchant key in map
-        merchant_to_cat_norm = {
-            _NormalizeMerchant(k).lower(): v for k, v in merchant_to_cat.items()
-        }
+        # Sort keywords descending by length so most specific keywords match first
+        sorted_keywords = sorted(
+            merchant_to_cat.items(),
+            key=lambda item: len(item[0]),
+            reverse=True,
+        )
 
         def map_merchant(row: pd.Series) -> str:
             merchant_norm = _NormalizeMerchant(str(row["Merchant"])).lower()
-            if merchant_norm in merchant_to_cat_norm:
-                return merchant_to_cat_norm[merchant_norm]
+            for kw, cat in sorted_keywords:
+                kw_norm = _NormalizeMerchant(kw).lower()
+                if kw_norm in merchant_norm:
+                    return cat
             return row["Category"]
 
         updated["Category"] = updated.apply(map_merchant, axis=1)

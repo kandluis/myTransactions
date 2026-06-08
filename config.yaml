@@ -532,4 +532,303 @@ STARTS_WITH_REMOVAL:
 ENDS_WITH_REMOVAL:
   - " Ca"
 CATEGORY_MAP: {}
-MERCHANT_TO_CATEGORY_MAP: {}
+MERCHANT_TO_CATEGORY_MAP:
+  adidas: Shopping
+  admin: Financial
+  airbnb: Travel
+  airline: Travel
+  airlines: Travel
+  allergy: Healthcare
+  alliance: Transportation
+  altos: "Food/Dining Restaurants"
+  amazon: Shopping
+  amc: Entertainment
+  anza: Transportation
+  apex: Financial
+  apple: Shopping
+  arco: Transportation
+  arteagas: "Food/Dining Coffee/Cafes"
+  asthma: Healthcare
+  atm: Financial
+  att: Utilities
+  audible: Entertainment
+  autozone: Transportation
+  aveda: Shopping
+  average: Financial
+  avis: Travel
+  bakery: "Food/Dining Coffee/Cafes"
+  balance: Financial
+  banana: Shopping
+  bandito: Groceries
+  bbq: "Food/Dining Restaurants"
+  bestbuy: Shopping
+  bistro: "Food/Dining Restaurants"
+  boba: "Food/Dining Coffee/Cafes"
+  bodega: Groceries
+  bonchon: "Food/Dining Restaurants"
+  boutique: Shopping
+  boxes: "Services/Other"
+  brothers: "Food/Dining Restaurants"
+  burdick: "Food/Dining Coffee/Cafes"
+  burger: "Food/Dining Restaurants"
+  cafe: "Food/Dining Coffee/Cafes"
+  capital: Financial
+  cardenas: Groceries
+  cardtronics: Financial
+  cashback: Financial
+  chargepoint: Transportation
+  chase: Financial
+  chevron: Transportation
+  chickfila: "Food/Dining Restaurants"
+  chilis: "Food/Dining Restaurants"
+  chipotle: "Food/Dining Restaurants"
+  chocolate: "Food/Dining Coffee/Cafes"
+  chowbus: "Food/Dining Restaurants"
+  cinema: Entertainment
+  cinemark: Entertainment
+  cinemas: Entertainment
+  cloudflare: "Services/Other"
+  coffee: "Food/Dining Coffee/Cafes"
+  college: Education
+  comcast: Utilities
+  cookies: "Food/Dining Coffee/Cafes"
+  corner: Shopping
+  costco: Groceries
+  court: "Services/Other"
+  crepes: "Food/Dining Restaurants"
+  cuisine: "Food/Dining Restaurants"
+  cupcakes: "Food/Dining Coffee/Cafes"
+  cvs: Healthcare
+  cvspharmacy: Healthcare
+  deli: "Food/Dining Restaurants"
+  delicious: "Food/Dining Restaurants"
+  delivery: "Food/Dining Restaurants"
+  delta: Travel
+  dental: Healthcare
+  depot: "Food/Dining Restaurants"
+  diagnostics: Healthcare
+  disney: Entertainment
+  disneyplus: Entertainment
+  dmv: "Services/Other"
+  docusign: "Services/Other"
+  dollar: Shopping
+  dollartree: Shopping
+  dominos: "Food/Dining Restaurants"
+  donut: "Food/Dining Coffee/Cafes"
+  doordash: "Food/Dining Restaurants"
+  duke: Utilities
+  dumpling: "Food/Dining Restaurants"
+  easyjet: Travel
+  eatery: "Food/Dining Restaurants"
+  eats: "Food/Dining Restaurants"
+  electric: Utilities
+  energy: Utilities
+  enterprise: Travel
+  epay: Financial
+  eurostar: Travel
+  exam: Education
+  expedia: Travel
+  family: Shopping
+  fantuan: "Food/Dining Restaurants"
+  fastrak: Transportation
+  fedex: "Services/Other"
+  felipes: "Food/Dining Restaurants"
+  feng: "Food/Dining Coffee/Cafes"
+  foreign: Shopping
+  frontier: Travel
+  gasoline: Transportation
+  gelato: "Food/Dining Coffee/Cafes"
+  github: "Services/Other"
+  godaddy: "Services/Other"
+  goodwill: Shopping
+  greatclips: "Services/Other"
+  greyhound: Travel
+  grocery: Groceries
+  groupon: Shopping
+  grubhub: "Food/Dining Restaurants"
+  harvard: Education
+  health: Healthcare
+  healthcare: Healthcare
+  hertz: Travel
+  hien: "Food/Dining Restaurants"
+  homestead: "Food/Dining Coffee/Cafes"
+  hometown: "Food/Dining Restaurants"
+  hotel: Travel
+  hotpot: "Food/Dining Restaurants"
+  hulu: Entertainment
+  ikea: Shopping
+  industries: Shopping
+  innout: "Food/Dining Restaurants"
+  instacart: "Food/Dining Restaurants"
+  insurance: "Services/Other"
+  interest: Financial
+  invested: Financial
+  investment: Financial
+  jamba: "Food/Dining Coffee/Cafes"
+  jcpenney: Shopping
+  jetblue: Travel
+  jiffy: Transportation
+  joes: Groceries
+  juice: "Food/Dining Coffee/Cafes"
+  kiosk: "Services/Other"
+  kitchen: "Food/Dining Restaurants"
+  kong: "Food/Dining Restaurants"
+  krispy: "Food/Dining Coffee/Cafes"
+  kroger: Groceries
+  kura: "Food/Dining Restaurants"
+  leetcode: Education
+  lego: Shopping
+  lion: "Food/Dining Restaurants"
+  localkitchens: "Food/Dining Restaurants"
+  lowes: Shopping
+  lucky: Groceries
+  lush: Shopping
+  lyfe: "Food/Dining Restaurants"
+  lyft: Transportation
+  macys: Shopping
+  marathon: Transportation
+  marriott: Travel
+  marshalls: Shopping
+  mbta: Transportation
+  mcalisters: "Food/Dining Restaurants"
+  mcdonalds: "Food/Dining Restaurants"
+  medical: Healthcare
+  megabus: Travel
+  membership: Financial
+  mervyns: Shopping
+  meter: Transportation
+  meters: Transportation
+  mexican: "Food/Dining Restaurants"
+  michaels: Shopping
+  mobil: Transportation
+  mott: "Food/Dining Restaurants"
+  namecheap: "Services/Other"
+  navy: Shopping
+  ncsged: Education
+  netflix: Entertainment
+  nike: Shopping
+  noodle: "Food/Dining Restaurants"
+  norwegian: Travel
+  nothing: "Food/Dining Coffee/Cafes"
+  oflif: "Services/Other"
+  oldnavy: Shopping
+  optometry: Healthcare
+  oreilly: Shopping
+  pacific: Transportation
+  paia: Groceries
+  panda: "Food/Dining Restaurants"
+  panera: "Food/Dining Restaurants"
+  parking: Transportation
+  parkingcen: Transportation
+  parts: Shopping
+  party: Shopping
+  paypal: Financial
+  peacock: Entertainment
+  peets: "Food/Dining Coffee/Cafes"
+  petroleum: Transportation
+  petsmart: Shopping
+  pgande: Utilities
+  pharmacy: Healthcare
+  pho: "Food/Dining Restaurants"
+  pizza: "Food/Dining Restaurants"
+  popeyes: "Food/Dining Restaurants"
+  publix: Groceries
+  quest: Healthcare
+  quikstop: Transportation
+  racetrac: Transportation
+  radiology: Healthcare
+  ramen: "Food/Dining Restaurants"
+  ranch: Groceries
+  refund: Financial
+  rentacar: Travel
+  restaur: "Food/Dining Restaurants"
+  restaurant: "Food/Dining Restaurants"
+  riteaid: Healthcare
+  robbie: Transportation
+  robinhood: Financial
+  ross: Shopping
+  rotten: Transportation
+  ryanair: Travel
+  safeway: Groceries
+  saigon: "Food/Dining Restaurants"
+  saks: Shopping
+  samsclub: Groceries
+  sbarro: "Food/Dining Restaurants"
+  sephora: Shopping
+  sharetea: "Food/Dining Coffee/Cafes"
+  shell: Transportation
+  sheng: "Food/Dining Coffee/Cafes"
+  shengkee: "Food/Dining Coffee/Cafes"
+  sheraton: Travel
+  shutterfly: Shopping
+  smog: Transportation
+  smoothie: "Food/Dining Coffee/Cafes"
+  snack: "Food/Dining Coffee/Cafes"
+  southwest: Travel
+  spectrum: Utilities
+  speed: Transportation
+  speedway: Transportation
+  spirit: Travel
+  spotify: Entertainment
+  sprinkles: "Food/Dining Coffee/Cafes"
+  sprouts: Groceries
+  squarespace: "Services/Other"
+  stanford: Education
+  staples: Shopping
+  starbucks: "Food/Dining Coffee/Cafes"
+  state: "Services/Other"
+  steam: Entertainment
+  subway: "Food/Dining Restaurants"
+  sunright: "Food/Dining Coffee/Cafes"
+  supercuts: "Services/Other"
+  sushi: "Food/Dining Restaurants"
+  sweet: "Food/Dining Coffee/Cafes"
+  sweetgreen: "Food/Dining Coffee/Cafes"
+  taco: "Food/Dining Restaurants"
+  tacos: "Food/Dining Restaurants"
+  taqueria: "Food/Dining Restaurants"
+  target: Shopping
+  taxi: "Services/Other"
+  tcbmta: Transportation
+  tea: "Food/Dining Coffee/Cafes"
+  teaspoon: "Food/Dining Coffee/Cafes"
+  thai: "Food/Dining Restaurants"
+  three: "Food/Dining Restaurants"
+  ticketsatwork: Entertainment
+  tire: Transportation
+  tjma: Shopping
+  tmobile: Utilities
+  tofu: "Food/Dining Restaurants"
+  trader: Groceries
+  travel: Travel
+  travelocity: Travel
+  trip: Transportation
+  tripcom: Travel
+  truck: "Food/Dining Restaurants"
+  uber: Transportation
+  ubereats: "Food/Dining Restaurants"
+  uhaul: Transportation
+  ulta: Shopping
+  uniqlo: Shopping
+  united: Travel
+  usps: "Services/Other"
+  valero: Transportation
+  venmo: Financial
+  verizon: Utilities
+  victorias: Shopping
+  virgin: Travel
+  vuong: "Food/Dining Restaurants"
+  walgreen: Healthcare
+  walmart: Shopping
+  wayfair: Shopping
+  whataburger: "Food/Dining Restaurants"
+  wholefds: Groceries
+  wingstop: "Food/Dining Restaurants"
+  wire: Financial
+  withdrawal: Financial
+  wyndham: Travel
+  yogurt: "Food/Dining Coffee/Cafes"
+  yogurtland: "Food/Dining Coffee/Cafes"
+  youtube: Entertainment
+  youtubepremium: Entertainment
+  zipcar: Transportation

@@ -1,14 +1,15 @@
 """Generate a concise keyword-based MERCHANT_TO_CATEGORY_MAP.
 
-Reads the proposed exact merchant-to-category mapping and the list of unique
-merchants, then distils a compact set of keywords that reliably predict a
-merchant's category via substring matching.
+Reads the existing merchant-to-category mapping, optional exact merchant
+overrides, and the list of unique merchants, then distils a compact set of
+keywords that reliably predict a merchant's category via substring matching.
 
 Usage:
     pipenv run python scripts/generate_keyword_map.py
 """
 
 import re
+from math import ceil
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
@@ -16,8 +17,10 @@ from typing import Any
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-UNIQUE_MERCHANTS_FILE = PROJECT_ROOT / "data" / "unique_merchants"
-PROPOSED_MAP_FILE = PROJECT_ROOT / "proposed_mappings.yaml"
+UNIQUE_MERCHANTS_FILE = PROJECT_ROOT / "data" / "unique_merchants.txt"
+EXACT_OVERRIDES_FILE = (
+    PROJECT_ROOT / "data" / "merchant_category_overrides_2025_2026.yaml"
+)
 CONFIG_FILE = PROJECT_ROOT / "config.yaml"
 
 # Minimum number of merchants a keyword must appear in to be eligible.
@@ -29,6 +32,11 @@ MIN_DOMINANCE_RATIO = 0.75
 
 # Minimum keyword length (after normalisation).
 MIN_KEYWORD_LENGTH = 4
+
+# Prefer keywords for coverage. Exact merchant entries are only emitted for
+# merchants still not covered after keyword coverage reaches this threshold.
+TARGET_KEYWORD_COVERAGE = 0.95
+MIN_DYNAMIC_KEYWORD_MERCHANTS = 2
 
 # ---------------------------------------------------------------------------
 # Stop words: generic location names, state codes, fragments, and other tokens
@@ -130,6 +138,47 @@ STOP_WORDS: set[str] = {
     "port",
     "bar",
     "grill",
+}
+
+DYNAMIC_KEYWORD_STOP_WORDS = STOP_WORDS | {
+    "account",
+    "ame",
+    "aplpay",
+    "auarmadale",
+    "ca",
+    "cruz",
+    "dd",
+    "de",
+    "fee",
+    "fr",
+    "fra",
+    "gglpay",
+    "il",
+    "iramaint",
+    "llc",
+    "maintenance",
+    "monthly",
+    "mountainview",
+    "mountainviewca",
+    "maria",
+    "mntn",
+    "ny",
+    "ref",
+    "restau",
+    "san",
+    "service",
+    "sp",
+    "sq",
+    "squ",
+    "square",
+    "store",
+    "tn",
+    "transfer",
+    "tst",
+    "tx",
+    "va",
+    "vcnsantaclar",
+    "viewca",
 }
 
 # ---------------------------------------------------------------------------
@@ -384,11 +433,20 @@ def load_unique_merchants() -> list[str]:
         return [line.strip() for line in f if line.strip()]
 
 
-def load_proposed_map() -> dict[str, str]:
-    """Load the hand-curated proposed merchant→category map."""
-    with open(PROPOSED_MAP_FILE, "r", encoding="utf-8") as f:
+def load_config_map() -> dict[str, str]:
+    """Load the existing keyword map from config.yaml."""
+    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         data: Any = yaml.safe_load(f)
     return data.get("MERCHANT_TO_CATEGORY_MAP", {})
+
+
+def load_exact_overrides() -> dict[str, str]:
+    """Load optional exact merchant overrides for the current merchant set."""
+    if not EXACT_OVERRIDES_FILE.exists():
+        return {}
+    with open(EXACT_OVERRIDES_FILE, "r", encoding="utf-8") as f:
+        data: Any = yaml.safe_load(f) or {}
+    return data.get("MERCHANT_CATEGORY_OVERRIDES", {})
 
 
 def normalize(text: str) -> str:
@@ -400,6 +458,125 @@ def tokenize(merchant: str) -> list[str]:
     """Split a merchant name into meaningful tokens."""
     words = re.split(r"[^A-Za-z0-9]+", merchant.lower())
     return [w for w in words if len(w) >= MIN_KEYWORD_LENGTH and w not in STOP_WORDS]
+
+
+def phrase_tokens(merchant: str) -> list[str]:
+    """Return candidate phrase tokens for dynamic keyword generation."""
+    return [
+        word
+        for word in re.split(r"[^A-Za-z0-9]+", merchant.lower())
+        if len(word) >= 3 and word not in DYNAMIC_KEYWORD_STOP_WORDS
+    ]
+
+
+def find_keyword_category(merchant: str, keyword_map: dict[str, str]) -> str | None:
+    """Return the category found by keyword matching, if any."""
+    merchant_norm = normalize(merchant)
+    for kw, cat in sorted(
+        keyword_map.items(),
+        key=lambda item: len(normalize(item[0])),
+        reverse=True,
+    ):
+        if normalize(kw) in merchant_norm:
+            return cat
+    return None
+
+
+def build_labeled_merchants(
+    merchants: list[str],
+    keyword_map: dict[str, str],
+    exact_overrides: dict[str, str],
+) -> dict[str, str]:
+    """Infer a category label for each known merchant."""
+    labels: dict[str, str] = {}
+    for merchant in merchants:
+        exact_cat = exact_overrides.get(merchant)
+        keyword_cat = find_keyword_category(merchant, keyword_map)
+        if exact_cat:
+            labels[merchant] = exact_cat
+        elif keyword_cat:
+            labels[merchant] = keyword_cat
+    return labels
+
+
+def generate_dynamic_keywords(
+    keyword_map: dict[str, str],
+    merchants: list[str],
+    labels: dict[str, str],
+) -> dict[str, str]:
+    """Add unambiguous merchant-set keywords until target coverage is reached."""
+    expanded = dict(keyword_map)
+    covered = {
+        merchant for merchant in merchants if find_keyword_category(merchant, expanded)
+    }
+
+    candidates: dict[str, tuple[str, set[str]]] = {}
+    for merchant, category in labels.items():
+        tokens = phrase_tokens(merchant)
+        phrases: set[str] = set()
+        for i in range(len(tokens)):
+            for phrase_len in (1, 2, 3):
+                if i + phrase_len <= len(tokens):
+                    phrase = " ".join(tokens[i : i + phrase_len])
+                    if len(normalize(phrase)) >= MIN_KEYWORD_LENGTH:
+                        phrases.add(phrase)
+
+        for phrase in phrases:
+            phrase_norm = normalize(phrase)
+            if phrase_norm in {normalize(kw) for kw in expanded}:
+                continue
+            matched = {
+                known_merchant
+                for known_merchant in merchants
+                if phrase_norm in normalize(known_merchant)
+            }
+            if len(matched) < MIN_DYNAMIC_KEYWORD_MERCHANTS:
+                continue
+            matched_categories = {labels.get(match) for match in matched}
+            if (
+                matched
+                and len(matched_categories) == 1
+                and category in matched_categories
+            ):
+                candidates[phrase] = (category, matched)
+
+    target_count = ceil(len(merchants) * TARGET_KEYWORD_COVERAGE)
+    while len(covered) < target_count:
+        best: tuple[tuple[int, int], str, str, set[str]] | None = None
+        expanded_norms = {normalize(kw) for kw in expanded}
+        for phrase, (category, matched) in candidates.items():
+            if normalize(phrase) in expanded_norms:
+                continue
+            gain = len(matched - covered)
+            if gain <= 0:
+                continue
+            score = (gain, len(normalize(phrase)))
+            if best is None or score > best[0]:
+                best = (score, phrase, category, matched)
+        if best is None:
+            break
+
+        _score, phrase, category, matched = best
+        expanded[phrase] = category
+        covered |= matched
+
+    return dict(sorted(expanded.items()))
+
+
+def minimize_exact_map(
+    keyword_map: dict[str, str],
+    merchants: list[str],
+    exact_overrides: dict[str, str],
+) -> dict[str, str]:
+    """Keep exact entries only for known merchants not covered by keywords."""
+    exact = {}
+    for merchant in merchants:
+        if (
+            merchant in exact_overrides
+            and find_keyword_category(merchant, keyword_map) is None
+        ):
+            exact[merchant] = exact_overrides[merchant]
+    return exact
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +598,7 @@ def generate_keyword_map() -> dict[str, str]:
          - are not already covered by a brand keyword
       4. Merge the two sets, with brand keywords taking precedence.
     """
-    proposed = load_proposed_map()
+    proposed = load_config_map()
 
     # Count keyword -> category frequencies
     keyword_cats: dict[str, Counter[str]] = defaultdict(Counter)
@@ -446,17 +623,20 @@ def generate_keyword_map() -> dict[str, str]:
             continue
         derived[kw] = dominant_cat
 
-    # Merge: brand keywords take precedence
-    keyword_map = {**derived, **BRAND_KEYWORDS}
+    # Merge: existing config and brand keywords take precedence over derived keywords.
+    keyword_map = {**derived, **BRAND_KEYWORDS, **load_config_map()}
 
     # Sort alphabetically for readability
     return dict(sorted(keyword_map.items()))
 
 
 def compute_coverage(
-    keyword_map: dict[str, str], merchants: list[str]
+    keyword_map: dict[str, str],
+    merchants: list[str],
+    exact_map: dict[str, str] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Check how many merchants are matched by the keyword map."""
+    exact_names = {normalize(merchant) for merchant in (exact_map or {})}
     sorted_keywords = sorted(
         keyword_map.items(),
         key=lambda item: len(item[0]),
@@ -466,6 +646,9 @@ def compute_coverage(
     unmatched: list[str] = []
     for merchant in merchants:
         merchant_norm = normalize(merchant)
+        if merchant_norm in exact_names:
+            matched.append(merchant)
+            continue
         found = False
         for kw, _cat in sorted_keywords:
             if normalize(kw) in merchant_norm:
@@ -478,8 +661,41 @@ def compute_coverage(
     return matched, unmatched
 
 
-def write_keyword_map_to_config(keyword_map: dict[str, str]) -> None:
-    """Replace the MERCHANT_TO_CATEGORY_MAP section in config.yaml.
+def format_yaml_map_block(section_name: str, values: dict[str, str]) -> str:
+    """Format a top-level string map section for config.yaml."""
+    lines = [f"{section_name}:"]
+    if not values:
+        return f"{section_name}: {{}}"
+    for key, cat in values.items():
+        key_str = f'"{key}"' if any(ch in key for ch in ":#{}[],&*?|<>=!%@`") else key
+        if "/" in cat:
+            lines.append(f'  {key_str}: "{cat}"')
+        else:
+            lines.append(f"  {key_str}: {cat}")
+    return "\n".join(lines)
+
+
+def replace_config_section(
+    content: str, section_name: str, values: dict[str, str]
+) -> str:
+    """Replace or insert a top-level map section in config.yaml."""
+    new_block = format_yaml_map_block(section_name, values)
+    pattern = rf"^{section_name}:.*?(?=\n[A-Z_]+:|\Z)"
+    if re.search(pattern, content, flags=re.DOTALL | re.MULTILINE):
+        return re.sub(
+            pattern,
+            new_block,
+            content,
+            count=1,
+            flags=re.DOTALL | re.MULTILINE,
+        )
+    return content.rstrip() + "\n" + new_block + "\n"
+
+
+def write_maps_to_config(
+    keyword_map: dict[str, str], exact_map: dict[str, str]
+) -> None:
+    """Replace category map sections in config.yaml.
 
     Uses targeted text replacement instead of yaml.safe_dump to preserve
     the original file formatting for all other sections.
@@ -487,20 +703,12 @@ def write_keyword_map_to_config(keyword_map: dict[str, str]) -> None:
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # Build the new YAML block
-    lines = ["MERCHANT_TO_CATEGORY_MAP:"]
-    for kw, cat in keyword_map.items():
-        # Quote values that contain / to avoid YAML issues
-        if "/" in cat:
-            lines.append(f'  {kw}: "{cat}"')
-        else:
-            lines.append(f"  {kw}: {cat}")
-    new_block = "\n".join(lines)
-
-    # Replace the existing MERCHANT_TO_CATEGORY_MAP section.
-    # It either ends at the next top-level key or at EOF.
-    pattern = r"MERCHANT_TO_CATEGORY_MAP:.*?(?=\n[A-Z_]+:|$)"
-    replaced = re.sub(pattern, new_block, content, count=1, flags=re.DOTALL)
+    replaced = replace_config_section(
+        content,
+        "EXACT_MERCHANT_TO_CATEGORY_MAP",
+        dict(sorted(exact_map.items())),
+    )
+    replaced = replace_config_section(replaced, "MERCHANT_TO_CATEGORY_MAP", keyword_map)
 
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         f.write(replaced)
@@ -508,13 +716,17 @@ def write_keyword_map_to_config(keyword_map: dict[str, str]) -> None:
 
 def main() -> None:
     """Entry point."""
-    proposed = load_proposed_map()
+    exact_overrides = load_exact_overrides()
+    proposed = {**load_config_map(), **exact_overrides}
     merchants = load_unique_merchants()
 
     print(f"Loaded {len(proposed)} proposed merchant mappings.")
     print(f"Loaded {len(merchants)} unique merchants.")
 
     keyword_map = generate_keyword_map()
+    labels = build_labeled_merchants(merchants, keyword_map, exact_overrides)
+    keyword_map = generate_dynamic_keywords(keyword_map, merchants, labels)
+    exact_map = minimize_exact_map(keyword_map, merchants, exact_overrides)
 
     # Count categories
     cats: Counter[str] = Counter(keyword_map.values())
@@ -525,7 +737,7 @@ def main() -> None:
         print(f"  {cat}: {count} keywords")
 
     # Coverage report
-    matched, unmatched = compute_coverage(keyword_map, merchants)
+    matched, unmatched = compute_coverage(keyword_map, merchants, exact_map)
     pct = len(matched) / len(merchants) * 100 if merchants else 0
     print(f"\nCoverage: {len(matched)}/{len(merchants)} merchants ({pct:.1f}%)")
     if unmatched:
@@ -536,8 +748,11 @@ def main() -> None:
             print(f"  ... and {len(unmatched) - 30} more")
 
     # Write to config
-    write_keyword_map_to_config(keyword_map)
-    print(f"\nUpdated {CONFIG_FILE.name} with {len(keyword_map)} keyword entries.")
+    write_maps_to_config(keyword_map, exact_map)
+    print(
+        f"\nUpdated {CONFIG_FILE.name} with {len(exact_map)} exact merchant entries "
+        f"and {len(keyword_map)} keyword entries."
+    )
 
 
 if __name__ == "__main__":

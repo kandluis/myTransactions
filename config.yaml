@@ -532,12 +532,173 @@ STARTS_WITH_REMOVAL:
 ENDS_WITH_REMOVAL:
   - " Ca"
 CATEGORY_MAP: {}
+EXACT_MERCHANT_TO_CATEGORY_MAP:
+  Aa Gas And Food Mart: Transportation
+  Aaa: "Services/Other"
+  Aarp: "Services/Other"
+  Actmountain View Rec: Entertainment
+  Advisory Fee: Financial
+  Air T Vad X: Travel
+  Airborne Gymnastics: Entertainment
+  Alibaba Group Hldg Ltd Fsponsored Adr Adr Reps Ord Shs: Financial
+  Alma Dessert: "Food/Dining Coffee/Cafes"
+  Ambrogio: "Food/Dining Restaurants"
+  American Express: Financial
+  American X Fort Worth Tx: Travel
+  Annual Fee: Financial
+  Aria Gas And Market Cupertino: Transportation
+  Artesanias Juarez: Shopping
+  Avas Downtowmountain View: Groceries
+  Bb Lanes: Entertainment
+  Blueberry Pediatrics Blueberrypedi: Healthcare
+  Bolt Operatiotallinn Es: Transportation
+  Bookingcom: Travel
+  Brasserie Saiparis Fr: "Food/Dining Restaurants"
+  Brother International: Shopping
+  Bucees: Transportation
+  Carousel: Entertainment
+  Carrycom Carrycom Ny: Shopping
+  Check X: Financial
+  City Of Mountain View: "Services/Other"
+  City Of Sunnyvale: "Services/Other"
+  Ckecococ Llcwatsonville: "Food/Dining Restaurants"
+  Cookunity: "Food/Dining Restaurants"
+  Costa Farms Llc: Groceries
+  Crepevine: "Food/Dining Restaurants"
+  D Jwsj Nj: Entertainment
+  Daisy Ortiz Farms Mountain View: Groceries
+  Dashpass: "Food/Dining Restaurants"
+  Debbies Germmountain View: "Food/Dining Coffee/Cafes"
+  Diamond Gas Mart Mountain View: Transportation
+  Dicks Sporting Goods: Shopping
+  Digit: Financial
+  Doches Credit Union: Financial
+  East Bay Reg Park Dist Oakland: Entertainment
+  Ecma Svmd: Healthcare
+  El Camino Anesthesia Al: Healthcare
+  El Camino Hospital: Healthcare
+  El Camino Real: Transportation
+  Ez Pay Fee Pge Piscataway Nj: Utilities
+  Fantasy Of Lights: Entertainment
+  Farm Fresh Supermarkets: Groceries
+  Fashion: Shopping
+  Fee Account Transfer Fee: Financial
+  Fee Account Transfer Fee Iramaint: Financial
+  Fig Tree: "Food/Dining Restaurants"
+  Fu Lam Mum: "Food/Dining Restaurants"
+  Ghiggeri Stoneba Sunnyvale: "Services/Other"
+  Giorgios: "Food/Dining Restaurants"
+  Golden Gate Transit Petaluma: Transportation
+  Google Cloud Storage: "Services/Other"
+  Google Owlet Dream: Shopping
+  Happy Hollow Food Be: "Food/Dining Restaurants"
+  Happy Hollow Park: Entertainment
+  Happy Hollow Park Zo: Entertainment
+  Happy Lemon: "Food/Dining Coffee/Cafes"
+  Honorio Robles Cupertino: Groceries
+  Hook Lsanta Cruz: "Food/Dining Restaurants"
+  Inkd Bluestonaustin Tx: "Food/Dining Coffee/Cafes"
+  Instalab Instalabcom Ny: Healthcare
+  Italian Cornesunnyvale: "Food/Dining Restaurants"
+  Jl Produce: Groceries
+  Kashiwase Farms: Groceries
+  Kitty Nomountain View: "Food/Dining Restaurants"
+  Leboulanger: "Food/Dining Coffee/Cafes"
+  Ls The Billy Jones Wi X: Entertainment
+  Lululemon Athletica: Shopping
+  Marukai Market: Groceries
+  Meducsf Baychildrens: Healthcare
+  Mendocino Farms: "Food/Dining Restaurants"
+  Meta Store: Shopping
+  Mex Cal On Wheels: "Food/Dining Restaurants"
+  Mifen: "Food/Dining Restaurants"
+  Mntn View Allmountain View: Transportation
+  Moffett Field Hist Mountain View: Entertainment
+  Moffett Valermountain View: Transportation
+  Monthly Maintenance Fee: Financial
+  Monthly Maintenance Fee Waived: Financial
+  Monthly Service Fee: Financial
+  Mothers Milk X: Healthcare
+  Namo Dallas Tx: "Food/Dining Restaurants"
+  New York Times: Entertainment
+  Nick The Greemountain View: "Food/Dining Restaurants"
+  Nurture Life: "Food/Dining Restaurants"
+  Oak And Los Gatos: "Food/Dining Restaurants"
+  Oura Ring: Healthcare
+  Parchment: Education
+  Paris Baguette: "Food/Dining Coffee/Cafes"
+  Paris Bamountain View: "Food/Dining Coffee/Cafes"
+  Paul Super Swdinuba: Groceries
+  Pedro Aguilar Narez Fr Atwater: Groceries
+  Pge: Utilities
+  Pinnacle Physical Ther Mountain View: Healthcare
+  Points Development Usan Francisco: Financial
+  Pokeworks Mountain Mountain View: "Food/Dining Restaurants"
+  Powers Law Group Pc Houston Tx: "Services/Other"
+  Primary: Financial
+  Qingshu Malatang: "Food/Dining Restaurants"
+  R Farms Cupertino: Groceries
+  Raising Canes: "Food/Dining Restaurants"
+  Residence Life: Education
+  Saint Joseph Parish: "Services/Other"
+  Sakoon Mountain View: "Food/Dining Restaurants"
+  Sc Wharf Gatesanta Cruz: Travel
+  Sched Xfer Ref D: Financial
+  Scotts Seafood: "Food/Dining Restaurants"
+  Seabrighsanta Cruz: "Food/Dining Restaurants"
+  Selecta Sas Le Bourget Fra: Travel
+  Service: "Services/Other"
+  Service Fee Tn: Financial
+  Service Navigo Paris Fra: Transportation
+  Sherwinwilliams: Shopping
+  Sp Bared Footwear Auarmadale Au: Shopping
+  Sp Cerebelly Erie Co: Groceries
+  Sp Cozy Earthsouth Jordan Ut: Shopping
+  Sp Thebabookishboutiqu Thebabookishb Ky: Shopping
+  Spoelcalifasmountain View: Healthcare
+  Sposimplysabmountain View: "Food/Dining Restaurants"
+  Sposimplysabor Mountain View: "Food/Dining Restaurants"
+  Springtown Gas: Transportation
+  Square: "Services/Other"
+  Store: Shopping
+  Suspiro: "Food/Dining Restaurants"
+  Suttr Hlth Ssr Mho Hos: Healthcare
+  T Castle Mountain View: "Food/Dining Coffee/Cafes"
+  Taiwan Porridcupertino: "Food/Dining Restaurants"
+  Taiwan Porridge Cupertino: "Food/Dining Restaurants"
+  Tarte Cosmetics: Shopping
+  The Bunny Hive Mtv Thebunnyhive: Education
+  The Childrens Place: Shopping
+  The Joule The Joule Dallas Tx: Travel
+  The Market At Edgewood: Groceries
+  The Midwife Amountain View: Healthcare
+  Tock Atalexanders Pat Alexanderspa Il: "Food/Dining Restaurants"
+  Togos: "Food/Dining Restaurants"
+  Too Good To Go: "Food/Dining Restaurants"
+  Toyota: Transportation
+  Trust Sp Direct Portfolio: Financial
+  Tstseoul Corndog Fr Escondido: "Food/Dining Restaurants"
+  Tstshoreline Lake Ame Mountain View: "Food/Dining Restaurants"
+  Turbotax: Financial
+  Udon Mugmountain View: "Food/Dining Restaurants"
+  Uepmr Bao Kmountain View: "Food/Dining Restaurants"
+  Uepsoong Soong Restau: "Food/Dining Restaurants"
+  Uss Midway Museum: Entertainment
+  Vaso Azzurro Ristorant Mountain Viewca: "Food/Dining Restaurants"
+  Vcnsantaclar: "Services/Other"
+  Vcnsantaclararecord: "Services/Other"
+  Vrbo: Travel
+  Wall Street Journal: Entertainment
+  Whole Foods: Groceries
+  Zhang Liang Games: Entertainment
 MERCHANT_TO_CATEGORY_MAP:
   adidas: Shopping
+  adj redist: Financial
   admin: Financial
   airbnb: Travel
   airline: Travel
   airlines: Travel
+  alexs: Groceries
   allergy: Healthcare
   alliance: Transportation
   altos: "Food/Dining Restaurants"
@@ -560,9 +721,12 @@ MERCHANT_TO_CATEGORY_MAP:
   balance: Financial
   banana: Shopping
   bandito: Groceries
+  bank: Financial
   bbq: "Food/Dining Restaurants"
+  beckmanns: "Food/Dining Coffee/Cafes"
   bestbuy: Shopping
   bistro: "Food/Dining Restaurants"
+  bluestone lane: "Food/Dining Coffee/Cafes"
   boba: "Food/Dining Coffee/Cafes"
   bodega: Groceries
   bonchon: "Food/Dining Restaurants"
@@ -579,6 +743,8 @@ MERCHANT_TO_CATEGORY_MAP:
   chargepoint: Transportation
   chase: Financial
   chevron: Transportation
+  chez: "Food/Dining Restaurants"
+  chicken: "Food/Dining Restaurants"
   chickfila: "Food/Dining Restaurants"
   chilis: "Food/Dining Restaurants"
   chipotle: "Food/Dining Restaurants"
@@ -594,6 +760,8 @@ MERCHANT_TO_CATEGORY_MAP:
   cookies: "Food/Dining Coffee/Cafes"
   corner: Shopping
   costco: Groceries
+  costena: "Food/Dining Restaurants"
+  country: Groceries
   court: "Services/Other"
   crepes: "Food/Dining Restaurants"
   cuisine: "Food/Dining Restaurants"
@@ -616,6 +784,7 @@ MERCHANT_TO_CATEGORY_MAP:
   dominos: "Food/Dining Restaurants"
   donut: "Food/Dining Coffee/Cafes"
   doordash: "Food/Dining Restaurants"
+  downtown: Groceries
   duke: Utilities
   dumpling: "Food/Dining Restaurants"
   easyjet: Travel
@@ -634,6 +803,7 @@ MERCHANT_TO_CATEGORY_MAP:
   fedex: "Services/Other"
   felipes: "Food/Dining Restaurants"
   feng: "Food/Dining Coffee/Cafes"
+  fish: "Food/Dining Restaurants"
   foreign: Shopping
   frontier: Travel
   gasoline: Transportation
@@ -646,6 +816,7 @@ MERCHANT_TO_CATEGORY_MAP:
   grocery: Groceries
   groupon: Shopping
   grubhub: "Food/Dining Restaurants"
+  guacamole: "Food/Dining Restaurants"
   harvard: Education
   health: Healthcare
   healthcare: Healthcare
@@ -658,6 +829,7 @@ MERCHANT_TO_CATEGORY_MAP:
   hulu: Entertainment
   ikea: Shopping
   industries: Shopping
+  inkd gratuity: "Food/Dining Restaurants"
   innout: "Food/Dining Restaurants"
   instacart: "Food/Dining Restaurants"
   insurance: "Services/Other"
@@ -671,11 +843,13 @@ MERCHANT_TO_CATEGORY_MAP:
   joes: Groceries
   juice: "Food/Dining Coffee/Cafes"
   kiosk: "Services/Other"
+  kirin: "Food/Dining Restaurants"
   kitchen: "Food/Dining Restaurants"
   kong: "Food/Dining Restaurants"
   krispy: "Food/Dining Coffee/Cafes"
   kroger: Groceries
   kura: "Food/Dining Restaurants"
+  lanzhou: "Food/Dining Restaurants"
   leetcode: Education
   lego: Shopping
   lion: "Food/Dining Restaurants"
@@ -686,9 +860,12 @@ MERCHANT_TO_CATEGORY_MAP:
   lyfe: "Food/Dining Restaurants"
   lyft: Transportation
   macys: Shopping
+  maison alyzee: "Food/Dining Coffee/Cafes"
   marathon: Transportation
+  marie: "Food/Dining Restaurants"
   marriott: Travel
   marshalls: Shopping
+  masa: "Food/Dining Restaurants"
   mbta: Transportation
   mcalisters: "Food/Dining Restaurants"
   mcdonalds: "Food/Dining Restaurants"
@@ -703,6 +880,7 @@ MERCHANT_TO_CATEGORY_MAP:
   mobil: Transportation
   mott: "Food/Dining Restaurants"
   namecheap: "Services/Other"
+  natera: Healthcare
   navy: Shopping
   ncsged: Education
   netflix: Entertainment
@@ -733,6 +911,8 @@ MERCHANT_TO_CATEGORY_MAP:
   pizza: "Food/Dining Restaurants"
   popeyes: "Food/Dining Restaurants"
   publix: Groceries
+  pumpables: Shopping
+  queen: "Food/Dining Restaurants"
   quest: Healthcare
   quikstop: Transportation
   racetrac: Transportation
@@ -754,6 +934,7 @@ MERCHANT_TO_CATEGORY_MAP:
   saks: Shopping
   samsclub: Groceries
   sbarro: "Food/Dining Restaurants"
+  seasons: "Food/Dining Restaurants"
   sephora: Shopping
   sharetea: "Food/Dining Coffee/Cafes"
   shell: Transportation
@@ -793,12 +974,15 @@ MERCHANT_TO_CATEGORY_MAP:
   tea: "Food/Dining Coffee/Cafes"
   teaspoon: "Food/Dining Coffee/Cafes"
   thai: "Food/Dining Restaurants"
+  thistle: Groceries
   three: "Food/Dining Restaurants"
   ticketsatwork: Entertainment
   tire: Transportation
   tjma: Shopping
   tmobile: Utilities
   tofu: "Food/Dining Restaurants"
+  tong sui: "Food/Dining Coffee/Cafes"
+  tpass order: Transportation
   trader: Groceries
   travel: Travel
   travelocity: Travel
@@ -811,6 +995,7 @@ MERCHANT_TO_CATEGORY_MAP:
   ulta: Shopping
   uniqlo: Shopping
   united: Travel
+  univ: Education
   usps: "Services/Other"
   valero: Transportation
   venmo: Financial
@@ -831,4 +1016,5 @@ MERCHANT_TO_CATEGORY_MAP:
   yogurtland: "Food/Dining Coffee/Cafes"
   youtube: Entertainment
   youtubepremium: Entertainment
+  zareens: "Food/Dining Restaurants"
   zipcar: Transportation

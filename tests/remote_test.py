@@ -109,6 +109,49 @@ def test_apply_category_rules(config: MonkeyPatch) -> None:
         assert updated.loc[2, "Category"] == "New Category"
 
 
+def test_apply_category_rules_prefers_exact_merchant(config: MonkeyPatch) -> None:
+    txns = pd.DataFrame(
+        [
+            {
+                "Date": "2026-01-01",
+                "Merchant": "Store",
+                "Amount": -10.00,
+                "Category": "Unknown",
+                "Account": "Checking",
+                "ID": "exact-1",
+                "Description": "Store",
+            },
+            {
+                "Date": "2026-01-02",
+                "Merchant": "Google Store",
+                "Amount": -20.00,
+                "Category": "Unknown",
+                "Account": "Checking",
+                "ID": "keyword-1",
+                "Description": "Google Store",
+            },
+        ]
+    )
+
+    with config.context() as c:
+        c.setattr(
+            remote.config.GLOBAL,
+            "EXACT_MERCHANT_TO_CATEGORY_MAP",
+            {"Store": "Shopping"},
+        )
+        c.setattr(
+            remote.config.GLOBAL,
+            "MERCHANT_TO_CATEGORY_MAP",
+            {"store": "Services/Other"},
+        )
+        c.setattr(remote.config.GLOBAL, "CATEGORY_MAP", {})
+
+        updated = remote.ApplyCategoryRules(txns)
+
+        assert updated.loc[0, "Category"] == "Shopping"
+        assert updated.loc[1, "Category"] == "Services/Other"
+
+
 def test_authenticate(
     mocker, test_env: MonkeyPatch, test_creds: service_account.Credentials
 ) -> None:

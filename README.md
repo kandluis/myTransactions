@@ -31,7 +31,7 @@ On Mac, make sure you have [Homebrew](https://brew.sh/) installed. You can insta
 ```sh
 brew install pipenv
 brew install pyenv
-````
+```
 
 After installing, you navigate to the root of the project directory, and run:
 
@@ -42,14 +42,98 @@ pipenv install
 This will install all the required dependencies as well as the appropriate Python version (using pyenv). You can then run:
 
 ```sh
-pipenv run python scraper.py --type='all'
+pipenv run python scraper.py --types='all'
 ```
 
 To run the script with these installs, or you can jump into the installed Python environment at the shell bevel with:
 
 ```sh
 pipenv shell
-````
+```
+
+# Scripts
+
+## Scrape Transactions and Accounts
+
+Use `scraper.py` to retrieve data from Empower and write it to the configured
+Google Sheet.
+
+```sh
+pipenv run python scraper.py --types='all'
+```
+
+The `--types` option can be one of:
+
+- `all`: scrape transactions and accounts.
+- `transactions`: scrape only transactions.
+- `accounts`: scrape only accounts.
+
+Useful flags:
+
+- `--dry_run`: retrieve and process data without updating Google Sheets.
+- `--debug`: write local CSV snapshots such as `transactions.csv` and
+  `accounts.csv`.
+
+Example:
+
+```sh
+pipenv run python scraper.py --types='transactions' --dry_run --debug
+```
+
+## Reapply Category Rules
+
+Use `updater.py` when transaction data already exists in Google Sheets and you
+want to reapply the category rules in `config.yaml` without scraping new data.
+This is the safest way to validate category-map changes before writing them
+back to the sheet.
+
+```sh
+pipenv run python updater.py --dry_run
+```
+
+In dry-run mode, the updater writes `transactions_updated.csv` locally and does
+not update Google Sheets. After reviewing the output, run without `--dry_run` to
+write the cleaned transactions back:
+
+```sh
+pipenv run python updater.py
+```
+
+Use `--debug` with a real update to also write `transactions_updated.csv`.
+
+## Generate Merchant Category Maps
+
+Use `scripts/generate_keyword_map.py` to refresh category coverage from the
+merchant list in `data/unique_merchants.txt`.
+
+```sh
+pipenv run python scripts/generate_keyword_map.py
+```
+
+The generator reads:
+
+- `config.yaml`: the existing keyword category map.
+- `data/unique_merchants.txt`: unique merchants to measure coverage against.
+- `data/merchant_category_overrides_2025_2026.yaml`: curated labels for known
+  merchants that are not reliably handled by broad keywords.
+
+It updates two sections in `config.yaml`:
+
+- `MERCHANT_TO_CATEGORY_MAP`: reusable keyword-based rules.
+- `EXACT_MERCHANT_TO_CATEGORY_MAP`: exact fallback rules for merchants still
+  not covered by keywords.
+
+After running the generator, review the `config.yaml` diff. Keywords should be
+reusable merchant or category signals; one-off or artifact-like names should
+stay in the exact map instead.
+
+Recommended validation flow:
+
+```sh
+pipenv run python scripts/generate_keyword_map.py
+pipenv run python updater.py --dry_run
+pipenv run pytest
+```
 
 # Type Checking
 
@@ -73,6 +157,19 @@ pipenv run pytest
 You can run all formatting with the command:
 ```sh
 pipenv run black .
+```
+
+# CI Checks
+
+GitHub Actions runs formatting, linting, type checking, and tests. To run the
+same local checks before pushing:
+
+```sh
+pipenv run black . --check
+pipenv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+pipenv run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+pipenv run mypy .
+pipenv run pytest --cov --cov-report=xml
 ```
 
 # Deploy to fly.io

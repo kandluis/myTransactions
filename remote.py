@@ -143,7 +143,22 @@ def ApplyCategoryRules(txns: pd.DataFrame) -> pd.DataFrame:
     if updated.empty:
         return updated
 
-    # 1. Apply Merchant to Category Map (using keyword matching)
+    # 1. Apply Exact Merchant to Category Map
+    exact_merchant_to_cat = getattr(config.GLOBAL, "EXACT_MERCHANT_TO_CATEGORY_MAP", {})
+    if exact_merchant_to_cat:
+        exact_merchant_to_cat_norm = {
+            _Normalize(k).lower(): v for k, v in exact_merchant_to_cat.items()
+        }
+
+        def map_exact_merchant(row: pd.Series) -> str:
+            merchant_norm = _Normalize(str(row["Merchant"])).lower()
+            if merchant_norm in exact_merchant_to_cat_norm:
+                return exact_merchant_to_cat_norm[merchant_norm]
+            return row["Category"]
+
+        updated["Category"] = updated.apply(map_exact_merchant, axis=1)
+
+    # 2. Apply Merchant to Category Map (using keyword matching)
     merchant_to_cat = getattr(config.GLOBAL, "MERCHANT_TO_CATEGORY_MAP", {})
     if merchant_to_cat:
         # Sort keywords descending by length so most specific keywords match first
@@ -152,8 +167,16 @@ def ApplyCategoryRules(txns: pd.DataFrame) -> pd.DataFrame:
             key=lambda item: len(item[0]),
             reverse=True,
         )
+        exact_merchant_names = set()
+        if exact_merchant_to_cat:
+            exact_merchant_names = {
+                _Normalize(k).lower() for k in exact_merchant_to_cat
+            }
 
         def map_merchant(row: pd.Series) -> str:
+            exact_merchant_norm = _Normalize(str(row["Merchant"])).lower()
+            if exact_merchant_norm in exact_merchant_names:
+                return row["Category"]
             merchant_norm = _NormalizeMerchant(str(row["Merchant"])).lower()
             for kw, cat in sorted_keywords:
                 kw_norm = _NormalizeMerchant(kw).lower()
@@ -163,7 +186,7 @@ def ApplyCategoryRules(txns: pd.DataFrame) -> pd.DataFrame:
 
         updated["Category"] = updated.apply(map_merchant, axis=1)
 
-    # 2. Apply Category Map (mapping old category names to new ones)
+    # 3. Apply Category Map (mapping old category names to new ones)
     category_map = getattr(config.GLOBAL, "CATEGORY_MAP", {})
     if category_map:
         category_map_norm = {_Normalize(k).lower(): v for k, v in category_map.items()}

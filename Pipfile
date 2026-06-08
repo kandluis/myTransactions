@@ -10,6 +10,7 @@ numpy = "*"
 mintotp = "*"
 google-auth = "*"
 pyyaml = "*"
+plotly = "*"
 
 [dev-packages]
 flake8 = "*"

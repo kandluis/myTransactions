@@ -101,6 +101,50 @@ pipenv run python updater.py
 
 Use `--debug` with a real update to also write `transactions_updated.csv`.
 
+## Generate Interactive Spend Charts
+
+Use `scripts/generate_spend_charts.py` to create an interactive Plotly HTML
+profile of historical spend by category. Categories are assigned with the same
+rules in `config.yaml` used by `updater.py`; the chart script does not maintain
+separate hard-coded plotting categories.
+
+The safest local flow is to first generate a cleaned CSV without writing
+changes back to Google Sheets:
+
+```sh
+pipenv run python updater.py --dry_run
+```
+
+This writes `transactions_updated.csv`, which the chart generator uses by
+default:
+
+```sh
+pipenv run python scripts/generate_spend_charts.py
+```
+
+You can also pass another CSV path and tune the rolling-average window or
+category display:
+
+```sh
+pipenv run python scripts/generate_spend_charts.py --input data/transactions.csv --window 31 --top-n-categories 12
+```
+
+To read transactions directly from the configured Google Sheet, use Sheets mode:
+
+```sh
+pipenv run python scripts/generate_spend_charts.py --source sheets --output spend_profile.html
+```
+
+Useful flags:
+
+- `--output`: HTML output path, defaulting to `spend_profile.html`.
+- `--start-date` and `--end-date`: limit the chart to a date range.
+- `--exclude-category`: omit a category; repeat the flag for multiple
+  categories.
+- `--top-n-categories`: keep the largest categories and group the rest as
+  `Other`.
+- `--skip-cleanup`: keep ignored categories/accounts in the chart for debugging.
+
 ## Generate Merchant Category Maps
 
 Use `scripts/generate_keyword_map.py` to refresh category coverage from the

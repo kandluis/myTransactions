@@ -104,9 +104,11 @@ Use `--debug` with a real update to also write `transactions_updated.csv`.
 ## Generate Interactive Spend Charts
 
 Use `scripts/generate_spend_charts.py` to create an interactive Plotly HTML
-profile of historical spend by category. Categories are assigned with the same
-rules in `config.yaml` used by `updater.py`; the chart script does not maintain
-separate hard-coded plotting categories.
+profile of historical spend by category. The report includes a total rolling
+spend trend, a stacked rolling category view, and a monthly category heatmap.
+Categories are assigned with the same rules in `config.yaml` used by
+`updater.py`; the chart script does not maintain separate hard-coded plotting
+categories.
 
 The safest local flow is to first generate a cleaned CSV without writing
 changes back to Google Sheets:
@@ -122,11 +124,20 @@ default:
 pipenv run python scripts/generate_spend_charts.py
 ```
 
-You can also pass another CSV path and tune the rolling-average window or
-category display:
+By default, the chart keeps the top 10 categories and groups the rest as
+`Other` so hover labels stay usable. You can also pass another CSV path and tune
+the rolling-average window or category display:
 
 ```sh
 pipenv run python scripts/generate_spend_charts.py --input data/transactions.csv --window 31 --top-n-categories 12
+```
+
+For datasets with large one-off expenses, use a visual-only cap and write an
+outlier CSV. The cap affects chart scaling and rolling averages, while the CSV
+keeps the raw transaction details for review.
+
+```sh
+pipenv run python scripts/generate_spend_charts.py --cap-daily-spend 1000 --outlier-report outliers.csv
 ```
 
 To read transactions directly from the configured Google Sheet, use Sheets mode:
@@ -142,7 +153,11 @@ Useful flags:
 - `--exclude-category`: omit a category; repeat the flag for multiple
   categories.
 - `--top-n-categories`: keep the largest categories and group the rest as
-  `Other`.
+  `Other`; defaults to `10`.
+- `--cap-daily-spend`: cap displayed daily category spend before rolling
+  averages, without changing raw spend values in the outlier report.
+- `--outlier-report`: write a CSV of transactions on capped or statistically
+  unusual high-spend days.
 - `--skip-cleanup`: keep ignored categories/accounts in the chart for debugging.
 
 ## Generate Merchant Category Maps

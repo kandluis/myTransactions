@@ -88,6 +88,29 @@ def _sample_txns() -> pd.DataFrame:
     )
 
 
+def _outlier_txns() -> pd.DataFrame:
+    txns = _sample_txns()
+    return pd.concat(
+        [
+            txns,
+            pd.DataFrame(
+                [
+                    {
+                        "Date": "2026-01-04",
+                        "Merchant": "Furniture Store",
+                        "Amount": -1500.0,
+                        "Category": "Shopping",
+                        "Account": "Checking",
+                        "ID": "4",
+                        "Description": "Furniture Store",
+                    }
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
+
+
 def test_prepare_spend_data_fills_dates_and_rolls_by_calendar_day(
     category_config: MonkeyPatch,
 ) -> None:
@@ -168,12 +191,86 @@ def test_prepare_spend_data_cleanup_excludes_ignored_categories(
     assert "Groceries" not in set(spend["Category"])
 
 
+def test_prepare_spend_data_caps_display_only(category_config: MonkeyPatch) -> None:
+    spend = generate_spend_charts.prepare_spend_data(
+        _outlier_txns(),
+        top_n_categories=None,
+        cap_daily_spend=100.0,
+        skip_cleanup=True,
+    )
+
+    shopping_mask = (spend["Date"] == pd.Timestamp("2026-01-04")) & (
+        spend["Category"] == "Shopping"
+    )
+    shopping = spend[shopping_mask].iloc[0]
+    assert shopping[generate_spend_charts.SPEND_COLUMN] == 1500.0
+    assert shopping[generate_spend_charts.DISPLAY_SPEND_COLUMN] == 100.0
+    assert shopping[generate_spend_charts.CAPPED_COLUMN]
+
+
+def test_prepare_total_spend_data_rolls_display_and_raw(
+    category_config: MonkeyPatch,
+) -> None:
+    spend = generate_spend_charts.prepare_spend_data(
+        _outlier_txns(),
+        window=2,
+        top_n_categories=None,
+        cap_daily_spend=100.0,
+        skip_cleanup=True,
+    )
+
+    total = generate_spend_charts.prepare_total_spend_data(spend, window=2)
+    final_day = total[total["Date"] == pd.Timestamp("2026-01-04")].iloc[0]
+    assert final_day[generate_spend_charts.ROLLING_SPEND_COLUMN] == 62.5
+    assert final_day[generate_spend_charts.RAW_ROLLING_SPEND_COLUMN] == 762.5
+
+
+def test_prepare_monthly_heatmap_data_uses_raw_spend(
+    category_config: MonkeyPatch,
+) -> None:
+    spend = generate_spend_charts.prepare_spend_data(
+        _outlier_txns(),
+        top_n_categories=None,
+        cap_daily_spend=100.0,
+        skip_cleanup=True,
+    )
+
+    monthly = generate_spend_charts.prepare_monthly_heatmap_data(spend)
+    shopping_mask = (monthly["Month"] == pd.Timestamp("2026-01-01")) & (
+        monthly["Category"] == "Shopping"
+    )
+    shopping = monthly[shopping_mask].iloc[0]
+    assert shopping[generate_spend_charts.SPEND_COLUMN] == 1505.0
+
+
+def test_build_outlier_report_includes_capped_day_transactions(
+    category_config: MonkeyPatch,
+) -> None:
+    txns = generate_spend_charts._prepare_transactions(
+        _outlier_txns(), skip_cleanup=True
+    )
+    spend = generate_spend_charts.prepare_spend_data(
+        txns,
+        top_n_categories=None,
+        cap_daily_spend=100.0,
+        skip_cleanup=True,
+    )
+
+    report = generate_spend_charts.build_outlier_report(
+        txns, spend, cap_daily_spend=100.0
+    )
+
+    assert set(report["ID"]) == {"4"}
+    assert report.iloc[0][generate_spend_charts.DAILY_CATEGORY_SPEND_COLUMN] == 1500.0
+
+
 def test_main_writes_html_from_csv(
     tmp_path: Path, category_config: MonkeyPatch
 ) -> None:
     input_path = tmp_path / "transactions.csv"
     output_path = tmp_path / "spend.html"
-    _sample_txns().to_csv(input_path, index=False)
+    outlier_path = tmp_path / "outliers.csv"
+    _outlier_txns().to_csv(input_path, index=False)
 
     generate_spend_charts.main(
         [
@@ -181,9 +278,15 @@ def test_main_writes_html_from_csv(
             os.fspath(input_path),
             "--output",
             os.fspath(output_path),
+            "--cap-daily-spend",
+            "100",
+            "--outlier-report",
+            os.fspath(outlier_path),
             "--skip-cleanup",
         ]
     )
 
     assert output_path.exists()
+    assert outlier_path.exists()
     assert "plotly" in output_path.read_text().lower()
+    assert "Furniture Store" in outlier_path.read_text()

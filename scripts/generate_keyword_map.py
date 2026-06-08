@@ -9,7 +9,6 @@ Usage:
 """
 
 import re
-import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
@@ -37,28 +36,100 @@ MIN_KEYWORD_LENGTH = 4
 # ---------------------------------------------------------------------------
 STOP_WORDS: set[str] = {
     # US states / abbreviations / countries
-    "calif", "texas", "york",
+    "calif",
+    "texas",
+    "york",
     # Cities that appear as location suffixes in merchant names
-    "austin", "boston", "cary", "charlotte", "chicago", "cleveland",
-    "cupertino", "cupert", "cupe", "dallas", "detroit", "durham",
-    "fremont", "fremon", "greensboro", "greensb", "houston", "knoxville",
-    "milpitas", "morrisville", "morris", "mountain", "nacogdoc",
-    "palo", "alto", "raleigh", "redwood", "redw", "richmond",
-    "sacramento", "jose", "francisco", "fransisco", "fran", "franc",
-    "santa", "clara", "saratoga", "seoul", "shanghai", "singapore",
-    "sunnyvale", "sunnyval", "tokyo", "woodside", "paris",
+    "austin",
+    "boston",
+    "cary",
+    "charlotte",
+    "chicago",
+    "cleveland",
+    "cupertino",
+    "cupert",
+    "cupe",
+    "dallas",
+    "detroit",
+    "durham",
+    "fremont",
+    "fremon",
+    "greensboro",
+    "greensb",
+    "houston",
+    "knoxville",
+    "milpitas",
+    "morrisville",
+    "morris",
+    "mountain",
+    "nacogdoc",
+    "palo",
+    "alto",
+    "raleigh",
+    "redwood",
+    "redw",
+    "richmond",
+    "sacramento",
+    "jose",
+    "francisco",
+    "fransisco",
+    "fran",
+    "franc",
+    "santa",
+    "clara",
+    "saratoga",
+    "seoul",
+    "shanghai",
+    "singapore",
+    "sunnyvale",
+    "sunnyval",
+    "tokyo",
+    "woodside",
+    "paris",
     # Generic location/address words
-    "street", "road", "blvd", "ave", "view", "city", "north",
-    "south", "east", "west", "center", "market",
+    "street",
+    "road",
+    "blvd",
+    "ave",
+    "view",
+    "city",
+    "north",
+    "south",
+    "east",
+    "west",
+    "center",
+    "market",
     # Generic business words that appear across many categories
-    "store", "inc", "llc", "com", "the", "and", "new", "online",
-    "payment", "paymen", "ecomm", "egift", "egiftrd",
+    "store",
+    "inc",
+    "llc",
+    "com",
+    "the",
+    "and",
+    "new",
+    "online",
+    "payment",
+    "paymen",
+    "ecomm",
+    "egift",
+    "egiftrd",
     # State abbreviations and country codes
-    "gbr", "fra", "usa",
+    "gbr",
+    "fra",
+    "usa",
     # Fragments from truncated merchant names
-    "cupertin", "moun", "san", "del", "los",
+    "cupertin",
+    "moun",
+    "san",
+    "del",
+    "los",
     # Overly generic words
-    "food", "home", "house", "port", "bar", "grill",
+    "food",
+    "home",
+    "house",
+    "port",
+    "bar",
+    "grill",
 }
 
 # ---------------------------------------------------------------------------
@@ -302,7 +373,6 @@ BRAND_KEYWORDS: dict[str, str] = {
 }
 
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -448,7 +518,9 @@ def main() -> None:
 
     # Count categories
     cats: Counter[str] = Counter(keyword_map.values())
-    print(f"\nGenerated {len(keyword_map)} keyword entries across {len(cats)} categories:")
+    print(
+        f"\nGenerated {len(keyword_map)} keyword entries across {len(cats)} categories:"
+    )
     for cat, count in cats.most_common():
         print(f"  {cat}: {count} keywords")
 
@@ -470,4 +542,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

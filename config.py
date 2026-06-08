@@ -24,6 +24,8 @@ class Config:
     MERCHANT_NORMALIZATION_PAIRS: List[Tuple[str, str]]
     STARTS_WITH_REMOVAL: List[str]
     ENDS_WITH_REMOVAL: List[str]
+    CATEGORY_MAP: Dict[str, str]
+    MERCHANT_TO_CATEGORY_MAP: Dict[str, str]
 
     def __init__(self: "Config") -> None:
         with open("config.yaml", "r") as f:

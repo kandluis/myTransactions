@@ -56,6 +56,59 @@ def test_normalize_merchant(config: MonkeyPatch) -> None:
         assert remote._NormalizeMerchant("Chi#$%$#%124potle Tx14x435") == "Chipotle"
 
 
+def test_apply_category_rules(config: MonkeyPatch) -> None:
+    txns = pd.DataFrame(
+        [
+            {
+                "Date": "2023-12-08",
+                "Merchant": "Starbucks Coffee",
+                "Amount": -5.50,
+                "Category": "Dining",
+                "Account": "Checking",
+                "ID": "123",
+                "Description": "Starbucks Coffee",
+            },
+            {
+                "Date": "2023-12-09",
+                "Merchant": "Amazon.com",
+                "Amount": -45.00,
+                "Category": "Merchandise",
+                "Account": "Checking",
+                "ID": "456",
+                "Description": "Amazon Purchase",
+            },
+            {
+                "Date": "2023-12-10",
+                "Merchant": "Random Merchant",
+                "Amount": -100.00,
+                "Category": "Old Category",
+                "Account": "Checking",
+                "ID": "789",
+                "Description": "Some random purchase",
+            },
+        ]
+    )
+
+    with config.context() as c:
+        c.setattr(
+            remote.config.GLOBAL,
+            "MERCHANT_TO_CATEGORY_MAP",
+            {"Starbucks": "Food/Dining Coffee", "Amazon": "Shopping"},
+        )
+        c.setattr(
+            remote.config.GLOBAL, "CATEGORY_MAP", {"Old Category": "New Category"}
+        )
+        c.setattr(
+            remote.config.GLOBAL, "MERCHANT_NORMALIZATION", ["Starbucks", "Amazon"]
+        )
+
+        updated = remote.ApplyCategoryRules(txns)
+
+        assert updated.loc[0, "Category"] == "Food/Dining Coffee"
+        assert updated.loc[1, "Category"] == "Shopping"
+        assert updated.loc[2, "Category"] == "New Category"
+
+
 def test_authenticate(
     mocker, test_env: MonkeyPatch, test_creds: service_account.Credentials
 ) -> None:

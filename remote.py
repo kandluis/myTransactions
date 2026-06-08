@@ -130,6 +130,53 @@ def _cleanTxns(txns: pd.DataFrame) -> pd.DataFrame:
     return cleaned
 
 
+def ApplyCategoryRules(txns: pd.DataFrame) -> pd.DataFrame:
+    """Applies MERCHANT_TO_CATEGORY_MAP and CATEGORY_MAP to transactions.
+
+    Args:
+      txns: DataFrame of transactions to transform.
+
+    Returns:
+      A DataFrame with updated categories.
+    """
+    updated = txns.copy()
+    if updated.empty:
+        return updated
+
+    # 1. Apply Merchant to Category Map (using normalized merchant names for matching)
+    merchant_to_cat = getattr(config.GLOBAL, "MERCHANT_TO_CATEGORY_MAP", {})
+    if merchant_to_cat:
+        # Match normalized merchant name against normalized merchant key in map
+        merchant_to_cat_norm = {
+            _NormalizeMerchant(k).lower(): v for k, v in merchant_to_cat.items()
+        }
+
+        def map_merchant(row: pd.Series) -> str:
+            merchant_norm = _NormalizeMerchant(str(row["Merchant"])).lower()
+            if merchant_norm in merchant_to_cat_norm:
+                return merchant_to_cat_norm[merchant_norm]
+            return row["Category"]
+
+        updated["Category"] = updated.apply(map_merchant, axis=1)
+
+    # 2. Apply Category Map (mapping old category names to new ones)
+    category_map = getattr(config.GLOBAL, "CATEGORY_MAP", {})
+    if category_map:
+        category_map_norm = {_Normalize(k).lower(): v for k, v in category_map.items()}
+
+        def map_category(cat: Any) -> str:
+            cat_norm = _Normalize(str(cat)).lower()
+            if cat_norm in category_map_norm:
+                return category_map_norm[cat_norm]
+            return str(cat)
+
+        updated["Category"] = updated["Category"].map(map_category)
+
+    # Re-normalize Category column to match format expectations
+    updated["Category"] = updated["Category"].map(_Normalize)
+    return updated
+
+
 def Authenticate(
     creds: auth.Credentials, options: utils.ScraperOptions
 ) -> empower.PersonalCapital:
@@ -269,8 +316,10 @@ def RetrieveTransactions(
 
     if config.GLOBAL.CLEAN_UP_OLD_TXNS:
         combined = pd.concat([old_txns, spend_txns])
+        combined = ApplyCategoryRules(combined)
         combined = _cleanTxns(combined)
     else:
+        spend_txns = ApplyCategoryRules(spend_txns)
         spend_txns = _cleanTxns(spend_txns)
         combined = pd.concat([old_txns, spend_txns])
 

@@ -104,7 +104,7 @@ Use `--debug` with a real update to also write `transactions_updated.csv`.
 ## Generate Merchant Category Maps
 
 Use `scripts/generate_keyword_map.py` to refresh category coverage from the
-merchant list in `data/unique_merchants.txt`.
+merchant list in `data/unique_merchants.csv`.
 
 ```sh
 pipenv run python scripts/generate_keyword_map.py
@@ -113,7 +113,8 @@ pipenv run python scripts/generate_keyword_map.py
 The generator reads:
 
 - `config.yaml`: the existing keyword category map.
-- `data/unique_merchants.txt`: unique merchants to measure coverage against.
+- `data/unique_merchants.csv`: unique merchants to measure coverage against.
+  The file may be a single-column CSV or include a `merchant` header.
 - `data/merchant_category_overrides_2025_2026.yaml`: curated labels for known
   merchants that are not reliably handled by broad keywords.
 

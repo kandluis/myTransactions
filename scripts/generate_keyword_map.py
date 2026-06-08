@@ -9,6 +9,7 @@ Usage:
 """
 
 import re
+import csv
 from math import ceil
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -17,7 +18,7 @@ from typing import Any
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-UNIQUE_MERCHANTS_FILE = PROJECT_ROOT / "data" / "unique_merchants.txt"
+UNIQUE_MERCHANTS_FILE = PROJECT_ROOT / "data" / "unique_merchants.csv"
 EXACT_OVERRIDES_FILE = (
     PROJECT_ROOT / "data" / "merchant_category_overrides_2025_2026.yaml"
 )
@@ -429,8 +430,35 @@ BRAND_KEYWORDS: dict[str, str] = {
 
 def load_unique_merchants() -> list[str]:
     """Load the unique merchant names from the data file."""
-    with open(UNIQUE_MERCHANTS_FILE, "r", encoding="utf-8") as f:
-        return [line.strip() for line in f if line.strip()]
+    with open(UNIQUE_MERCHANTS_FILE, "r", encoding="utf-8", newline="") as f:
+        sample = f.read(2048)
+        f.seek(0)
+        try:
+            has_header = csv.Sniffer().has_header(sample) if sample else False
+        except csv.Error:
+            has_header = False
+        reader = csv.reader(f)
+        rows = list(reader)
+
+    if not rows:
+        return []
+
+    if has_header:
+        header = [cell.strip().lower() for cell in rows[0]]
+        merchant_column = header.index("merchant") if "merchant" in header else 0
+        data_rows = rows[1:]
+    else:
+        merchant_column = 0
+        data_rows = rows
+
+    merchants = []
+    for row in data_rows:
+        if merchant_column >= len(row):
+            continue
+        merchant = row[merchant_column].strip()
+        if merchant:
+            merchants.append(merchant)
+    return merchants
 
 
 def load_config_map() -> dict[str, str]:

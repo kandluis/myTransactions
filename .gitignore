@@ -108,6 +108,7 @@ htmlcov/
 
 # 
 *.txt
+data/*.csv
 
 # Ignore session data
 .mintapi

@@ -508,17 +508,13 @@ def _add_category_area_traces(
                 hoveron="points+fills",
                 name=category,
                 line={"color": category_colors[category]},
-                customdata=category_data[
-                    [RAW_ROLLING_SPEND_COLUMN, SPEND_COLUMN, CAPPED_COLUMN]
-                ],
                 hovertemplate=(
                     "%{x|%Y-%m-%d}<br>"
                     f"{category}<br>"
                     "Displayed rolling spend: $%{y:,.2f}<br>"
-                    "Raw rolling spend: $%{customdata[0]:,.2f}<br>"
-                    "Raw daily spend: $%{customdata[1]:,.2f}<br>"
-                    "Capped: %{customdata[2]}<extra></extra>"
+                    "Capped: %{customdata}<extra></extra>"
                 ),
+                customdata=category_data[CAPPED_COLUMN],
             ),
             row=2,
             col=1,
@@ -541,15 +537,10 @@ def _add_category_share_traces(
                 name=f"{category} share",
                 showlegend=False,
                 line={"color": category_colors[category]},
-                customdata=category_data[
-                    [ROLLING_SPEND_COLUMN, RAW_ROLLING_SPEND_COLUMN]
-                ],
                 hovertemplate=(
                     "%{x|%Y-%m-%d}<br>"
                     f"{category}<br>"
-                    "Share of rolling spend: %{y:.1f}%<br>"
-                    "Displayed rolling spend: $%{customdata[0]:,.2f}<br>"
-                    "Raw rolling spend: $%{customdata[1]:,.2f}<extra></extra>"
+                    "Share of rolling spend: %{y:.1f}%<extra></extra>"
                 ),
             ),
             row=3,
@@ -572,14 +563,12 @@ def _add_monthly_heatmap(fig: go.Figure, monthly_spend: pd.DataFrame) -> None:
             x=heatmap.columns,
             y=heatmap.index,
             z=heatmap.values,
-            customdata=raw_heatmap.values,
             colorscale="Viridis",
             colorbar={"title": "Displayed monthly spend"},
             hovertemplate=(
                 "%{x|%Y-%m}<br>"
                 "%{y}<br>"
-                "Displayed monthly spend: $%{z:,.2f}<br>"
-                "Raw monthly spend: $%{customdata:,.2f}<extra></extra>"
+                "Displayed monthly spend: $%{z:,.2f}<extra></extra>"
             ),
         ),
         row=4,
@@ -588,12 +577,45 @@ def _add_monthly_heatmap(fig: go.Figure, monthly_spend: pd.DataFrame) -> None:
 
 
 def write_spend_chart(
-    spend_data: pd.DataFrame, output_path: Path, *, window: int
+    spend_data: pd.DataFrame,
+    output_path: Path,
+    *,
+    window: int,
+    job_id: Optional[str] = None,
 ) -> None:
     """Write an interactive multi-view spending report to output_path."""
+    chart_start = time.perf_counter()
+    _log(
+        job_id,
+        "Starting chart build with %d spend rows across %d categories",
+        len(spend_data),
+        spend_data["Category"].nunique() if not spend_data.empty else 0,
+    )
+    stage_start = time.perf_counter()
     total_spend = prepare_total_spend_data(spend_data, window=window)
+    _log(
+        job_id,
+        "Prepared total spend series with %d rows in %s",
+        len(total_spend),
+        f"{time.perf_counter() - stage_start:.2f}s",
+    )
+    stage_start = time.perf_counter()
     share_data = prepare_category_share_data(spend_data)
+    _log(
+        job_id,
+        "Prepared share series with %d rows in %s",
+        len(share_data),
+        f"{time.perf_counter() - stage_start:.2f}s",
+    )
+    stage_start = time.perf_counter()
     monthly_spend = prepare_monthly_heatmap_data(spend_data)
+    _log(
+        job_id,
+        "Prepared monthly heatmap with %d rows in %s",
+        len(monthly_spend),
+        f"{time.perf_counter() - stage_start:.2f}s",
+    )
+    stage_start = time.perf_counter()
     fig = make_subplots(
         rows=4,
         cols=1,
@@ -607,17 +629,36 @@ def write_spend_chart(
             "Monthly category spend",
         ),
     )
+    _log(
+        job_id,
+        "Created plotly subplots in %s",
+        f"{time.perf_counter() - stage_start:.2f}s",
+    )
 
+    trace_count = 0
+    stage_start = time.perf_counter()
     if not total_spend.empty:
         _add_total_spend_trace(fig, total_spend)
+        trace_count += 1
         _add_outlier_markers(fig, spend_data)
+        trace_count += 1
     if not spend_data.empty:
         categories = sorted(spend_data["Category"].unique())
         category_colors = _category_colors(categories)
         _add_category_area_traces(fig, spend_data, category_colors)
+        trace_count += len(categories)
         _add_category_share_traces(fig, share_data, category_colors)
+        trace_count += len(categories)
         _add_monthly_heatmap(fig, monthly_spend)
+        trace_count += 1
+    _log(
+        job_id,
+        "Added %d traces to the figure in %s",
+        trace_count,
+        f"{time.perf_counter() - stage_start:.2f}s",
+    )
 
+    stage_start = time.perf_counter()
     fig.update_layout(
         title="Historical Spend Profile",
         hovermode="closest",
@@ -653,7 +694,25 @@ def write_spend_chart(
     fig.update_xaxes(title_text="Date", row=3, col=1)
     fig.update_xaxes(title_text="Month", row=4, col=1)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.write_html(output_path, include_plotlyjs="cdn", full_html=True)
+    _log(job_id, "Writing chart HTML to %s", output_path)
+    fig.write_html(
+        output_path,
+        include_plotlyjs="cdn",
+        full_html=True,
+        validate=False,
+    )
+    _log(
+        job_id,
+        "Wrote chart HTML to %s in %s (size=%s bytes)",
+        output_path,
+        f"{time.perf_counter() - stage_start:.2f}s",
+        output_path.stat().st_size if output_path.exists() else 0,
+    )
+    _log(
+        job_id,
+        "Finished chart build in %s",
+        f"{time.perf_counter() - chart_start:.2f}s",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:

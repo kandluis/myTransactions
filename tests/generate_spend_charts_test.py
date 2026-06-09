@@ -386,3 +386,37 @@ def test_main_writes_html_from_csv(
     assert "plotly" in output_path.read_text().lower()
     assert "Rolling category share of spend" in output_path.read_text()
     assert "Furniture Store" in outlier_path.read_text()
+
+
+def test_write_spend_chart_logs_and_writes_html(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    category_config: MonkeyPatch,
+) -> None:
+    spend = generate_spend_charts.prepare_spend_data(
+        _outlier_txns(),
+        top_n_categories=None,
+        cap_daily_spend=100.0,
+        skip_cleanup=True,
+    )
+    output_path = tmp_path / "spend.html"
+
+    with caplog.at_level("INFO"):
+        generate_spend_charts.write_spend_chart(
+            spend,
+            output_path,
+            window=2,
+            job_id="job-1",
+        )
+
+    messages = "\n".join(record.message for record in caplog.records)
+    assert "[report job job-1]" in messages
+    assert "Starting chart build" in messages
+    assert "Prepared total spend series" in messages
+    assert "Prepared share series" in messages
+    assert "Prepared monthly heatmap" in messages
+    assert "Added" in messages
+    assert "Wrote chart HTML" in messages
+    assert "Finished chart build" in messages
+    assert output_path.exists()
+    assert output_path.stat().st_size > 0

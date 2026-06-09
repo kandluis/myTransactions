@@ -199,6 +199,69 @@ def test_publish_spend_report_logs_stage_progress(
     assert "Status write finished" in messages
 
 
+def test_generate_report_files_logs_each_stage(
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    txns = pd.DataFrame(
+        [
+            {
+                "Date": "2026-06-01",
+                "Merchant": "Coffee Shop",
+                "Amount": 12.34,
+                "Category": "Food",
+                "Account": "Checking",
+                "ID": "txn-1",
+                "Description": "Morning coffee",
+            },
+            {
+                "Date": "2026-06-02",
+                "Merchant": "Book Store",
+                "Amount": 45.67,
+                "Category": "Books",
+                "Account": "Checking",
+                "ID": "txn-2",
+                "Description": "Books",
+            },
+        ]
+    )
+    calls: list[str] = []
+
+    monkeypatch.setattr(
+        report_publisher.generate_spend_charts,
+        "write_spend_chart",
+        lambda spend_data, output_path, *, window: calls.append(
+            f"chart:{output_path}:{len(spend_data)}:{window}"
+        ),
+    )
+    monkeypatch.setattr(
+        report_publisher.generate_spend_charts,
+        "write_outlier_report",
+        lambda outlier_report, output_path: calls.append(
+            f"outliers:{output_path}:{len(outlier_report)}"
+        ),
+    )
+
+    with caplog.at_level("INFO"):
+        report_publisher.generate_report_files(
+            txns,
+            Path("/tmp/reports"),
+            job_id="job-1",
+        )
+
+    messages = "\n".join(record.message for record in caplog.records)
+    assert "[report job job-1]" in messages
+    assert "Preparing report files from 2 transactions" in messages
+    assert "Prepared 2 transactions" in messages
+    assert "Grouped transactions into" in messages
+    assert "Built spend grid with" in messages
+    assert "Wrote spend chart HTML" in messages
+    assert "Built outlier report with" in messages
+    assert "Wrote outlier CSV" in messages
+    assert calls[0].startswith("chart:/tmp/reports/spend_profile.html:")
+    assert calls[1].startswith("outliers:/tmp/reports/outliers.csv:")
+
+
 def test_cli_publish_exits_nonzero_on_failed_result(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

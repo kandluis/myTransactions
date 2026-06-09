@@ -157,14 +157,36 @@ def generate_report_files(
     report_path = output_dir / SPEND_REPORT_FILENAME
     outlier_path = output_dir / OUTLIER_REPORT_FILENAME
 
+    _log(
+        job_id,
+        "Preparing report files from %d transactions into %s",
+        len(txns),
+        output_dir,
+    )
+    prep_start = time.perf_counter()
     prepared_txns = generate_spend_charts._prepare_transactions(
         txns,
         start_date=start_date,
         end_date=end_date,
     )
+    _log(
+        job_id,
+        "Prepared %d transactions in %s",
+        len(prepared_txns),
+        _elapsed(prep_start),
+    )
+    group_start = time.perf_counter()
     grouped_txns = generate_spend_charts._apply_top_n_category_grouping(
         prepared_txns, top_n_categories
     )
+    _log(
+        job_id,
+        "Grouped transactions into %d rows across %d categories in %s",
+        len(grouped_txns),
+        grouped_txns["Category"].nunique() if not grouped_txns.empty else 0,
+        _elapsed(group_start),
+    )
+    spend_start = time.perf_counter()
     spend_data = generate_spend_charts.prepare_spend_data(
         grouped_txns,
         window=window,
@@ -173,13 +195,38 @@ def generate_report_files(
         cap_daily_spend=cap_daily_spend,
         auto_cap=auto_cap,
     )
+    _log(
+        job_id,
+        "Built spend grid with %d rows across %d dates in %s",
+        len(spend_data),
+        spend_data["Date"].nunique() if not spend_data.empty else 0,
+        _elapsed(spend_start),
+    )
+    chart_start = time.perf_counter()
     generate_spend_charts.write_spend_chart(spend_data, report_path, window=window)
+    _log(
+        job_id, "Wrote spend chart HTML to %s in %s", report_path, _elapsed(chart_start)
+    )
+    outlier_start = time.perf_counter()
     outlier_report = generate_spend_charts.build_outlier_report(
         grouped_txns,
         spend_data,
         cap_daily_spend=cap_daily_spend,
     )
+    _log(
+        job_id,
+        "Built outlier report with %d rows in %s",
+        len(outlier_report),
+        _elapsed(outlier_start),
+    )
+    outlier_write_start = time.perf_counter()
     generate_spend_charts.write_outlier_report(outlier_report, outlier_path)
+    _log(
+        job_id,
+        "Wrote outlier CSV to %s in %s",
+        outlier_path,
+        _elapsed(outlier_write_start),
+    )
     _log(
         job_id,
         "Generated report files in %s (txns=%d, spend_rows=%d, report=%s, outliers=%s)",

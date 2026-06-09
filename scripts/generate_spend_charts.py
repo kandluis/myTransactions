@@ -3,6 +3,7 @@
 import argparse
 import logging
 import sys
+import time
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -45,6 +46,17 @@ PLOTLY_COLORWAY = [
     "#FF97FF",
     "#FECB52",
 ]
+
+
+def _job_prefix(job_id: Optional[str]) -> str:
+    return f"[report job {job_id}] " if job_id else ""
+
+
+def _log(job_id: Optional[str], message: str, *args: object) -> None:
+    if args:
+        logger.info("%s" + message, _job_prefix(job_id), *args)
+    else:
+        logger.info("%s%s", _job_prefix(job_id), message)
 
 
 def _normalize_transaction_columns(txns: pd.DataFrame) -> pd.DataFrame:
@@ -94,13 +106,33 @@ def _prepare_transactions(
     end_date: Optional[str] = None,
     exclude_categories: Optional[Iterable[str]] = None,
     skip_cleanup: bool = False,
+    job_id: Optional[str] = None,
 ) -> pd.DataFrame:
     """Apply shared transaction cleanup, category rules, and filters."""
+    stage_start = time.perf_counter()
     prepared = _normalize_transaction_columns(txns)
+    _log(
+        job_id,
+        "Normalized transaction columns in %s",
+        f"{time.perf_counter() - stage_start:.2f}s",
+    )
+    stage_start = time.perf_counter()
     prepared = remote.ApplyCategoryRules(prepared)
+    _log(
+        job_id,
+        "Applied category rules in %s",
+        f"{time.perf_counter() - stage_start:.2f}s",
+    )
     if not skip_cleanup:
+        stage_start = time.perf_counter()
         prepared = remote._cleanTxns(prepared)
+        _log(
+            job_id,
+            "Cleaned transactions in %s",
+            f"{time.perf_counter() - stage_start:.2f}s",
+        )
 
+    stage_start = time.perf_counter()
     prepared = prepared.copy()
     prepared["Date"] = pd.to_datetime(prepared["Date"], errors="raise").dt.normalize()
     if start_date is not None:
@@ -114,6 +146,11 @@ def _prepare_transactions(
 
     prepared = prepared.copy()
     prepared[SPEND_COLUMN] = prepared["Amount"].abs()
+    _log(
+        job_id,
+        "Applied date filters and spend projection in %s",
+        f"{time.perf_counter() - stage_start:.2f}s",
+    )
     return prepared
 
 
@@ -168,6 +205,7 @@ def prepare_spend_data(
     skip_cleanup: bool = False,
     cap_daily_spend: Optional[float] = None,
     auto_cap: bool = True,
+    job_id: Optional[str] = None,
 ) -> pd.DataFrame:
     """Apply category rules and build a daily category spend grid."""
     if window < 1:
@@ -183,6 +221,7 @@ def prepare_spend_data(
         end_date=end_date,
         exclude_categories=exclude_categories,
         skip_cleanup=skip_cleanup,
+        job_id=job_id,
     )
 
     if prepared.empty:
@@ -199,16 +238,35 @@ def prepare_spend_data(
         )
 
     prepared = _apply_top_n_category_grouping(prepared, top_n_categories)
+    _log(
+        job_id,
+        "Applied top-N grouping to %d transactions across %d categories",
+        len(prepared),
+        prepared["Category"].nunique() if not prepared.empty else 0,
+    )
 
+    stage_start = time.perf_counter()
     daily = (
         prepared.groupby(["Date", "Category"], as_index=True)[SPEND_COLUMN]
         .sum()
         .sort_index()
     )
+    _log(
+        job_id,
+        "Aggregated daily category spend in %s",
+        f"{time.perf_counter() - stage_start:.2f}s",
+    )
     effective_cap = cap_daily_spend
     if effective_cap is None and auto_cap:
+        stage_start = time.perf_counter()
         effective_cap = _auto_cap_daily_spend(daily)
+        _log(
+            job_id,
+            "Computed automatic visual cap in %s",
+            f"{time.perf_counter() - stage_start:.2f}s",
+        )
 
+    stage_start = time.perf_counter()
     dates = pd.date_range(prepared["Date"].min(), prepared["Date"].max(), freq="D")
     categories = pd.Index(sorted(prepared["Category"].unique()), name="Category")
     complete_index = pd.MultiIndex.from_product(
@@ -216,6 +274,13 @@ def prepare_spend_data(
     )
 
     grid = daily.reindex(complete_index, fill_value=0).reset_index()
+    _log(
+        job_id,
+        "Built dense spend grid with %d rows in %s",
+        len(grid),
+        f"{time.perf_counter() - stage_start:.2f}s",
+    )
+    stage_start = time.perf_counter()
     grid.attrs[CAP_ATTR] = effective_cap
     grid[DISPLAY_SPEND_COLUMN] = grid[SPEND_COLUMN]
     if effective_cap is not None:
@@ -232,6 +297,11 @@ def prepare_spend_data(
     grid[RAW_ROLLING_SPEND_COLUMN] = grid.groupby("Category", group_keys=False)[
         SPEND_COLUMN
     ].transform(lambda series: series.rolling(window=window, min_periods=1).mean())
+    _log(
+        job_id,
+        "Computed rolling spend series in %s",
+        f"{time.perf_counter() - stage_start:.2f}s",
+    )
     return grid
 
 

@@ -167,6 +167,10 @@ def ApplyCategoryRules(txns: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
             key=lambda item: len(item[0]),
             reverse=True,
         )
+        normalized_keywords = [
+            (_NormalizeMerchant(keyword).lower(), category)
+            for keyword, category in sorted_keywords
+        ]
         exact_merchant_names = set()
         if exact_merchant_to_cat:
             exact_merchant_names = {
@@ -178,8 +182,7 @@ def ApplyCategoryRules(txns: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
             if exact_merchant_norm in exact_merchant_names:
                 return row["Category"]
             merchant_norm = _NormalizeMerchant(str(row["Merchant"])).lower()
-            for kw, cat in sorted_keywords:
-                kw_norm = _NormalizeMerchant(kw).lower()
+            for kw_norm, cat in normalized_keywords:
                 if kw_norm in merchant_norm:
                     return cat
             return row["Category"]

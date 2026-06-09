@@ -168,6 +168,7 @@ def generate_report_files(
         txns,
         start_date=start_date,
         end_date=end_date,
+        job_id=job_id,
     )
     _log(
         job_id,
@@ -194,6 +195,7 @@ def generate_report_files(
         skip_cleanup=True,
         cap_daily_spend=cap_daily_spend,
         auto_cap=auto_cap,
+        job_id=job_id,
     )
     _log(
         job_id,

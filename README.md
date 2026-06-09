@@ -217,14 +217,13 @@ pipenv run python scripts/publish_spend_report.py \
   --update-sheet
 ```
 
-The publisher writes report status to `Settings!F1:G6`, including the latest
+The publisher writes report status to `Settings!D5:D10`, including the latest
 tokenized report URLs, generation timestamp, status, source, and error text.
 If generation fails, it preserves the last successful report URLs when they are
 already present in the sheet.
 The `/generate` endpoint returns immediately and uses the compact report mode
-without the monthly heatmap, total-spend panel, category-share panel, or
-heavier hover payloads. The background job writes the sheet status when it
-finishes. The normal CLI and local chart generation still produce the full
+without the monthly heatmap. The background job writes the sheet status when
+it finishes. The normal CLI and local chart generation still produce the full
 report by default.
 
 The Fly web service exposes:

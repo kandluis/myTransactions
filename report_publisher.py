@@ -23,16 +23,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_REPORT_DIR = Path(os.getenv("REPORT_OUTPUT_DIR", "/data/reports"))
 SPEND_REPORT_FILENAME = "spend_profile.html"
 OUTLIER_REPORT_FILENAME = "outliers.csv"
-STATUS_RANGE_START = "F1"
-STATUS_URL_VALUE_CELLS = ("G1", "G2")
-STATUS_LABELS = [
-    "Latest spend report URL",
-    "Latest outlier report URL",
-    "Report generated at",
-    "Report generation status",
-    "Report generation source",
-    "Report generation error",
-]
+STATUS_RANGE_START = "D5"
+STATUS_URL_VALUE_CELLS = ("D5", "D6")
 
 
 def _job_prefix(job_id: Optional[str]) -> str:
@@ -118,7 +110,7 @@ def write_report_status(
     *,
     job_id: Optional[str] = None,
 ) -> None:
-    """Write report publication status to Settings!F1:G6."""
+    """Write report publication status to Settings!D5:D10."""
     settings_ws = sheet.worksheet_by_title(title=config.GLOBAL.SETTINGS_SHEET_TITLE)
     report_url = result.report_url
     outlier_url = result.outlier_url
@@ -128,15 +120,15 @@ def write_report_status(
         outlier_url = outlier_url or existing_outlier_url
 
     values = [
-        [STATUS_LABELS[0], report_url],
-        [STATUS_LABELS[1], outlier_url],
-        [STATUS_LABELS[2], result.generated_at],
-        [STATUS_LABELS[3], result.status],
-        [STATUS_LABELS[4], result.source],
-        [STATUS_LABELS[5], result.error],
+        [report_url],
+        [outlier_url],
+        [result.generated_at],
+        [result.status],
+        [result.source],
+        [result.error],
     ]
     settings_ws.update_values(STATUS_RANGE_START, values)
-    _log(job_id, "Updated Settings!F1:G6 with status=%s", result.status)
+    _log(job_id, "Updated Settings!D5:D10 with status=%s", result.status)
 
 
 def generate_report_files(

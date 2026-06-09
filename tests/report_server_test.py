@@ -93,12 +93,19 @@ def test_generate_starts_background_job_and_returns_accepted(
         source="sheets",
     )
 
-    def publish(**kwargs):
+    def publish(
+        *,
+        include_heatmap: bool = True,
+        include_total_spend: bool = True,
+        include_category_share: bool = True,
+        include_customdata: bool = True,
+        **kwargs,
+    ):
         started.set()
-        assert kwargs["include_heatmap"] is False
-        assert kwargs["include_total_spend"] is False
-        assert kwargs["include_category_share"] is False
-        assert kwargs["include_customdata"] is False
+        assert include_heatmap is False
+        assert include_total_spend is True
+        assert include_category_share is True
+        assert include_customdata is True
         release.wait(timeout=5)
         return result
 
@@ -129,12 +136,19 @@ def test_generate_rejects_concurrent_request(client) -> None:
     release = threading.Event()
     started = threading.Event()
 
-    def publish(**kwargs):
+    def publish(
+        *,
+        include_heatmap: bool = True,
+        include_total_spend: bool = True,
+        include_category_share: bool = True,
+        include_customdata: bool = True,
+        **kwargs,
+    ):
         started.set()
-        assert kwargs["include_heatmap"] is False
-        assert kwargs["include_total_spend"] is False
-        assert kwargs["include_category_share"] is False
-        assert kwargs["include_customdata"] is False
+        assert include_heatmap is False
+        assert include_total_spend is True
+        assert include_category_share is True
+        assert include_customdata is True
         release.wait(timeout=5)
         return report_publisher.SpendReportResult(
             report_url="",
@@ -172,12 +186,19 @@ def test_generate_failure_returns_500(client, monkeypatch: pytest.MonkeyPatch) -
         error="boom",
     )
 
-    def publish(**kwargs):
+    def publish(
+        *,
+        include_heatmap: bool = True,
+        include_total_spend: bool = True,
+        include_category_share: bool = True,
+        include_customdata: bool = True,
+        **kwargs,
+    ):
         started.set()
-        assert kwargs["include_heatmap"] is False
-        assert kwargs["include_total_spend"] is False
-        assert kwargs["include_category_share"] is False
-        assert kwargs["include_customdata"] is False
+        assert include_heatmap is False
+        assert include_total_spend is True
+        assert include_category_share is True
+        assert include_customdata is True
         return result
 
     monkeypatch.setattr(

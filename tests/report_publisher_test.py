@@ -34,14 +34,14 @@ def test_write_report_status_writes_expected_settings_block() -> None:
     report_publisher.write_report_status(sheet, result)
 
     settings_ws.update_values.assert_called_once_with(
-        "F1",
+        "D5",
         [
-            ["Latest spend report URL", "https://example.test/report"],
-            ["Latest outlier report URL", "https://example.test/outliers"],
-            ["Report generated at", "2026-06-09T12:00:00+00:00"],
-            ["Report generation status", "success"],
-            ["Report generation source", "sheets"],
-            ["Report generation error", ""],
+            ["https://example.test/report"],
+            ["https://example.test/outliers"],
+            ["2026-06-09T12:00:00+00:00"],
+            ["success"],
+            ["sheets"],
+            [""],
         ],
     )
 
@@ -66,16 +66,10 @@ def test_write_report_status_preserves_urls_on_failure() -> None:
     report_publisher.write_report_status(sheet, result)
 
     written_values = settings_ws.update_values.call_args.args[1]
-    assert written_values[0] == [
-        "Latest spend report URL",
-        "https://example.test/old-report",
-    ]
-    assert written_values[1] == [
-        "Latest outlier report URL",
-        "https://example.test/old-outliers",
-    ]
-    assert written_values[3] == ["Report generation status", "failed"]
-    assert written_values[5] == ["Report generation error", "boom"]
+    assert written_values[0] == ["https://example.test/old-report"]
+    assert written_values[1] == ["https://example.test/old-outliers"]
+    assert written_values[3] == ["failed"]
+    assert written_values[5] == ["boom"]
 
 
 def test_publish_spend_report_calls_loader_writer_and_sheet_update(

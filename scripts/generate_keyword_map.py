@@ -532,7 +532,7 @@ def build_labeled_merchants(
     return labels
 
 
-def generate_dynamic_keywords(
+def generate_dynamic_keywords(  # noqa: C901
     keyword_map: dict[str, str],
     merchants: list[str],
     labels: dict[str, str],

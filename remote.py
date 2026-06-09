@@ -109,19 +109,19 @@ def _cleanTxns(txns: pd.DataFrame) -> pd.DataFrame:
         The cleaned DataFrame of transactions.
     """
     cleaned = txns[:]
-    cleaned.Category = cleaned.Category.map(_Normalize)
-    cleaned.Merchant = cleaned.Merchant.map(_NormalizeMerchant)
-    cleaned.Account = cleaned.Account.map(_Normalize)
-    cleaned.Description = cleaned.Description.map(_Normalize)
+    cleaned["Category"] = cleaned["Category"].map(_Normalize)
+    cleaned["Merchant"] = cleaned["Merchant"].map(_NormalizeMerchant)
+    cleaned["Account"] = cleaned["Account"].map(_Normalize)
+    cleaned["Description"] = cleaned["Description"].map(_Normalize)
 
-    ignored_category = cleaned.Category.isin(
+    ignored_category = cleaned["Category"].isin(
         [_Normalize(category) for category in config.GLOBAL.IGNORED_CATEGORIES]
     )
-    ignored_merchant = cleaned.Merchant.isin(
+    ignored_merchant = cleaned["Merchant"].isin(
         [_NormalizeMerchant(merchant) for merchant in config.GLOBAL.IGNORED_MERCHANTS]
     )
-    ignored_txn = cleaned.ID.isin(config.GLOBAL.IGNORED_TXNS)
-    ignored_account = cleaned.Account.isin(
+    ignored_txn = cleaned["ID"].isin(config.GLOBAL.IGNORED_TXNS)
+    ignored_account = cleaned["Account"].isin(
         [_Normalize(account) for account in config.GLOBAL.SKIPPED_ACCOUNTS]
     )
     cleaned = cleaned[
@@ -130,7 +130,7 @@ def _cleanTxns(txns: pd.DataFrame) -> pd.DataFrame:
     return cleaned
 
 
-def ApplyCategoryRules(txns: pd.DataFrame) -> pd.DataFrame:
+def ApplyCategoryRules(txns: pd.DataFrame) -> pd.DataFrame:  # noqa: C901
     """Applies MERCHANT_TO_CATEGORY_MAP and CATEGORY_MAP to transactions.
 
     Args:
@@ -329,14 +329,14 @@ def RetrieveTransactions(
     spend_txns = new_txns[
         (new_txns.isSpending | new_txns.isCashOut) & new_txns.investmentType.isna()
     ].copy()
-    spend_txns.amount = spend_txns.amount * spend_txns.isCredit.map(
+    spend_txns["amount"] = spend_txns["amount"] * spend_txns["isCredit"].map(
         lambda isCredit: 1 if isCredit else -1
     )
 
     spend_txns = spend_txns[config.GLOBAL.COLUMNS]
     spend_txns.columns = pd.Index(config.GLOBAL.COLUMN_NAMES)
     spend_txns = spend_txns.sort_values("Date", ascending=True)
-    spend_txns.Merchant = spend_txns.Merchant.fillna(spend_txns.Description)
+    spend_txns["Merchant"] = spend_txns["Merchant"].fillna(spend_txns["Description"])
 
     if cutoff:
         old_txns = old_txns[old_txns.Date < cutoff.strftime("%Y-%m-%d")]

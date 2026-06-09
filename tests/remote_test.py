@@ -1,5 +1,6 @@
 # We test several internal-only details. Its easier this way.
 import remote
+from scripts import generate_keyword_map
 
 import argparse
 import auth
@@ -150,6 +151,99 @@ def test_apply_category_rules_prefers_exact_merchant(config: MonkeyPatch) -> Non
 
         assert updated.loc[0, "Category"] == "Shopping"
         assert updated.loc[1, "Category"] == "Services/Other"
+
+
+def test_config_category_rules_for_costco_and_meal_delivery(
+    config: MonkeyPatch,
+) -> None:
+    txns = pd.DataFrame(
+        [
+            {
+                "Date": "2026-01-01",
+                "Merchant": "Costco Wholesale",
+                "Amount": -100.00,
+                "Category": "Shopping",
+                "Account": "Checking",
+                "ID": "costco-1",
+                "Description": "Costco Wholesale",
+            },
+            {
+                "Date": "2026-01-02",
+                "Merchant": "Thistleco Thistleco",
+                "Amount": -80.00,
+                "Category": "Groceries",
+                "Account": "Checking",
+                "ID": "thistle-1",
+                "Description": "Thistleco Thistleco",
+            },
+            {
+                "Date": "2026-01-03",
+                "Merchant": "Cookunity",
+                "Amount": -90.00,
+                "Category": "Food/Dining Restaurants",
+                "Account": "Checking",
+                "ID": "cookunity-1",
+                "Description": "Cookunity",
+            },
+            {
+                "Date": "2026-01-04",
+                "Merchant": "Nurture Life",
+                "Amount": -75.00,
+                "Category": "Food/Dining Restaurants",
+                "Account": "Checking",
+                "ID": "nurture-1",
+                "Description": "Nurture Life",
+            },
+            {
+                "Date": "2026-01-05",
+                "Merchant": "Sp Cerebelly Erie Co",
+                "Amount": -60.00,
+                "Category": "Groceries",
+                "Account": "Checking",
+                "ID": "cerebelly-1",
+                "Description": "Sp Cerebelly Erie Co",
+            },
+            {
+                "Date": "2026-01-06",
+                "Merchant": "Doordash",
+                "Amount": -40.00,
+                "Category": "Food/Dining Restaurants",
+                "Account": "Checking",
+                "ID": "doordash-1",
+                "Description": "Doordash",
+            },
+            {
+                "Date": "2026-01-07",
+                "Merchant": "Instacart",
+                "Amount": -50.00,
+                "Category": "Food/Dining Restaurants",
+                "Account": "Checking",
+                "ID": "instacart-1",
+                "Description": "Instacart",
+            },
+        ]
+    )
+
+    updated = remote.ApplyCategoryRules(txns)
+
+    assert list(updated["Category"]) == [
+        "Groceries",
+        "Meal Delivery",
+        "Meal Delivery",
+        "Meal Delivery",
+        "Meal Delivery",
+        "Food/Dining Restaurants",
+        "Food/Dining Restaurants",
+    ]
+
+
+def test_keyword_generator_preserves_costco_and_meal_delivery() -> None:
+    assert generate_keyword_map.BRAND_KEYWORDS["costco"] == "Groceries"
+    assert generate_keyword_map.BRAND_KEYWORDS["thistle"] == "Meal Delivery"
+    assert generate_keyword_map.BRAND_KEYWORDS["cookunity"] == "Meal Delivery"
+    assert generate_keyword_map.BRAND_KEYWORDS["nurture life"] == "Meal Delivery"
+    assert generate_keyword_map.BRAND_KEYWORDS["cerebelly"] == "Meal Delivery"
+    assert generate_keyword_map.BRAND_KEYWORDS["doordash"] == "Food/Dining Restaurants"
 
 
 def test_authenticate(

@@ -111,6 +111,49 @@ def _outlier_txns() -> pd.DataFrame:
     )
 
 
+def _auto_cap_txns() -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "Date": "2026-01-01",
+                "Merchant": "Grocery One",
+                "Amount": -10.0,
+                "Category": "Groceries",
+                "Account": "Checking",
+                "ID": "auto-1",
+                "Description": "Grocery One",
+            },
+            {
+                "Date": "2026-01-02",
+                "Merchant": "Grocery Two",
+                "Amount": -12.0,
+                "Category": "Groceries",
+                "Account": "Checking",
+                "ID": "auto-2",
+                "Description": "Grocery Two",
+            },
+            {
+                "Date": "2026-01-03",
+                "Merchant": "Grocery Three",
+                "Amount": -11.0,
+                "Category": "Groceries",
+                "Account": "Checking",
+                "ID": "auto-3",
+                "Description": "Grocery Three",
+            },
+            {
+                "Date": "2026-01-04",
+                "Merchant": "Bad Grocery",
+                "Amount": -5000.0,
+                "Category": "Groceries",
+                "Account": "Checking",
+                "ID": "auto-4",
+                "Description": "Bad Grocery",
+            },
+        ]
+    )
+
+
 def test_prepare_spend_data_fills_dates_and_rolls_by_calendar_day(
     category_config: MonkeyPatch,
 ) -> None:
@@ -208,6 +251,22 @@ def test_prepare_spend_data_caps_display_only(category_config: MonkeyPatch) -> N
     assert shopping[generate_spend_charts.CAPPED_COLUMN]
 
 
+def test_prepare_spend_data_auto_caps_extreme_values(
+    category_config: MonkeyPatch,
+) -> None:
+    spend = generate_spend_charts.prepare_spend_data(
+        _auto_cap_txns(),
+        top_n_categories=None,
+        skip_cleanup=True,
+    )
+
+    capped = spend[spend[generate_spend_charts.CAPPED_COLUMN]].iloc[0]
+    assert capped["Date"] == pd.Timestamp("2026-01-04")
+    assert capped[generate_spend_charts.SPEND_COLUMN] == 5000.0
+    assert capped[generate_spend_charts.DISPLAY_SPEND_COLUMN] < 5000.0
+    assert spend.attrs[generate_spend_charts.CAP_ATTR] is not None
+
+
 def test_prepare_total_spend_data_rolls_display_and_raw(
     category_config: MonkeyPatch,
 ) -> None:
@@ -223,6 +282,42 @@ def test_prepare_total_spend_data_rolls_display_and_raw(
     final_day = total[total["Date"] == pd.Timestamp("2026-01-04")].iloc[0]
     assert final_day[generate_spend_charts.ROLLING_SPEND_COLUMN] == 62.5
     assert final_day[generate_spend_charts.RAW_ROLLING_SPEND_COLUMN] == 762.5
+
+
+def test_prepare_category_share_data_sums_to_100_for_non_zero_days(
+    category_config: MonkeyPatch,
+) -> None:
+    spend = generate_spend_charts.prepare_spend_data(
+        _sample_txns(),
+        window=2,
+        top_n_categories=None,
+        skip_cleanup=True,
+    )
+
+    share = generate_spend_charts.prepare_category_share_data(spend)
+    day_three = share[share["Date"] == pd.Timestamp("2026-01-03")]
+
+    assert day_three[generate_spend_charts.SHARE_PERCENT_COLUMN].sum() == 100.0
+    groceries = day_three[day_three["Category"] == "Groceries"].iloc[0]
+    assert groceries[generate_spend_charts.SHARE_PERCENT_COLUMN] == 80.0
+    assert groceries[generate_spend_charts.ROLLING_SPEND_COLUMN] == 10.0
+    assert groceries[generate_spend_charts.RAW_ROLLING_SPEND_COLUMN] == 10.0
+
+
+def test_prepare_category_share_data_gaps_zero_total_days(
+    category_config: MonkeyPatch,
+) -> None:
+    spend = generate_spend_charts.prepare_spend_data(
+        _sample_txns(),
+        window=1,
+        top_n_categories=None,
+        skip_cleanup=True,
+    )
+
+    share = generate_spend_charts.prepare_category_share_data(spend)
+    zero_day = share[share["Date"] == pd.Timestamp("2026-01-02")]
+
+    assert zero_day[generate_spend_charts.SHARE_PERCENT_COLUMN].isna().all()
 
 
 def test_prepare_monthly_heatmap_data_uses_raw_spend(
@@ -289,4 +384,5 @@ def test_main_writes_html_from_csv(
     assert output_path.exists()
     assert outlier_path.exists()
     assert "plotly" in output_path.read_text().lower()
+    assert "Rolling category share of spend" in output_path.read_text()
     assert "Furniture Store" in outlier_path.read_text()

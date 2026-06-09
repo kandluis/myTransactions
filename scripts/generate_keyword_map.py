@@ -252,6 +252,11 @@ BRAND_KEYWORDS: dict[str, str] = {
     "sprouts": "Groceries",
     "trader": "Groceries",
     "wholefds": "Groceries",
+    # Meal Delivery
+    "cerebelly": "Meal Delivery",
+    "cookunity": "Meal Delivery",
+    "nurture life": "Meal Delivery",
+    "thistle": "Meal Delivery",
     # Shopping
     "adidas": "Shopping",
     "amazon": "Shopping",

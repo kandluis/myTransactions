@@ -43,7 +43,7 @@ MERCHANT_CATEGORY_OVERRIDES:
   City Of Sunnyvale: Services/Other
   Ckecococ Llcwatsonville: "Food/Dining Restaurants"
   Colgate Univ Va: Education
-  Cookunity: "Food/Dining Restaurants"
+  Cookunity: "Meal Delivery"
   Cornell University: Education
   Costa Farms Llc: Groceries
   Country Rhodeivanhoe: Groceries
@@ -136,7 +136,7 @@ MERCHANT_CATEGORY_OVERRIDES:
   Natera San Carlos: Healthcare
   New York Times: Entertainment
   Nick The Greemountain View: "Food/Dining Restaurants"
-  Nurture Life: "Food/Dining Restaurants"
+  Nurture Life: "Meal Delivery"
   Oak And Los Gatos: "Food/Dining Restaurants"
   Oura Ring: Healthcare
   Ox Lanzhou Handpulled Mountain View: "Food/Dining Restaurants"
@@ -172,7 +172,7 @@ MERCHANT_CATEGORY_OVERRIDES:
   Service Navigo Paris Fra: Transportation
   Sherwinwilliams: Shopping
   Sp Bared Footwear Auarmadale Au: Shopping
-  Sp Cerebelly Erie Co: Groceries
+  Sp Cerebelly Erie Co: "Meal Delivery"
   Sp Cozy Earthsouth Jordan Ut: Shopping
   Sp Pumpables Middletown De: Shopping
   Sp Pumpables Pumpablesco De: Shopping
@@ -198,8 +198,8 @@ MERCHANT_CATEGORY_OVERRIDES:
   The Midwife Amountain View: Healthcare
   The Old Fisherman: "Food/Dining Restaurants"
   The University Of Tampa: Education
-  Thistle: Groceries
-  Thistleco Thistleco: Groceries
+  Thistle: "Meal Delivery"
+  Thistleco Thistleco: "Meal Delivery"
   Tock Atalexanders Pat Alexanderspa Il: "Food/Dining Restaurants"
   Toddlers Travel: Travel
   Too Good To Go: "Food/Dining Restaurants"

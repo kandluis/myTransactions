@@ -105,10 +105,10 @@ Use `--debug` with a real update to also write `transactions_updated.csv`.
 
 Use `scripts/generate_spend_charts.py` to create an interactive Plotly HTML
 profile of historical spend by category. The report includes a total rolling
-spend trend, a stacked rolling category view, and a monthly category heatmap.
-Categories are assigned with the same rules in `config.yaml` used by
-`updater.py`; the chart script does not maintain separate hard-coded plotting
-categories.
+spend trend, a stacked rolling category view, a 100% stacked rolling category
+share view, and a monthly category heatmap. Categories are assigned with the
+same rules in `config.yaml` used by `updater.py`; the chart script does not
+maintain separate hard-coded plotting categories.
 
 The safest local flow is to first generate a cleaned CSV without writing
 changes back to Google Sheets:
@@ -132,9 +132,16 @@ the rolling-average window or category display:
 pipenv run python scripts/generate_spend_charts.py --input data/transactions.csv --window 31 --top-n-categories 12
 ```
 
-For datasets with large one-off expenses, use a visual-only cap and write an
-outlier CSV. The cap affects chart scaling and rolling averages, while the CSV
-keeps the raw transaction details for review.
+The normalized share chart is based on rolling displayed spend, so it uses the
+same smoothing and visual capping as the absolute rolling category chart. Days
+with no displayed rolling spend are shown as gaps instead of a misleading
+category mix.
+
+For datasets with large one-off expenses, the chart applies an automatic
+visual-only cap to unusually large daily category totals. The cap affects chart
+scaling and rolling averages, while hover labels and outlier reports keep the
+raw values available for review. You can override the automatic cap and write an
+outlier CSV:
 
 ```sh
 pipenv run python scripts/generate_spend_charts.py --cap-daily-spend 1000 --outlier-report outliers.csv
@@ -154,8 +161,9 @@ Useful flags:
   categories.
 - `--top-n-categories`: keep the largest categories and group the rest as
   `Other`; defaults to `10`.
-- `--cap-daily-spend`: cap displayed daily category spend before rolling
-  averages, without changing raw spend values in the outlier report.
+- `--cap-daily-spend`: override the automatic cap for displayed daily category
+  spend before rolling averages, without changing raw spend values.
+- `--no-auto-cap`: disable the automatic visual cap.
 - `--outlier-report`: write a CSV of transactions on capped or statistically
   unusual high-spend days.
 - `--skip-cleanup`: keep ignored categories/accounts in the chart for debugging.

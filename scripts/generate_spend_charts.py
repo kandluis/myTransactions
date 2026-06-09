@@ -28,9 +28,23 @@ SPEND_COLUMN = "Spend"
 DISPLAY_SPEND_COLUMN = "DisplaySpend"
 ROLLING_SPEND_COLUMN = "RollingAverageSpend"
 RAW_ROLLING_SPEND_COLUMN = "RawRollingAverageSpend"
+SHARE_PERCENT_COLUMN = "CategorySharePercent"
 CAPPED_COLUMN = "IsCapped"
 DAILY_CATEGORY_SPEND_COLUMN = "DailyCategorySpend"
 DAILY_TOTAL_SPEND_COLUMN = "DailyTotalSpend"
+CAP_ATTR = "cap_daily_spend"
+PLOTLY_COLORWAY = [
+    "#636efa",
+    "#EF553B",
+    "#00cc96",
+    "#ab63fa",
+    "#FFA15A",
+    "#19d3f3",
+    "#FF6692",
+    "#B6E880",
+    "#FF97FF",
+    "#FECB52",
+]
 
 
 def _normalize_transaction_columns(txns: pd.DataFrame) -> pd.DataFrame:
@@ -121,6 +135,28 @@ def _apply_top_n_category_grouping(
     return grouped
 
 
+def _auto_cap_daily_spend(daily_spend: pd.Series) -> Optional[float]:
+    """Return a robust visual cap for unusually large daily category spend."""
+    positive_spend = daily_spend[daily_spend > 0]
+    if positive_spend.size < 4:
+        return None
+
+    trim_threshold = positive_spend.quantile(0.95)
+    trimmed_spend = positive_spend[positive_spend < trim_threshold]
+    if trimmed_spend.size < 3:
+        trimmed_spend = positive_spend
+
+    median = trimmed_spend.median()
+    q1 = trimmed_spend.quantile(0.25)
+    q3 = trimmed_spend.quantile(0.75)
+    iqr = q3 - q1
+    iqr_cap = q3 + (3 * iqr) if iqr > 0 else q3 * 3
+    cap = float(max(iqr_cap, median * 3))
+    if cap <= 0 or cap >= float(positive_spend.max()):
+        return None
+    return cap
+
+
 def prepare_spend_data(
     txns: pd.DataFrame,
     *,
@@ -131,6 +167,7 @@ def prepare_spend_data(
     top_n_categories: Optional[int] = DEFAULT_TOP_N_CATEGORIES,
     skip_cleanup: bool = False,
     cap_daily_spend: Optional[float] = None,
+    auto_cap: bool = True,
 ) -> pd.DataFrame:
     """Apply category rules and build a daily category spend grid."""
     if window < 1:
@@ -168,6 +205,10 @@ def prepare_spend_data(
         .sum()
         .sort_index()
     )
+    effective_cap = cap_daily_spend
+    if effective_cap is None and auto_cap:
+        effective_cap = _auto_cap_daily_spend(daily)
+
     dates = pd.date_range(prepared["Date"].min(), prepared["Date"].max(), freq="D")
     categories = pd.Index(sorted(prepared["Category"].unique()), name="Category")
     complete_index = pd.MultiIndex.from_product(
@@ -175,11 +216,12 @@ def prepare_spend_data(
     )
 
     grid = daily.reindex(complete_index, fill_value=0).reset_index()
+    grid.attrs[CAP_ATTR] = effective_cap
     grid[DISPLAY_SPEND_COLUMN] = grid[SPEND_COLUMN]
-    if cap_daily_spend is not None:
-        grid[CAPPED_COLUMN] = grid[SPEND_COLUMN] > cap_daily_spend
+    if effective_cap is not None:
+        grid[CAPPED_COLUMN] = grid[SPEND_COLUMN] > effective_cap
         grid[DISPLAY_SPEND_COLUMN] = grid[DISPLAY_SPEND_COLUMN].clip(
-            upper=cap_daily_spend
+            upper=effective_cap
         )
     else:
         grid[CAPPED_COLUMN] = False
@@ -194,14 +236,18 @@ def prepare_spend_data(
 
 
 def prepare_monthly_heatmap_data(spend_data: pd.DataFrame) -> pd.DataFrame:
-    """Aggregate raw daily category spend by calendar month."""
+    """Aggregate daily category spend by calendar month."""
     if spend_data.empty:
-        return pd.DataFrame(columns=["Month", "Category", SPEND_COLUMN])
+        return pd.DataFrame(
+            columns=["Month", "Category", SPEND_COLUMN, DISPLAY_SPEND_COLUMN]
+        )
 
     monthly = spend_data.copy()
     monthly["Month"] = monthly["Date"].dt.to_period("M").dt.to_timestamp()
     return (
-        monthly.groupby(["Month", "Category"], as_index=False)[[SPEND_COLUMN]]
+        monthly.groupby(["Month", "Category"], as_index=False)[
+            [SPEND_COLUMN, DISPLAY_SPEND_COLUMN]
+        ]
         .sum()
         .sort_values(["Category", "Month"])
     )
@@ -226,6 +272,28 @@ def prepare_total_spend_data(spend_data: pd.DataFrame, *, window: int) -> pd.Dat
     return daily_total
 
 
+def prepare_category_share_data(spend_data: pd.DataFrame) -> pd.DataFrame:
+    """Build category percentages from displayed rolling spend."""
+    if spend_data.empty:
+        return pd.DataFrame(
+            columns=[
+                "Date",
+                "Category",
+                SHARE_PERCENT_COLUMN,
+                ROLLING_SPEND_COLUMN,
+                RAW_ROLLING_SPEND_COLUMN,
+            ]
+        )
+
+    share_data = spend_data.copy()
+    total_rolling = share_data.groupby("Date")[ROLLING_SPEND_COLUMN].transform("sum")
+    share_data[SHARE_PERCENT_COLUMN] = (
+        share_data[ROLLING_SPEND_COLUMN].div(total_rolling).mul(100)
+    )
+    share_data.loc[total_rolling == 0, SHARE_PERCENT_COLUMN] = pd.NA
+    return share_data
+
+
 def build_outlier_report(
     txns: pd.DataFrame,
     spend_data: pd.DataFrame,
@@ -244,11 +312,15 @@ def build_outlier_report(
         columns={SPEND_COLUMN: DAILY_CATEGORY_SPEND_COLUMN}
     )
 
-    if cap_daily_spend is not None:
+    effective_cap = cap_daily_spend
+    if effective_cap is None:
+        effective_cap = spend_data.attrs.get(CAP_ATTR)
+
+    if effective_cap is not None:
         spikes = category_spend[
-            category_spend[DAILY_CATEGORY_SPEND_COLUMN] > cap_daily_spend
+            category_spend[DAILY_CATEGORY_SPEND_COLUMN] > effective_cap
         ].copy()
-        spikes["OutlierReason"] = f"daily category spend over ${cap_daily_spend:,.2f}"
+        spikes["OutlierReason"] = f"daily category spend over ${effective_cap:,.2f}"
     else:
         q1 = daily_totals[DAILY_TOTAL_SPEND_COLUMN].quantile(0.25)
         q3 = daily_totals[DAILY_TOTAL_SPEND_COLUMN].quantile(0.75)
@@ -345,7 +417,16 @@ def _add_outlier_markers(fig: go.Figure, spend_data: pd.DataFrame) -> None:
     )
 
 
-def _add_category_area_traces(fig: go.Figure, spend_data: pd.DataFrame) -> None:
+def _category_colors(categories: list[str]) -> dict[str, str]:
+    return {
+        category: PLOTLY_COLORWAY[index % len(PLOTLY_COLORWAY)]
+        for index, category in enumerate(categories)
+    }
+
+
+def _add_category_area_traces(
+    fig: go.Figure, spend_data: pd.DataFrame, category_colors: dict[str, str]
+) -> None:
     for category in sorted(spend_data["Category"].unique()):
         category_data = spend_data[spend_data["Category"] == category]
         fig.add_trace(
@@ -354,7 +435,9 @@ def _add_category_area_traces(fig: go.Figure, spend_data: pd.DataFrame) -> None:
                 y=category_data[ROLLING_SPEND_COLUMN],
                 mode="lines",
                 stackgroup="category_spend",
+                hoveron="points+fills",
                 name=category,
+                line={"color": category_colors[category]},
                 customdata=category_data[
                     [RAW_ROLLING_SPEND_COLUMN, SPEND_COLUMN, CAPPED_COLUMN]
                 ],
@@ -372,11 +455,46 @@ def _add_category_area_traces(fig: go.Figure, spend_data: pd.DataFrame) -> None:
         )
 
 
+def _add_category_share_traces(
+    fig: go.Figure, share_data: pd.DataFrame, category_colors: dict[str, str]
+) -> None:
+    for category in sorted(share_data["Category"].unique()):
+        category_data = share_data[share_data["Category"] == category]
+        fig.add_trace(
+            go.Scatter(
+                x=category_data["Date"],
+                y=category_data[SHARE_PERCENT_COLUMN],
+                mode="lines",
+                stackgroup="category_share",
+                groupnorm="percent",
+                hoveron="points+fills",
+                name=f"{category} share",
+                showlegend=False,
+                line={"color": category_colors[category]},
+                customdata=category_data[
+                    [ROLLING_SPEND_COLUMN, RAW_ROLLING_SPEND_COLUMN]
+                ],
+                hovertemplate=(
+                    "%{x|%Y-%m-%d}<br>"
+                    f"{category}<br>"
+                    "Share of rolling spend: %{y:.1f}%<br>"
+                    "Displayed rolling spend: $%{customdata[0]:,.2f}<br>"
+                    "Raw rolling spend: $%{customdata[1]:,.2f}<extra></extra>"
+                ),
+            ),
+            row=3,
+            col=1,
+        )
+
+
 def _add_monthly_heatmap(fig: go.Figure, monthly_spend: pd.DataFrame) -> None:
     if monthly_spend.empty:
         return
 
     heatmap = monthly_spend.pivot(
+        index="Category", columns="Month", values=DISPLAY_SPEND_COLUMN
+    ).fillna(0)
+    raw_heatmap = monthly_spend.pivot(
         index="Category", columns="Month", values=SPEND_COLUMN
     ).fillna(0)
     fig.add_trace(
@@ -384,13 +502,17 @@ def _add_monthly_heatmap(fig: go.Figure, monthly_spend: pd.DataFrame) -> None:
             x=heatmap.columns,
             y=heatmap.index,
             z=heatmap.values,
+            customdata=raw_heatmap.values,
             colorscale="Viridis",
-            colorbar={"title": "Monthly spend"},
+            colorbar={"title": "Displayed monthly spend"},
             hovertemplate=(
-                "%{x|%Y-%m}<br>%{y}<br>Monthly spend: $%{z:,.2f}<extra></extra>"
+                "%{x|%Y-%m}<br>"
+                "%{y}<br>"
+                "Displayed monthly spend: $%{z:,.2f}<br>"
+                "Raw monthly spend: $%{customdata:,.2f}<extra></extra>"
             ),
         ),
-        row=3,
+        row=4,
         col=1,
     )
 
@@ -400,16 +522,18 @@ def write_spend_chart(
 ) -> None:
     """Write an interactive multi-view spending report to output_path."""
     total_spend = prepare_total_spend_data(spend_data, window=window)
+    share_data = prepare_category_share_data(spend_data)
     monthly_spend = prepare_monthly_heatmap_data(spend_data)
     fig = make_subplots(
-        rows=3,
+        rows=4,
         cols=1,
         shared_xaxes=False,
-        vertical_spacing=0.09,
-        row_heights=[0.22, 0.43, 0.35],
+        vertical_spacing=0.07,
+        row_heights=[0.18, 0.34, 0.24, 0.24],
         subplot_titles=(
             "Total rolling daily spend",
             "Rolling daily spend by category",
+            "Rolling category share of spend",
             "Monthly category spend",
         ),
     )
@@ -418,24 +542,46 @@ def write_spend_chart(
         _add_total_spend_trace(fig, total_spend)
         _add_outlier_markers(fig, spend_data)
     if not spend_data.empty:
-        _add_category_area_traces(fig, spend_data)
+        categories = sorted(spend_data["Category"].unique())
+        category_colors = _category_colors(categories)
+        _add_category_area_traces(fig, spend_data, category_colors)
+        _add_category_share_traces(fig, share_data, category_colors)
         _add_monthly_heatmap(fig, monthly_spend)
 
     fig.update_layout(
         title="Historical Spend Profile",
         hovermode="closest",
-        height=1100,
+        height=1400,
         legend_title_text="Category",
     )
+    cap = spend_data.attrs.get(CAP_ATTR)
+    if cap is not None:
+        fig.add_annotation(
+            text=f"Visual cap applied to daily category spend: ${cap:,.2f}",
+            xref="paper",
+            yref="paper",
+            x=1,
+            y=1.06,
+            showarrow=False,
+            xanchor="right",
+        )
     fig.update_yaxes(title_text="Rolling average", row=1, col=1)
     fig.update_yaxes(
         title_text="Rolling average daily spend",
         row=2,
         col=1,
     )
+    fig.update_yaxes(
+        title_text="Share of rolling spend",
+        range=[0, 100],
+        ticksuffix="%",
+        row=3,
+        col=1,
+    )
     fig.update_xaxes(title_text="Date", row=1, col=1)
     fig.update_xaxes(title_text="Date", row=2, col=1)
-    fig.update_xaxes(title_text="Month", row=3, col=1)
+    fig.update_xaxes(title_text="Date", row=3, col=1)
+    fig.update_xaxes(title_text="Month", row=4, col=1)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.write_html(output_path, include_plotlyjs="cdn", full_html=True)
 
@@ -462,7 +608,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--cap-daily-spend",
         type=float,
         default=None,
-        help="Visual-only cap for daily category spend before rolling averages.",
+        help=(
+            "Visual-only cap for daily category spend before rolling averages. "
+            "Overrides the automatic cap."
+        ),
+    )
+    parser.add_argument(
+        "--no-auto-cap",
+        action="store_true",
+        help="Disable the automatic visual cap for unusually large daily spend.",
     )
     parser.add_argument(
         "--outlier-report",
@@ -508,6 +662,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         top_n_categories=None,
         skip_cleanup=True,
         cap_daily_spend=args.cap_daily_spend,
+        auto_cap=not args.no_auto_cap,
     )
     write_spend_chart(spend_data, args.output, window=args.window)
     logger.info("Wrote %s.", args.output)

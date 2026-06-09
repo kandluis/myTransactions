@@ -562,7 +562,7 @@ EXACT_MERCHANT_TO_CATEGORY_MAP:
   City Of Mountain View: "Services/Other"
   City Of Sunnyvale: "Services/Other"
   Ckecococ Llcwatsonville: "Food/Dining Restaurants"
-  Cookunity: "Food/Dining Restaurants"
+  Cookunity: "Meal Delivery"
   Costa Farms Llc: Groceries
   Crepevine: "Food/Dining Restaurants"
   D Jwsj Nj: Entertainment
@@ -622,7 +622,7 @@ EXACT_MERCHANT_TO_CATEGORY_MAP:
   Namo Dallas Tx: "Food/Dining Restaurants"
   New York Times: Entertainment
   Nick The Greemountain View: "Food/Dining Restaurants"
-  Nurture Life: "Food/Dining Restaurants"
+  Nurture Life: "Meal Delivery"
   Oak And Los Gatos: "Food/Dining Restaurants"
   Oura Ring: Healthcare
   Parchment: Education
@@ -652,7 +652,7 @@ EXACT_MERCHANT_TO_CATEGORY_MAP:
   Service Navigo Paris Fra: Transportation
   Sherwinwilliams: Shopping
   Sp Bared Footwear Auarmadale Au: Shopping
-  Sp Cerebelly Erie Co: Groceries
+  Sp Cerebelly Erie Co: "Meal Delivery"
   Sp Cozy Earthsouth Jordan Ut: Shopping
   Sp Thebabookishboutiqu Thebabookishb Ky: Shopping
   Spoelcalifasmountain View: Healthcare
@@ -740,6 +740,7 @@ MERCHANT_TO_CATEGORY_MAP:
   cardenas: Groceries
   cardtronics: Financial
   cashback: Financial
+  cerebelly: "Meal Delivery"
   chargepoint: Transportation
   chase: Financial
   chevron: Transportation
@@ -760,6 +761,7 @@ MERCHANT_TO_CATEGORY_MAP:
   cookies: "Food/Dining Coffee/Cafes"
   corner: Shopping
   costco: Groceries
+  cookunity: "Meal Delivery"
   costena: "Food/Dining Restaurants"
   country: Groceries
   court: "Services/Other"
@@ -888,6 +890,7 @@ MERCHANT_TO_CATEGORY_MAP:
   noodle: "Food/Dining Restaurants"
   norwegian: Travel
   nothing: "Food/Dining Coffee/Cafes"
+  nurture life: "Meal Delivery"
   oflif: "Services/Other"
   oldnavy: Shopping
   optometry: Healthcare
@@ -974,7 +977,7 @@ MERCHANT_TO_CATEGORY_MAP:
   tea: "Food/Dining Coffee/Cafes"
   teaspoon: "Food/Dining Coffee/Cafes"
   thai: "Food/Dining Restaurants"
-  thistle: Groceries
+  thistle: "Meal Delivery"
   three: "Food/Dining Restaurants"
   ticketsatwork: Entertainment
   tire: Transportation

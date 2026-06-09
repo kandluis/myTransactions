@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hmac
+import logging
 import os
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -17,6 +18,24 @@ import report_publisher
 
 app = Flask(__name__)
 _job_state_lock = Lock()
+
+
+def _configure_logging() -> None:
+    """Make module INFO logs visible under Gunicorn and local runs."""
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    if not root_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        )
+        root_logger.addHandler(handler)
+
+    logging.getLogger("gunicorn.error").setLevel(logging.INFO)
+    logging.getLogger("gunicorn.access").setLevel(logging.INFO)
+
+
+_configure_logging()
 
 
 @dataclass

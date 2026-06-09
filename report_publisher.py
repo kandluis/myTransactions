@@ -151,6 +151,7 @@ def generate_report_files(
     auto_cap: bool = True,
     include_heatmap: bool = True,
     include_total_spend: bool = True,
+    include_category_share: bool = True,
     include_customdata: bool = True,
     job_id: Optional[str] = None,
 ) -> tuple[Path, Path]:
@@ -214,6 +215,7 @@ def generate_report_files(
         window=window,
         include_heatmap=include_heatmap,
         include_total_spend=include_total_spend,
+        include_category_share=include_category_share,
         include_customdata=include_customdata,
     )
     _log(
@@ -262,6 +264,7 @@ def publish_spend_report(
     window: int = 31,
     include_heatmap: bool = True,
     include_total_spend: bool = True,
+    include_category_share: bool = True,
     include_customdata: bool = True,
     job_id: Optional[str] = None,
 ) -> SpendReportResult:
@@ -312,6 +315,7 @@ def publish_spend_report(
             window=window,
             include_heatmap=include_heatmap,
             include_total_spend=include_total_spend,
+            include_category_share=include_category_share,
             include_customdata=include_customdata,
             job_id=job_id,
         )

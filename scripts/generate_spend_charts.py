@@ -608,6 +608,7 @@ def write_spend_chart(
     job_id: Optional[str] = None,
     include_heatmap: bool = True,
     include_total_spend: bool = True,
+    include_category_share: bool = True,
     include_customdata: bool = True,
 ) -> None:
     """Write an interactive multi-view spending report to output_path."""
@@ -628,14 +629,16 @@ def write_spend_chart(
             len(total_spend),
             f"{time.perf_counter() - stage_start:.2f}s",
         )
-    stage_start = time.perf_counter()
-    share_data = prepare_category_share_data(spend_data)
-    _log(
-        job_id,
-        "Prepared share series with %d rows in %s",
-        len(share_data),
-        f"{time.perf_counter() - stage_start:.2f}s",
-    )
+    share_data = pd.DataFrame()
+    if include_category_share:
+        stage_start = time.perf_counter()
+        share_data = prepare_category_share_data(spend_data)
+        _log(
+            job_id,
+            "Prepared share series with %d rows in %s",
+            len(share_data),
+            f"{time.perf_counter() - stage_start:.2f}s",
+        )
     monthly_spend = pd.DataFrame()
     if include_heatmap:
         stage_start = time.perf_counter()
@@ -647,18 +650,27 @@ def write_spend_chart(
             f"{time.perf_counter() - stage_start:.2f}s",
         )
     stage_start = time.perf_counter()
-    subplot_titles_list = []
+    subplot_titles_list: list[str] = []
     row_heights: list[float] = []
     if include_total_spend:
         subplot_titles_list.append("Total rolling daily spend")
         row_heights.append(0.18 if include_heatmap else 0.22)
     subplot_titles_list.append("Rolling daily spend by category")
-    row_heights.append(0.34 if include_total_spend else 0.45)
-    subplot_titles_list.append("Rolling category share of spend")
-    row_heights.append(0.24 if include_total_spend else 0.35)
+    row_heights.append(
+        0.34
+        if include_total_spend
+        else (0.45 if include_category_share or include_heatmap else 0.60)
+    )
+    if include_category_share:
+        subplot_titles_list.append("Rolling category share of spend")
+        row_heights.append(
+            0.24 if include_total_spend else (0.35 if include_heatmap else 0.42)
+        )
     if include_heatmap:
         subplot_titles_list.append("Monthly category spend")
-        row_heights.append(0.24 if include_total_spend else 0.30)
+        row_heights.append(
+            0.24 if include_total_spend else (0.30 if include_category_share else 0.38)
+        )
     rows = len(subplot_titles_list)
     fig = make_subplots(
         rows=rows,
@@ -688,8 +700,7 @@ def write_spend_chart(
         trace_count += 1
         current_row += 1
     category_row = current_row
-    share_row = current_row + 1
-    heatmap_row = current_row + 2 if include_heatmap else None
+    share_row = current_row + 1 if include_category_share else None
     if not spend_data.empty:
         categories = sorted(spend_data["Category"].unique())
         category_colors = _category_colors(categories)
@@ -701,8 +712,9 @@ def write_spend_chart(
             include_customdata=include_customdata,
         )
         trace_count += len(categories)
-        _add_category_share_traces(fig, share_data, category_colors, row=share_row)
-        trace_count += len(categories)
+        if include_category_share and not share_data.empty and share_row is not None:
+            _add_category_share_traces(fig, share_data, category_colors, row=share_row)
+            trace_count += len(categories)
         if include_heatmap:
             _add_monthly_heatmap(fig, monthly_spend)
             trace_count += 1
@@ -743,16 +755,18 @@ def write_spend_chart(
     )
     fig.update_xaxes(title_text="Date", row=layout_row, col=1)
     layout_row += 1
-    fig.update_yaxes(
-        title_text="Share of rolling spend",
-        range=[0, 100],
-        ticksuffix="%",
-        row=layout_row,
-        col=1,
-    )
-    fig.update_xaxes(title_text="Date", row=layout_row, col=1)
+    if include_category_share:
+        fig.update_yaxes(
+            title_text="Share of rolling spend",
+            range=[0, 100],
+            ticksuffix="%",
+            row=layout_row,
+            col=1,
+        )
+        fig.update_xaxes(title_text="Date", row=layout_row, col=1)
+        layout_row += 1
     if include_heatmap:
-        fig.update_xaxes(title_text="Month", row=layout_row + 1, col=1)
+        fig.update_xaxes(title_text="Month", row=layout_row, col=1)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     _log(job_id, "Writing chart HTML to %s", output_path)
     fig.write_html(

@@ -156,6 +156,14 @@ pipenv run python scripts/benchmark_spend_chart.py \
   --output /tmp/spend-profile.html
 ```
 
+To compare memory across the compact report variants, run the 8-way sweep:
+
+```sh
+pipenv run python scripts/benchmark_spend_chart.py \
+  --sweep-compact-matrix \
+  --input data/benchmark_transactions.csv
+```
+
 For datasets with large one-off expenses, the chart applies an automatic
 visual-only cap to unusually large daily category totals. The cap affects chart
 scaling and rolling averages, while hover labels and outlier reports keep the
@@ -213,10 +221,11 @@ The publisher writes report status to `Settings!F1:G6`, including the latest
 tokenized report URLs, generation timestamp, status, source, and error text.
 If generation fails, it preserves the last successful report URLs when they are
 already present in the sheet.
-The `/generate` endpoint returns immediately, uses the compact report mode
-without the monthly heatmap, and the background job writes the sheet status
-when it finishes. The normal CLI and local chart generation still produce the
-full report by default.
+The `/generate` endpoint returns immediately and uses the compact report mode
+without the monthly heatmap, total-spend panel, category-share panel, or
+heavier hover payloads. The background job writes the sheet status when it
+finishes. The normal CLI and local chart generation still produce the full
+report by default.
 
 The Fly web service exposes:
 

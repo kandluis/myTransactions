@@ -97,6 +97,7 @@ def test_generate_starts_background_job_and_returns_accepted(
         started.set()
         assert kwargs["include_heatmap"] is False
         assert kwargs["include_total_spend"] is False
+        assert kwargs["include_category_share"] is False
         assert kwargs["include_customdata"] is False
         release.wait(timeout=5)
         return result
@@ -132,6 +133,7 @@ def test_generate_rejects_concurrent_request(client) -> None:
         started.set()
         assert kwargs["include_heatmap"] is False
         assert kwargs["include_total_spend"] is False
+        assert kwargs["include_category_share"] is False
         assert kwargs["include_customdata"] is False
         release.wait(timeout=5)
         return report_publisher.SpendReportResult(
@@ -174,6 +176,7 @@ def test_generate_failure_returns_500(client, monkeypatch: pytest.MonkeyPatch) -
         started.set()
         assert kwargs["include_heatmap"] is False
         assert kwargs["include_total_spend"] is False
+        assert kwargs["include_category_share"] is False
         assert kwargs["include_customdata"] is False
         return result
 

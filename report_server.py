@@ -141,6 +141,7 @@ def _run_generate_job(job_id: str) -> None:
             update_sheet=True,
             include_heatmap=False,
             include_total_spend=False,
+            include_category_share=False,
             include_customdata=False,
             job_id=job.job_id,
         )

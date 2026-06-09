@@ -6,11 +6,11 @@ import argparse
 import gc
 import json
 import logging
+import subprocess
 import resource
-import sys
 import tempfile
 import time
-import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -49,6 +49,7 @@ class BenchmarkResult:
     output_bytes: int
     include_heatmap: bool
     include_total_spend: bool
+    include_category_share: bool
     include_customdata: bool
 
     def as_dict(self) -> dict[str, object]:
@@ -62,6 +63,7 @@ class BenchmarkResult:
             "output_bytes": self.output_bytes,
             "include_heatmap": self.include_heatmap,
             "include_total_spend": self.include_total_spend,
+            "include_category_share": self.include_category_share,
             "include_customdata": self.include_customdata,
         }
 
@@ -120,6 +122,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Include the total rolling spend chart in the benchmark chart.",
     )
     parser.add_argument(
+        "--include-category-share",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Include the category share chart in the benchmark chart.",
+    )
+    parser.add_argument(
         "--include-customdata",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -160,6 +168,7 @@ def run_benchmark(
     skip_cleanup: bool = False,
     include_heatmap: bool = True,
     include_total_spend: bool = True,
+    include_category_share: bool = True,
     include_customdata: bool = True,
 ) -> BenchmarkResult:
     if not input_path.exists():
@@ -191,6 +200,7 @@ def run_benchmark(
         window=window,
         include_heatmap=include_heatmap,
         include_total_spend=include_total_spend,
+        include_category_share=include_category_share,
         include_customdata=include_customdata,
         job_id="benchmark",
     )
@@ -205,6 +215,7 @@ def run_benchmark(
         output_bytes=output_path.stat().st_size if output_path.exists() else 0,
         include_heatmap=include_heatmap,
         include_total_spend=include_total_spend,
+        include_category_share=include_category_share,
         include_customdata=include_customdata,
     )
 
@@ -221,56 +232,64 @@ def run_benchmark_matrix(
     results: list[BenchmarkResult] = []
     for include_total_spend in (True, False):
         for include_customdata in (True, False):
-            variant_output = output_dir / (
-                f"spend_profile_total-{int(include_total_spend)}"
-                f"_custom-{int(include_customdata)}.html"
-            )
-            command = [
-                sys.executable,
-                str(Path(__file__).resolve()),
-                "--input",
-                str(input_path),
-                "--output",
-                str(variant_output),
-                "--window",
-                str(window),
-                "--no-include-heatmap",
-                (
-                    "--include-total-spend"
-                    if include_total_spend
-                    else "--no-include-total-spend"
-                ),
-                (
-                    "--include-customdata"
-                    if include_customdata
-                    else "--no-include-customdata"
-                ),
-            ]
-            if top_n_categories is not None:
-                command.extend(["--top-n-categories", str(top_n_categories)])
-            if skip_cleanup:
-                command.append("--skip-cleanup")
-            completed = subprocess.run(
-                command,
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            payload = json.loads(completed.stdout.strip())
-            results.append(
-                BenchmarkResult(
-                    input_path=Path(payload["input_path"]),
-                    output_path=Path(payload["output_path"]),
-                    rows=payload["rows"],
-                    categories=payload["categories"],
-                    elapsed_seconds=payload["elapsed_seconds"],
-                    peak_rss_mb=payload["peak_rss_mb"],
-                    output_bytes=payload["output_bytes"],
-                    include_heatmap=payload["include_heatmap"],
-                    include_total_spend=payload["include_total_spend"],
-                    include_customdata=payload["include_customdata"],
+            for include_category_share in (True, False):
+                variant_output = output_dir / (
+                    f"spend_profile_total-{int(include_total_spend)}"
+                    f"_share-{int(include_category_share)}"
+                    f"_custom-{int(include_customdata)}.html"
                 )
-            )
+                command = [
+                    sys.executable,
+                    str(Path(__file__).resolve()),
+                    "--input",
+                    str(input_path),
+                    "--output",
+                    str(variant_output),
+                    "--window",
+                    str(window),
+                    "--no-include-heatmap",
+                    (
+                        "--include-total-spend"
+                        if include_total_spend
+                        else "--no-include-total-spend"
+                    ),
+                    (
+                        "--include-category-share"
+                        if include_category_share
+                        else "--no-include-category-share"
+                    ),
+                    (
+                        "--include-customdata"
+                        if include_customdata
+                        else "--no-include-customdata"
+                    ),
+                ]
+                if top_n_categories is not None:
+                    command.extend(["--top-n-categories", str(top_n_categories)])
+                if skip_cleanup:
+                    command.append("--skip-cleanup")
+                completed = subprocess.run(
+                    command,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                payload = json.loads(completed.stdout.strip())
+                results.append(
+                    BenchmarkResult(
+                        input_path=Path(payload["input_path"]),
+                        output_path=Path(payload["output_path"]),
+                        rows=payload["rows"],
+                        categories=payload["categories"],
+                        elapsed_seconds=payload["elapsed_seconds"],
+                        peak_rss_mb=payload["peak_rss_mb"],
+                        output_bytes=payload["output_bytes"],
+                        include_heatmap=payload["include_heatmap"],
+                        include_total_spend=payload["include_total_spend"],
+                        include_category_share=payload["include_category_share"],
+                        include_customdata=payload["include_customdata"],
+                    )
+                )
     return results
 
 
@@ -313,6 +332,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         skip_cleanup=args.skip_cleanup,
         include_heatmap=args.include_heatmap,
         include_total_spend=args.include_total_spend,
+        include_category_share=args.include_category_share,
         include_customdata=args.include_customdata,
     )
     print(json.dumps(result.as_dict(), sort_keys=True))

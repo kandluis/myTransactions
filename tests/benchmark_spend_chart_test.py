@@ -128,6 +128,7 @@ def test_main_prints_json_metrics(monkeypatch: pytest.MonkeyPatch, capsys) -> No
         output_bytes=4096,
         include_heatmap=False,
         include_total_spend=True,
+        include_category_share=True,
         include_customdata=True,
     )
     monkeypatch.setattr(benchmark_spend_chart, "run_benchmark", lambda **kwargs: result)
@@ -162,6 +163,7 @@ def test_run_benchmark_matrix_runs_four_variants(
             "output_bytes": 10,
             "include_heatmap": False,
             "include_total_spend": "--include-total-spend" in command,
+            "include_category_share": "--include-category-share" in command,
             "include_customdata": "--include-customdata" in command,
         }
         return Completed(json.dumps(payload))
@@ -173,17 +175,28 @@ def test_run_benchmark_matrix_runs_four_variants(
         output_dir=tmp_path,
     )
 
-    assert len(commands) == 4
-    assert "--no-include-heatmap" in commands[0]
-    assert "--include-total-spend" in commands[0]
-    assert "--include-customdata" in commands[0]
-    assert "--no-include-customdata" in commands[1]
-    assert "--no-include-total-spend" in commands[2]
-    assert "--no-include-total-spend" in commands[3]
-    assert "--no-include-customdata" in commands[3]
-    assert len(results) == 4
+    assert len(commands) == 8
+    combos = {
+        (
+            "--include-total-spend" in command,
+            "--include-category-share" in command,
+            "--include-customdata" in command,
+        )
+        for command in commands
+    }
+    assert combos == {
+        (True, True, True),
+        (True, True, False),
+        (True, False, True),
+        (True, False, False),
+        (False, True, True),
+        (False, True, False),
+        (False, False, True),
+        (False, False, False),
+    }
+    assert len(results) == 8
     assert all(not result.include_heatmap for result in results)
-    assert results[0].output_path.name.endswith("total-1_custom-1.html")
+    assert results[0].output_path.name.endswith("total-1_share-1_custom-1.html")
 
 
 def test_refresh_cache_from_sheets_writes_full_export(

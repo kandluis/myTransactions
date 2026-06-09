@@ -1,2 +1,2 @@
 #!/bin/bash
-python scraper.py --type='all'
+python scraper.py --types=all

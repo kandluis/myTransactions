@@ -34,7 +34,7 @@ def test_write_report_status_writes_expected_settings_block() -> None:
     report_publisher.write_report_status(sheet, result)
 
     settings_ws.update_values.assert_called_once_with(
-        "D5",
+        "F1",
         [
             ["https://example.test/report"],
             ["https://example.test/outliers"],

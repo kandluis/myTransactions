@@ -42,7 +42,7 @@ pipenv install
 This will install all the required dependencies as well as the appropriate Python version (using pyenv). You can then run:
 
 ```sh
-pipenv run python scraper.py --types='all'
+pipenv run python scraper.py --types=all
 ```
 
 To run the script with these installs, or you can jump into the installed Python environment at the shell bevel with:
@@ -59,7 +59,7 @@ Use `scraper.py` to retrieve data from Empower and write it to the configured
 Google Sheet.
 
 ```sh
-pipenv run python scraper.py --types='all'
+pipenv run python scraper.py --types=all
 ```
 
 The `--types` option can be one of:
@@ -217,13 +217,41 @@ pipenv run python scripts/publish_spend_report.py \
   --update-sheet
 ```
 
-The publisher writes report status to `Settings!D5:D10`, including the latest
+The publisher writes report status to `Settings!F1:G6`, including the latest
 tokenized report URLs, generation timestamp, status, source, and error text.
 If generation fails, it preserves the last successful report URLs when they are
 already present in the sheet.
-The `/generate` endpoint returns immediately and produces the full report. The
-background job writes the sheet status when it finishes. The normal CLI and
-local chart generation still produce the full report by default.
+The `/generate` endpoint returns immediately and uses the compact report mode
+without the monthly heatmap. The background job writes the sheet status when
+it finishes. The normal CLI and local chart generation still produce the full
+report by default.
+
+## Trigger Scraper From Sheets
+
+Use `POST /scrape?token=<REPORT_TOKEN>` to kick off a background scraper run
+against the live sheet. The endpoint checks `Settings!D5` first and skips the
+run when the last successful scrape is still within the freshness window
+(`15` minutes by default). When a scrape succeeds, the app writes a
+machine-readable UTC timestamp into `Settings!D5` so both the endpoint and a
+Sheets script can make the same freshness decision.
+
+The scrape job reuses the existing scraper flow and the shared `REPORT_TOKEN`.
+It is safe to invoke from a menu item or button in Google Sheets:
+
+```javascript
+function triggerScrape() {
+  const token = PropertiesService.getScriptProperties().getProperty('REPORT_TOKEN');
+  const url = 'https://mint-scraper.fly.dev/scrape?token=' + encodeURIComponent(token);
+  const response = UrlFetchApp.fetch(url, { method: 'post', muteHttpExceptions: true });
+  if (response.getResponseCode() >= 300) {
+    throw new Error(response.getContentText());
+  }
+}
+```
+
+You can optionally read `Settings!D5` in Apps Script first and skip the
+network call when the scrape is already fresh. The server still enforces the
+freshness check and prevents overlapping runs with the scheduled scraper.
 
 The Fly web service exposes:
 
@@ -236,6 +264,9 @@ The Fly web service exposes:
   HTML report.
 - `GET /reports/outliers.csv?token=<REPORT_TOKEN>`: download the latest
   outlier CSV.
+- `POST /scrape?token=<REPORT_TOKEN>`: enqueue a scraper run when the last
+  successful scrape is stale enough.
+- `GET /scrape/status?token=<REPORT_TOKEN>`: poll the latest scrape job state.
 
 Set Fly secrets before deploying:
 
@@ -361,7 +392,7 @@ docker build -t mint_scraper .
 
 Once built, you can test locally by running the image. Note that it might fail due to binary incompatibitlies between the driver versions.
 ```sh
-docker run --env-file=.env -e mint_scraper:latest python scraper.py --type='all'
+docker run --env-file=.env mint_scraper:latest python scraper.py --types=all
 ```
 
 ## Managing 2FA Session on Fly.io

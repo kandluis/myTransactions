@@ -6,7 +6,7 @@ import hmac
 import logging
 import os
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import Lock, Thread
 from typing import Optional
@@ -14,10 +14,18 @@ from uuid import uuid4
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
+import auth
+import config
 import report_publisher
+import remote
+import scraper
+import utils
 
 app = Flask(__name__)
 _job_state_lock = Lock()
+_SCRAPE_FRESHNESS_WINDOW = timedelta(
+    seconds=int(os.getenv("SCRAPE_FRESHNESS_SECONDS", "900"))
+)
 
 
 def _configure_logging() -> None:
@@ -56,8 +64,29 @@ class GenerateJob:
         return payload
 
 
+@dataclass
+class ScrapeJob:
+    job_id: str
+    state: str
+    created_at: str
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+    last_successful_at: str = ""
+    skip_reason: str = ""
+    error: str = ""
+    source: str = "sheets"
+    freshness_window_seconds: int = int(_SCRAPE_FRESHNESS_WINDOW.total_seconds())
+
+    def to_dict(self) -> dict[str, object]:
+        payload = asdict(self)
+        payload["active"] = self.state in {"queued", "running"}
+        return payload
+
+
 _current_job: Optional[GenerateJob] = None
 _last_terminal_job: Optional[GenerateJob] = None
+_current_scrape_job: Optional[ScrapeJob] = None
+_last_terminal_scrape_job: Optional[ScrapeJob] = None
 
 
 def _report_token() -> str:
@@ -104,12 +133,25 @@ def _set_current_job(job: GenerateJob) -> None:
     _current_job = job
 
 
+def _set_current_scrape_job(job: ScrapeJob) -> None:
+    global _current_scrape_job
+    _current_scrape_job = job
+
+
 def _mark_terminal(job: GenerateJob) -> None:
     global _current_job, _last_terminal_job
     with _job_state_lock:
         job.finished_at = _utc_now()
         _current_job = None
         _last_terminal_job = job
+
+
+def _mark_scrape_terminal(job: ScrapeJob) -> None:
+    global _current_scrape_job, _last_terminal_scrape_job
+    with _job_state_lock:
+        job.finished_at = _utc_now()
+        _current_scrape_job = None
+        _last_terminal_scrape_job = job
 
 
 def _get_current_job(job_id: str) -> Optional[GenerateJob]:
@@ -119,9 +161,45 @@ def _get_current_job(job_id: str) -> Optional[GenerateJob]:
         return None
 
 
+def _get_current_scrape_job(job_id: str) -> Optional[ScrapeJob]:
+    with _job_state_lock:
+        if _current_scrape_job is not None and _current_scrape_job.job_id == job_id:
+            return _current_scrape_job
+        return None
+
+
 def _get_job_snapshot() -> Optional[GenerateJob]:
     with _job_state_lock:
         return _current_job or _last_terminal_job
+
+
+def _get_scrape_job_snapshot() -> Optional[ScrapeJob]:
+    with _job_state_lock:
+        return _current_scrape_job or _last_terminal_scrape_job
+
+
+def _load_last_scrape_at() -> Optional[datetime]:
+    try:
+        sheet = report_publisher.open_configured_spreadsheet()
+        settings_ws = sheet.worksheet_by_title(title=config.GLOBAL.SETTINGS_SHEET_TITLE)
+        return remote.read_last_scrape_at(settings_ws)
+    except Exception as exc:  # pragma: no cover - best effort freshness hint
+        logging.getLogger(__name__).info(
+            "Could not read last scrape timestamp: %s", exc
+        )
+        return None
+
+
+def _scrape_is_fresh(last_scrape_at: Optional[datetime]) -> bool:
+    if last_scrape_at is None:
+        return False
+    return datetime.now(timezone.utc) - last_scrape_at <= _SCRAPE_FRESHNESS_WINDOW
+
+
+def _scrape_age_seconds(last_scrape_at: Optional[datetime]) -> Optional[int]:
+    if last_scrape_at is None:
+        return None
+    return max(0, int((datetime.now(timezone.utc) - last_scrape_at).total_seconds()))
 
 
 def _run_generate_job(job_id: str) -> None:
@@ -139,6 +217,9 @@ def _run_generate_job(job_id: str) -> None:
             base_url=_configured_base_url(),
             token=_report_token(),
             update_sheet=True,
+            include_heatmap=False,
+            include_total_spend=False,
+            include_customdata=False,
             job_id=job.job_id,
         )
         with _job_state_lock:
@@ -158,8 +239,41 @@ def _run_generate_job(job_id: str) -> None:
         _mark_terminal(job)
 
 
+def _run_scrape_job(job_id: str) -> None:
+    job = _get_current_scrape_job(job_id)
+    if job is None:
+        return
+
+    try:
+        with _job_state_lock:
+            job.state = "running"
+            job.started_at = _utc_now()
+        options = utils.ScraperOptions()
+        creds = auth.GetCredentials()
+        scraper.scrape_and_push(options, creds)
+        completed_at = _utc_now()
+        with _job_state_lock:
+            if _current_scrape_job is not None and _current_scrape_job.job_id == job_id:
+                _current_scrape_job.state = "succeeded"
+                _current_scrape_job.last_successful_at = completed_at
+    except Exception as exc:  # pragma: no cover - defensive guard
+        with _job_state_lock:
+            if _current_scrape_job is not None and _current_scrape_job.job_id == job_id:
+                _current_scrape_job.state = "failed"
+                _current_scrape_job.error = str(exc)
+    finally:
+        _mark_scrape_terminal(job)
+
+
 def _status_payload() -> dict[str, object]:
     job = _get_job_snapshot()
+    if job is None:
+        return {"state": "idle", "active": False}
+    return job.to_dict()
+
+
+def _scrape_status_payload() -> dict[str, object]:
+    job = _get_scrape_job_snapshot()
     if job is None:
         return {"state": "idle", "active": False}
     return job.to_dict()
@@ -215,3 +329,58 @@ def generate_status() -> Response | tuple[Response, int]:
     if not is_authorized_token(_request_token()):
         return _forbidden()
     return jsonify(_status_payload())
+
+
+@app.post("/scrape")
+def scrape() -> tuple[Response, int]:
+    if not is_authorized_token(_request_token()):
+        return _forbidden()
+
+    with _job_state_lock:
+        if _current_scrape_job is not None and _current_scrape_job.state in {
+            "queued",
+            "running",
+        }:
+            payload = _current_scrape_job.to_dict()
+            payload["error"] = "scrape already running"
+            return jsonify(payload), 409
+
+    if not scraper.scrape_lock_available():
+        return jsonify({"error": "scrape already running"}), 409
+
+    last_scrape_at = _load_last_scrape_at()
+    if _scrape_is_fresh(last_scrape_at):
+        job = ScrapeJob(
+            job_id=_new_job_id(),
+            state="skipped",
+            created_at=_utc_now(),
+            finished_at=_utc_now(),
+            last_successful_at=last_scrape_at.isoformat() if last_scrape_at else "",
+            skip_reason="last successful scrape is still within the freshness window",
+        )
+        _mark_scrape_terminal(job)
+        payload = job.to_dict()
+        payload["age_seconds"] = _scrape_age_seconds(last_scrape_at)
+        return jsonify(payload), 200
+
+    with _job_state_lock:
+        job = ScrapeJob(
+            job_id=_new_job_id(),
+            state="queued",
+            created_at=_utc_now(),
+            last_successful_at=last_scrape_at.isoformat() if last_scrape_at else "",
+        )
+        _set_current_scrape_job(job)
+        worker = Thread(target=_run_scrape_job, args=(job.job_id,), daemon=True)
+        worker.start()
+        payload = job.to_dict()
+        payload["status_url"] = f"/scrape/status?token={_report_token()}"
+        payload["age_seconds"] = _scrape_age_seconds(last_scrape_at)
+        return jsonify(payload), 202
+
+
+@app.get("/scrape/status")
+def scrape_status() -> Response | tuple[Response, int]:
+    if not is_authorized_token(_request_token()):
+        return _forbidden()
+    return jsonify(_scrape_status_payload())

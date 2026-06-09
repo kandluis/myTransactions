@@ -19,6 +19,8 @@ from typing import (
 
 logger = logging.getLogger(__name__)
 
+SCRAPE_LAST_UPDATED_CELL = "D5"
+
 
 def _trim(merchant: str) -> str:
     """Removes non-alphanumeric characters from a string and titles it."""
@@ -392,4 +394,31 @@ def UpdateGoogleSheet(
     today = datetime.now(tz=timezone(-timedelta(hours=8)))
     today_string = today.strftime("%d-%B-%Y %H:%M:%S %Z")
     hostname = socket.gethostname()
-    settings_ws.set_dataframe(pd.DataFrame([today_string, hostname]), "D2")
+    scrape_timestamp = datetime.now(timezone.utc).isoformat()
+    settings_ws.set_dataframe(
+        pd.DataFrame([today_string, hostname]),
+        "D2",
+    )
+    settings_ws.update_values(SCRAPE_LAST_UPDATED_CELL, [[scrape_timestamp]])
+
+
+def read_last_scrape_at(
+    settings_ws: pygsheets.Worksheet,
+) -> Optional[datetime]:
+    """Read the last machine-readable scrape timestamp from Settings!D5."""
+    try:
+        raw_value = str(settings_ws.get_value(SCRAPE_LAST_UPDATED_CELL) or "").strip()
+    except Exception:
+        return None
+
+    if not raw_value:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(raw_value)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)

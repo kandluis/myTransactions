@@ -15,7 +15,6 @@ COPY . ./
 RUN chmod +x /app/serve.sh
 
 # Set the entrypoint to run your script
-CMD ["python", "scraper.py --type='all'"]
-
+CMD ["python", "scraper.py", "--types=all"]
 
 

@@ -674,6 +674,8 @@ def test_update_google_sheets(mocker) -> None:
             title=remote.config.GLOBAL.SETTINGS_SHEET_TITLE
         )
         mockWs.set_dataframe.assert_called_once()
+        mockWs.update_values.assert_called_once()
+        assert mockWs.update_values.call_args.args[0] == remote.SCRAPE_LAST_UPDATED_CELL
 
 
 def test_update_google_sheets_txns(mocker) -> None:
@@ -690,6 +692,8 @@ def test_update_google_sheets_txns(mocker) -> None:
             any_order=True,
         )
         assert mockWs.set_dataframe.call_count == 2
+        mockWs.update_values.assert_called_once()
+        assert mockWs.update_values.call_args.args[0] == remote.SCRAPE_LAST_UPDATED_CELL
 
 
 def test_update_google_sheets_accounts(mocker) -> None:
@@ -706,6 +710,8 @@ def test_update_google_sheets_accounts(mocker) -> None:
             any_order=True,
         )
         assert mockWs.set_dataframe.call_count == 2
+        mockWs.update_values.assert_called_once()
+        assert mockWs.update_values.call_args.args[0] == remote.SCRAPE_LAST_UPDATED_CELL
 
 
 def test_update_google_sheets_all(mocker) -> None:
@@ -725,6 +731,18 @@ def test_update_google_sheets_all(mocker) -> None:
             any_order=True,
         )
         assert mockWs.set_dataframe.call_count == 3
+        mockWs.update_values.assert_called_once()
+        assert mockWs.update_values.call_args.args[0] == remote.SCRAPE_LAST_UPDATED_CELL
+
+
+def test_read_last_scrape_at_parses_iso_timestamp(mocker) -> None:
+    settings_ws = mocker.MagicMock()
+    settings_ws.get_value.return_value = "2026-06-09T12:00:00+00:00"
+
+    parsed = remote.read_last_scrape_at(settings_ws)
+
+    assert parsed is not None
+    assert parsed.isoformat() == "2026-06-09T12:00:00+00:00"
 
 
 def test_normalize_merchant_cycle(config: MonkeyPatch, mocker) -> None:

@@ -14,6 +14,7 @@ gunicorn = "*"
 pandas = "==2.3.0"
 numpy = "==2.3.1"
 pytz = "*"
+rsa = "*"
 
 [dev-packages]
 flake8 = "*"

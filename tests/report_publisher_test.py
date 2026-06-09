@@ -1,6 +1,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pandas as pd
 import pytest
 
 import report_publisher
@@ -87,11 +88,11 @@ def test_publish_spend_report_calls_loader_writer_and_sheet_update(
         calls.append(f"load:{path}")
         return MagicMock()
 
-    def generate_files(txns, output_dir: Path, *, window: int = 31):
+    def generate_files(txns, output_dir: Path, *, window: int = 31, job_id=None):
         calls.append(f"generate:{output_dir}:{window}")
         return output_dir / "spend_profile.html", output_dir / "outliers.csv"
 
-    def write_status(status_sheet, result):
+    def write_status(status_sheet, result, *, job_id=None):
         calls.append(f"status:{result.status}:{result.report_url}")
         assert status_sheet is sheet
 
@@ -140,7 +141,7 @@ def test_publish_spend_report_records_failure_status(
     monkeypatch.setattr(
         report_publisher,
         "write_report_status",
-        lambda status_sheet, result: written_results.append(result),
+        lambda status_sheet, result, *, job_id=None: written_results.append(result),
     )
 
     result = report_publisher.publish_spend_report(
@@ -152,6 +153,50 @@ def test_publish_spend_report_records_failure_status(
     assert result.status == "failed"
     assert "bad csv" in result.error
     assert written_results == [result]
+
+
+def test_publish_spend_report_logs_stage_progress(
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sheet = MagicMock()
+
+    monkeypatch.setattr(
+        report_publisher.generate_spend_charts,
+        "load_transactions_from_csv",
+        lambda path: pd.DataFrame([{"id": 1}]),
+    )
+    monkeypatch.setattr(
+        report_publisher,
+        "generate_report_files",
+        lambda txns, output_dir, *, window=31, job_id=None: (
+            output_dir / "spend_profile.html",
+            output_dir / "outliers.csv",
+        ),
+    )
+    monkeypatch.setattr(report_publisher, "open_configured_spreadsheet", lambda: sheet)
+    monkeypatch.setattr(
+        report_publisher,
+        "write_report_status",
+        lambda status_sheet, result, *, job_id=None: None,
+    )
+
+    with caplog.at_level("INFO"):
+        report_publisher.publish_spend_report(
+            source="csv",
+            input_path=Path("txns.csv"),
+            output_dir=Path("/tmp/reports"),
+            base_url="https://example.test",
+            token="secret",
+            update_sheet=True,
+            job_id="job-1",
+        )
+
+    messages = "\n".join(record.message for record in caplog.records)
+    assert "[report job job-1]" in messages
+    assert "Loaded 1 transactions from CSV" in messages
+    assert "Report generation finished" in messages
+    assert "Status write finished" in messages
 
 
 def test_cli_publish_exits_nonzero_on_failed_result(

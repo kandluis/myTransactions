@@ -194,12 +194,16 @@ The publisher writes report status to `Settings!F1:G6`, including the latest
 tokenized report URLs, generation timestamp, status, source, and error text.
 If generation fails, it preserves the last successful report URLs when they are
 already present in the sheet.
+The `/generate` endpoint returns immediately and the background job writes the
+sheet status when it finishes.
 
 The Fly web service exposes:
 
 - `GET /health`: unauthenticated health check.
-- `POST /generate?token=<REPORT_TOKEN>`: regenerate reports from Sheets and
-  update `Settings!F1:G6`.
+- `POST /generate?token=<REPORT_TOKEN>`: enqueue report generation from Sheets
+  and return `202` immediately.
+- `GET /generate/status?token=<REPORT_TOKEN>`: poll the latest job state and
+  result after enqueueing.
 - `GET /reports/spend_profile.html?token=<REPORT_TOKEN>`: open the latest
   HTML report.
 - `GET /reports/outliers.csv?token=<REPORT_TOKEN>`: download the latest

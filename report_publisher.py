@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime, timezone
 import logging
 import os
+import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
@@ -32,6 +33,21 @@ STATUS_LABELS = [
     "Report generation source",
     "Report generation error",
 ]
+
+
+def _job_prefix(job_id: Optional[str]) -> str:
+    return f"[report job {job_id}] " if job_id else ""
+
+
+def _log(job_id: Optional[str], message: str, *args: object) -> None:
+    if args:
+        logger.info("%s" + message, _job_prefix(job_id), *args)
+    else:
+        logger.info("%s%s", _job_prefix(job_id), message)
+
+
+def _elapsed(start: float) -> str:
+    return f"{time.perf_counter() - start:.2f}s"
 
 
 @dataclass(frozen=True)
@@ -99,6 +115,8 @@ def _existing_url_values(settings_ws: pygsheets.Worksheet) -> tuple[str, str]:
 def write_report_status(
     sheet: pygsheets.Spreadsheet,
     result: SpendReportResult,
+    *,
+    job_id: Optional[str] = None,
 ) -> None:
     """Write report publication status to Settings!F1:G6."""
     settings_ws = sheet.worksheet_by_title(title=config.GLOBAL.SETTINGS_SHEET_TITLE)
@@ -118,6 +136,7 @@ def write_report_status(
         [STATUS_LABELS[5], result.error],
     ]
     settings_ws.update_values(STATUS_RANGE_START, values)
+    _log(job_id, "Updated Settings!F1:G6 with status=%s", result.status)
 
 
 def generate_report_files(
@@ -130,8 +149,10 @@ def generate_report_files(
     end_date: Optional[str] = None,
     cap_daily_spend: Optional[float] = None,
     auto_cap: bool = True,
+    job_id: Optional[str] = None,
 ) -> tuple[Path, Path]:
     """Generate the HTML spend report and outlier CSV under output_dir."""
+    stage_start = time.perf_counter()
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir / SPEND_REPORT_FILENAME
     outlier_path = output_dir / OUTLIER_REPORT_FILENAME
@@ -159,6 +180,15 @@ def generate_report_files(
         cap_daily_spend=cap_daily_spend,
     )
     generate_spend_charts.write_outlier_report(outlier_report, outlier_path)
+    _log(
+        job_id,
+        "Generated report files in %s (txns=%d, spend_rows=%d, report=%s, outliers=%s)",
+        _elapsed(stage_start),
+        len(txns),
+        len(spend_data),
+        report_path,
+        outlier_path,
+    )
     return report_path, outlier_path
 
 
@@ -171,27 +201,56 @@ def publish_spend_report(
     update_sheet: bool = False,
     input_path: Optional[Path] = None,
     window: int = 31,
+    job_id: Optional[str] = None,
 ) -> SpendReportResult:
     """Generate report files, build tokenized URLs, and update Sheets status."""
     generated_at = datetime.now(timezone.utc).isoformat()
     sheet: Optional[pygsheets.Spreadsheet] = None
+    job_start = time.perf_counter()
+    _log(
+        job_id,
+        "Starting spend report publish (source=%s, update_sheet=%s, output_dir=%s)",
+        source,
+        update_sheet,
+        output_dir,
+    )
 
     try:
         if source == "sheets":
+            stage_start = time.perf_counter()
             sheet = open_configured_spreadsheet()
+            _log(job_id, "Opened configured spreadsheet in %s", _elapsed(stage_start))
+            stage_start = time.perf_counter()
             txns = load_transactions_from_sheet(sheet)
+            _log(
+                job_id,
+                "Loaded %d transactions from Sheets in %s",
+                len(txns),
+                _elapsed(stage_start),
+            )
         elif source == "csv":
             if input_path is None:
                 input_path = generate_spend_charts.DEFAULT_INPUT
+            stage_start = time.perf_counter()
             txns = generate_spend_charts.load_transactions_from_csv(input_path)
+            _log(
+                job_id,
+                "Loaded %d transactions from CSV %s in %s",
+                len(txns),
+                input_path,
+                _elapsed(stage_start),
+            )
         else:
             raise ValueError(f"Unsupported report source: {source}")
 
-        generate_report_files(txns, output_dir, window=window)
+        stage_start = time.perf_counter()
+        generate_report_files(txns, output_dir, window=window, job_id=job_id)
+        _log(job_id, "Report generation finished in %s", _elapsed(stage_start))
         report_url = ""
         outlier_url = ""
         if base_url and token:
             report_url, outlier_url = build_report_urls(base_url, token)
+            _log(job_id, "Built tokenized report URLs for %s", base_url)
         result = SpendReportResult(
             report_url=report_url,
             outlier_url=outlier_url,
@@ -211,8 +270,17 @@ def publish_spend_report(
         )
 
     if update_sheet:
+        stage_start = time.perf_counter()
         if sheet is None:
+            _log(job_id, "Opening spreadsheet for status write")
             sheet = open_configured_spreadsheet()
-        write_report_status(sheet, result)
+        write_report_status(sheet, result, job_id=job_id)
+        _log(job_id, "Status write finished in %s", _elapsed(stage_start))
 
+    _log(
+        job_id,
+        "Spend report publish completed with status=%s in %s",
+        result.status,
+        _elapsed(job_start),
+    )
     return result

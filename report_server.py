@@ -4,16 +4,41 @@ from __future__ import annotations
 
 import hmac
 import os
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from pathlib import Path
-import threading
+from threading import Lock, Thread
 from typing import Optional
+from uuid import uuid4
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
 import report_publisher
 
 app = Flask(__name__)
-_generate_lock = threading.Lock()
+_job_state_lock = Lock()
+
+
+@dataclass
+class GenerateJob:
+    job_id: str
+    state: str
+    created_at: str
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+    report_url: str = ""
+    outlier_url: str = ""
+    error: str = ""
+    source: str = "sheets"
+
+    def to_dict(self) -> dict[str, object]:
+        payload = asdict(self)
+        payload["active"] = self.state in {"queued", "running"}
+        return payload
+
+
+_current_job: Optional[GenerateJob] = None
+_last_terminal_job: Optional[GenerateJob] = None
 
 
 def _report_token() -> str:
@@ -47,6 +72,80 @@ def _forbidden() -> tuple[Response, int]:
     return jsonify({"error": "forbidden"}), 403
 
 
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _new_job_id() -> str:
+    return uuid4().hex
+
+
+def _set_current_job(job: GenerateJob) -> None:
+    global _current_job
+    _current_job = job
+
+
+def _mark_terminal(job: GenerateJob) -> None:
+    global _current_job, _last_terminal_job
+    with _job_state_lock:
+        job.finished_at = _utc_now()
+        _current_job = None
+        _last_terminal_job = job
+
+
+def _get_current_job(job_id: str) -> Optional[GenerateJob]:
+    with _job_state_lock:
+        if _current_job is not None and _current_job.job_id == job_id:
+            return _current_job
+        return None
+
+
+def _get_job_snapshot() -> Optional[GenerateJob]:
+    with _job_state_lock:
+        return _current_job or _last_terminal_job
+
+
+def _run_generate_job(job_id: str) -> None:
+    job = _get_current_job(job_id)
+    if job is None:
+        return
+
+    try:
+        with _job_state_lock:
+            job.state = "running"
+            job.started_at = _utc_now()
+        result = report_publisher.publish_spend_report(
+            source="sheets",
+            output_dir=_report_dir(),
+            base_url=_configured_base_url(),
+            token=_report_token(),
+            update_sheet=True,
+            job_id=job.job_id,
+        )
+        with _job_state_lock:
+            if _current_job is not None and _current_job.job_id == job_id:
+                _current_job.report_url = result.report_url
+                _current_job.outlier_url = result.outlier_url
+                _current_job.error = result.error
+                _current_job.state = (
+                    "succeeded" if result.status == "success" else "failed"
+                )
+    except Exception as exc:  # pragma: no cover - defensive guard
+        with _job_state_lock:
+            if _current_job is not None and _current_job.job_id == job_id:
+                _current_job.state = "failed"
+                _current_job.error = str(exc)
+    finally:
+        _mark_terminal(job)
+
+
+def _status_payload() -> dict[str, object]:
+    job = _get_job_snapshot()
+    if job is None:
+        return {"state": "idle", "active": False}
+    return job.to_dict()
+
+
 @app.get("/health")
 def health() -> Response:
     return jsonify({"status": "ok"})
@@ -69,19 +168,31 @@ def generate() -> tuple[Response, int]:
     if not is_authorized_token(_request_token()):
         return _forbidden()
 
-    if not _generate_lock.acquire(blocking=False):
-        return jsonify({"error": "generation already running"}), 409
+    with _job_state_lock:
+        if _current_job is not None and _current_job.state in {
+            "queued",
+            "running",
+        }:
+            payload = _current_job.to_dict()
+            payload["error"] = "generation already running"
+            return jsonify(payload), 409
 
-    try:
-        token = _report_token()
-        result = report_publisher.publish_spend_report(
+        job = GenerateJob(
+            job_id=_new_job_id(),
+            state="queued",
+            created_at=_utc_now(),
             source="sheets",
-            output_dir=_report_dir(),
-            base_url=_configured_base_url(),
-            token=token,
-            update_sheet=True,
         )
-        status_code = 200 if result.status == "success" else 500
-        return jsonify(result.as_dict()), status_code
-    finally:
-        _generate_lock.release()
+        _set_current_job(job)
+        worker = Thread(target=_run_generate_job, args=(job.job_id,), daemon=True)
+        worker.start()
+        payload = job.to_dict()
+        payload["status_url"] = f"/generate/status?token={_report_token()}"
+        return jsonify(payload), 202
+
+
+@app.get("/generate/status")
+def generate_status() -> Response | tuple[Response, int]:
+    if not is_authorized_token(_request_token()):
+        return _forbidden()
+    return jsonify(_status_payload())

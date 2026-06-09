@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 12px;
+        color: #111827;
+      }
+
+      .row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      button {
+        border: 1px solid #d1d5db;
+        background: #f9fafb;
+        border-radius: 6px;
+        padding: 8px 10px;
+        cursor: pointer;
+      }
+
+      button.primary {
+        background: #111827;
+        color: white;
+        border-color: #111827;
+      }
+
+      .status {
+        font-size: 13px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+      }
+
+      .muted {
+        color: #6b7280;
+      }
+
+      .ok {
+        color: #065f46;
+      }
+
+      .err {
+        color: #991b1b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <button class="primary" onclick="runJob('generate')">Run report</button>
+      <button class="primary" onclick="runJob('scrape')">Run scrape</button>
+    </div>
+
+    <div id="status" class="status muted">Idle.</div>
+
+    <script>
+      let pollTimer = null;
+
+      function setStatus(text, cls) {
+        const el = document.getElementById('status');
+        el.className = 'status ' + (cls || 'muted');
+        el.textContent = text;
+      }
+
+      function runJob(jobType) {
+        setStatus('Starting ' + jobType + '...', 'muted');
+
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (!result.ok && result.code !== 202 && result.code !== 200) {
+              setStatus(
+                jobType + ' start failed:\n' + JSON.stringify(result.payload, null, 2),
+                'err'
+              );
+              return;
+            }
+            setStatus(jobType + ' queued.\nPolling status...', 'muted');
+            startPolling(jobType);
+          })
+          .withFailureHandler(function(err) {
+            setStatus(jobType + ' start error:\n' + err.message, 'err');
+          })
+          .startJob(jobType);
+      }
+
+      function startPolling(jobType) {
+        stopPolling();
+        pollTimer = setInterval(function() {
+          google.script.run
+            .withSuccessHandler(function(result) {
+              const p = result.payload || {};
+              if (p.state === 'running' || p.state === 'queued') {
+                setStatus(
+                  jobType + ' ' + p.state + '...\n' +
+                  (p.job_id ? 'Job: ' + p.job_id + '\n' : '') +
+                  (p.created_at ? 'Started: ' + (p.started_at || p.created_at) + '\n' : ''),
+                  'muted'
+                );
+                return;
+              }
+
+              stopPolling();
+
+              if (p.state === 'succeeded') {
+                setStatus(
+                  jobType + ' succeeded.\n' +
+                  (p.report_url ? 'Report: ' + p.report_url + '\n' : '') +
+                  (p.outlier_url ? 'Outliers: ' + p.outlier_url + '\n' : '') +
+                  (p.last_successful_at ? 'Completed: ' + p.last_successful_at : ''),
+                  'ok'
+                );
+                return;
+              }
+
+              if (p.state === 'skipped') {
+                setStatus(
+                  jobType + ' skipped.\n' +
+                  (p.skip_reason ? p.skip_reason : ''),
+                  'ok'
+                );
+                return;
+              }
+
+              setStatus(
+                jobType + ' failed.\n' +
+                (p.error ? p.error : JSON.stringify(p, null, 2)),
+                'err'
+              );
+            })
+            .withFailureHandler(function(err) {
+              stopPolling();
+              setStatus(jobType + ' status error:\n' + err.message, 'err');
+            })
+            .getJobStatus(jobType);
+        }, 3000);
+      }
+
+      function stopPolling() {
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      }
+    </script>
+  </body>
+</html>

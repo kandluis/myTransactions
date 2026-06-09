@@ -440,7 +440,20 @@ def write_outlier_report(outlier_report: pd.DataFrame, output_path: Path) -> Non
     outlier_report.to_csv(output_path, index=False)
 
 
-def _add_total_spend_trace(fig: go.Figure, total_spend: pd.DataFrame) -> None:
+def _add_total_spend_trace(
+    fig: go.Figure, total_spend: pd.DataFrame, *, include_customdata: bool
+) -> None:
+    hovertemplate = (
+        "%{x|%Y-%m-%d}<br>" "Displayed rolling spend: $%{y:,.2f}<extra></extra>"
+    )
+    trace_kwargs: dict[str, object] = {}
+    if include_customdata:
+        trace_kwargs["customdata"] = total_spend[[RAW_ROLLING_SPEND_COLUMN]]
+        hovertemplate = (
+            "%{x|%Y-%m-%d}<br>"
+            "Displayed rolling spend: $%{y:,.2f}<br>"
+            "Raw rolling spend: $%{customdata[0]:,.2f}<extra></extra>"
+        )
     fig.add_trace(
         go.Scatter(
             x=total_spend["Date"],
@@ -448,19 +461,15 @@ def _add_total_spend_trace(fig: go.Figure, total_spend: pd.DataFrame) -> None:
             mode="lines",
             name="Total rolling spend",
             line={"color": "#1f77b4", "width": 2},
-            customdata=total_spend[[RAW_ROLLING_SPEND_COLUMN]],
-            hovertemplate=(
-                "%{x|%Y-%m-%d}<br>"
-                "Displayed rolling spend: $%{y:,.2f}<br>"
-                "Raw rolling spend: $%{customdata[0]:,.2f}<extra></extra>"
-            ),
+            hovertemplate=hovertemplate,
+            **trace_kwargs,
         ),
         row=1,
         col=1,
     )
 
 
-def _add_outlier_markers(fig: go.Figure, spend_data: pd.DataFrame) -> None:
+def _add_outlier_markers(fig: go.Figure, spend_data: pd.DataFrame, *, row: int) -> None:
     capped_totals = (
         spend_data[spend_data[CAPPED_COLUMN]]
         .groupby("Date", as_index=False)[[SPEND_COLUMN]]
@@ -482,7 +491,7 @@ def _add_outlier_markers(fig: go.Figure, spend_data: pd.DataFrame) -> None:
                 "Raw capped-category spend: $%{y:,.2f}<extra></extra>"
             ),
         ),
-        row=1,
+        row=row,
         col=1,
     )
 
@@ -495,10 +504,29 @@ def _category_colors(categories: list[str]) -> dict[str, str]:
 
 
 def _add_category_area_traces(
-    fig: go.Figure, spend_data: pd.DataFrame, category_colors: dict[str, str]
+    fig: go.Figure,
+    spend_data: pd.DataFrame,
+    category_colors: dict[str, str],
+    *,
+    row: int,
+    include_customdata: bool,
 ) -> None:
     for category in sorted(spend_data["Category"].unique()):
         category_data = spend_data[spend_data["Category"] == category]
+        hovertemplate = (
+            "%{x|%Y-%m-%d}<br>"
+            f"{category}<br>"
+            "Displayed rolling spend: $%{y:,.2f}<extra></extra>"
+        )
+        trace_kwargs: dict[str, object] = {}
+        if include_customdata:
+            hovertemplate = (
+                "%{x|%Y-%m-%d}<br>"
+                f"{category}<br>"
+                "Displayed rolling spend: $%{y:,.2f}<br>"
+                "Capped: %{customdata}<extra></extra>"
+            )
+            trace_kwargs["customdata"] = category_data[CAPPED_COLUMN]
         fig.add_trace(
             go.Scatter(
                 x=category_data["Date"],
@@ -508,21 +536,20 @@ def _add_category_area_traces(
                 hoveron="points+fills",
                 name=category,
                 line={"color": category_colors[category]},
-                hovertemplate=(
-                    "%{x|%Y-%m-%d}<br>"
-                    f"{category}<br>"
-                    "Displayed rolling spend: $%{y:,.2f}<br>"
-                    "Capped: %{customdata}<extra></extra>"
-                ),
-                customdata=category_data[CAPPED_COLUMN],
+                hovertemplate=hovertemplate,
+                **trace_kwargs,
             ),
-            row=2,
+            row=row,
             col=1,
         )
 
 
 def _add_category_share_traces(
-    fig: go.Figure, share_data: pd.DataFrame, category_colors: dict[str, str]
+    fig: go.Figure,
+    share_data: pd.DataFrame,
+    category_colors: dict[str, str],
+    *,
+    row: int,
 ) -> None:
     for category in sorted(share_data["Category"].unique()):
         category_data = share_data[share_data["Category"] == category]
@@ -543,7 +570,7 @@ def _add_category_share_traces(
                     "Share of rolling spend: %{y:.1f}%<extra></extra>"
                 ),
             ),
-            row=3,
+            row=row,
             col=1,
         )
 
@@ -580,6 +607,8 @@ def write_spend_chart(
     window: int,
     job_id: Optional[str] = None,
     include_heatmap: bool = True,
+    include_total_spend: bool = True,
+    include_customdata: bool = True,
 ) -> None:
     """Write an interactive multi-view spending report to output_path."""
     chart_start = time.perf_counter()
@@ -590,13 +619,15 @@ def write_spend_chart(
         spend_data["Category"].nunique() if not spend_data.empty else 0,
     )
     stage_start = time.perf_counter()
-    total_spend = prepare_total_spend_data(spend_data, window=window)
-    _log(
-        job_id,
-        "Prepared total spend series with %d rows in %s",
-        len(total_spend),
-        f"{time.perf_counter() - stage_start:.2f}s",
-    )
+    total_spend = pd.DataFrame()
+    if include_total_spend:
+        total_spend = prepare_total_spend_data(spend_data, window=window)
+        _log(
+            job_id,
+            "Prepared total spend series with %d rows in %s",
+            len(total_spend),
+            f"{time.perf_counter() - stage_start:.2f}s",
+        )
     stage_start = time.perf_counter()
     share_data = prepare_category_share_data(spend_data)
     _log(
@@ -616,29 +647,26 @@ def write_spend_chart(
             f"{time.perf_counter() - stage_start:.2f}s",
         )
     stage_start = time.perf_counter()
-    rows = 4 if include_heatmap else 3
-    row_heights = [0.18, 0.34, 0.24, 0.24] if include_heatmap else [0.22, 0.44, 0.34]
-    subplot_titles = (
-        (
-            "Total rolling daily spend",
-            "Rolling daily spend by category",
-            "Rolling category share of spend",
-            "Monthly category spend",
-        )
-        if include_heatmap
-        else (
-            "Total rolling daily spend",
-            "Rolling daily spend by category",
-            "Rolling category share of spend",
-        )
-    )
+    subplot_titles_list = []
+    row_heights: list[float] = []
+    if include_total_spend:
+        subplot_titles_list.append("Total rolling daily spend")
+        row_heights.append(0.18 if include_heatmap else 0.22)
+    subplot_titles_list.append("Rolling daily spend by category")
+    row_heights.append(0.34 if include_total_spend else 0.45)
+    subplot_titles_list.append("Rolling category share of spend")
+    row_heights.append(0.24 if include_total_spend else 0.35)
+    if include_heatmap:
+        subplot_titles_list.append("Monthly category spend")
+        row_heights.append(0.24 if include_total_spend else 0.30)
+    rows = len(subplot_titles_list)
     fig = make_subplots(
         rows=rows,
         cols=1,
         shared_xaxes=False,
         vertical_spacing=0.07,
         row_heights=row_heights,
-        subplot_titles=subplot_titles,
+        subplot_titles=tuple(subplot_titles_list),
     )
     _log(
         job_id,
@@ -647,18 +675,33 @@ def write_spend_chart(
     )
 
     trace_count = 0
+    current_row = 1
     stage_start = time.perf_counter()
-    if not total_spend.empty:
-        _add_total_spend_trace(fig, total_spend)
+    if include_total_spend and not total_spend.empty:
+        _add_total_spend_trace(
+            fig,
+            total_spend,
+            include_customdata=include_customdata,
+        )
         trace_count += 1
-        _add_outlier_markers(fig, spend_data)
+        _add_outlier_markers(fig, spend_data, row=current_row)
         trace_count += 1
+        current_row += 1
+    category_row = current_row
+    share_row = current_row + 1
+    heatmap_row = current_row + 2 if include_heatmap else None
     if not spend_data.empty:
         categories = sorted(spend_data["Category"].unique())
         category_colors = _category_colors(categories)
-        _add_category_area_traces(fig, spend_data, category_colors)
+        _add_category_area_traces(
+            fig,
+            spend_data,
+            category_colors,
+            row=category_row,
+            include_customdata=include_customdata,
+        )
         trace_count += len(categories)
-        _add_category_share_traces(fig, share_data, category_colors)
+        _add_category_share_traces(fig, share_data, category_colors, row=share_row)
         trace_count += len(categories)
         if include_heatmap:
             _add_monthly_heatmap(fig, monthly_spend)
@@ -688,24 +731,28 @@ def write_spend_chart(
             showarrow=False,
             xanchor="right",
         )
-    fig.update_yaxes(title_text="Rolling average", row=1, col=1)
+    layout_row = 1
+    if include_total_spend:
+        fig.update_yaxes(title_text="Rolling average", row=layout_row, col=1)
+        fig.update_xaxes(title_text="Date", row=layout_row, col=1)
+        layout_row += 1
     fig.update_yaxes(
         title_text="Rolling average daily spend",
-        row=2,
+        row=layout_row,
         col=1,
     )
+    fig.update_xaxes(title_text="Date", row=layout_row, col=1)
+    layout_row += 1
     fig.update_yaxes(
         title_text="Share of rolling spend",
         range=[0, 100],
         ticksuffix="%",
-        row=3,
+        row=layout_row,
         col=1,
     )
-    fig.update_xaxes(title_text="Date", row=1, col=1)
-    fig.update_xaxes(title_text="Date", row=2, col=1)
-    fig.update_xaxes(title_text="Date", row=3, col=1)
+    fig.update_xaxes(title_text="Date", row=layout_row, col=1)
     if include_heatmap:
-        fig.update_xaxes(title_text="Month", row=4, col=1)
+        fig.update_xaxes(title_text="Month", row=layout_row + 1, col=1)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     _log(job_id, "Writing chart HTML to %s", output_path)
     fig.write_html(

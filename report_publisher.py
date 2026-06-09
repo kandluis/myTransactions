@@ -150,6 +150,8 @@ def generate_report_files(
     cap_daily_spend: Optional[float] = None,
     auto_cap: bool = True,
     include_heatmap: bool = True,
+    include_total_spend: bool = True,
+    include_customdata: bool = True,
     job_id: Optional[str] = None,
 ) -> tuple[Path, Path]:
     """Generate the HTML spend report and outlier CSV under output_dir."""
@@ -211,6 +213,8 @@ def generate_report_files(
         report_path,
         window=window,
         include_heatmap=include_heatmap,
+        include_total_spend=include_total_spend,
+        include_customdata=include_customdata,
     )
     _log(
         job_id, "Wrote spend chart HTML to %s in %s", report_path, _elapsed(chart_start)
@@ -257,6 +261,8 @@ def publish_spend_report(
     input_path: Optional[Path] = None,
     window: int = 31,
     include_heatmap: bool = True,
+    include_total_spend: bool = True,
+    include_customdata: bool = True,
     job_id: Optional[str] = None,
 ) -> SpendReportResult:
     """Generate report files, build tokenized URLs, and update Sheets status."""
@@ -305,6 +311,8 @@ def publish_spend_report(
             output_dir,
             window=window,
             include_heatmap=include_heatmap,
+            include_total_spend=include_total_spend,
+            include_customdata=include_customdata,
             job_id=job_id,
         )
         _log(job_id, "Report generation finished in %s", _elapsed(stage_start))

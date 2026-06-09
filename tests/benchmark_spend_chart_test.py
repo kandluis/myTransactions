@@ -126,6 +126,9 @@ def test_main_prints_json_metrics(monkeypatch: pytest.MonkeyPatch, capsys) -> No
         elapsed_seconds=1.2345,
         peak_rss_mb=128.9,
         output_bytes=4096,
+        include_heatmap=False,
+        include_total_spend=True,
+        include_customdata=True,
     )
     monkeypatch.setattr(benchmark_spend_chart, "run_benchmark", lambda **kwargs: result)
 
@@ -133,6 +136,54 @@ def test_main_prints_json_metrics(monkeypatch: pytest.MonkeyPatch, capsys) -> No
 
     stdout = capsys.readouterr().out.strip()
     assert json.loads(stdout) == result.as_dict()
+
+
+def test_run_benchmark_matrix_runs_four_variants(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    commands: list[list[str]] = []
+
+    class Completed:
+        def __init__(self, stdout: str) -> None:
+            self.stdout = stdout
+
+    def fake_run(command, check, capture_output, text):
+        assert check is True
+        assert capture_output is True
+        assert text is True
+        commands.append(command)
+        payload = {
+            "input_path": "input.csv",
+            "output_path": command[command.index("--output") + 1],
+            "rows": 1,
+            "categories": 1,
+            "elapsed_seconds": 0.1,
+            "peak_rss_mb": 100.0,
+            "output_bytes": 10,
+            "include_heatmap": False,
+            "include_total_spend": "--include-total-spend" in command,
+            "include_customdata": "--include-customdata" in command,
+        }
+        return Completed(json.dumps(payload))
+
+    monkeypatch.setattr(benchmark_spend_chart.subprocess, "run", fake_run)
+
+    results = benchmark_spend_chart.run_benchmark_matrix(
+        input_path=Path("input.csv"),
+        output_dir=tmp_path,
+    )
+
+    assert len(commands) == 4
+    assert "--no-include-heatmap" in commands[0]
+    assert "--include-total-spend" in commands[0]
+    assert "--include-customdata" in commands[0]
+    assert "--no-include-customdata" in commands[1]
+    assert "--no-include-total-spend" in commands[2]
+    assert "--no-include-total-spend" in commands[3]
+    assert "--no-include-customdata" in commands[3]
+    assert len(results) == 4
+    assert all(not result.include_heatmap for result in results)
+    assert results[0].output_path.name.endswith("total-1_custom-1.html")
 
 
 def test_refresh_cache_from_sheets_writes_full_export(

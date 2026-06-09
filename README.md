@@ -137,6 +137,25 @@ same smoothing and visual capping as the absolute rolling category chart. Days
 with no displayed rolling spend are shown as gaps instead of a misleading
 category mix.
 
+For faster local memory iteration on the chart pipeline, use the benchmark
+script. It runs in-process against a local cached export of the full Sheet
+transaction list when available, and prints elapsed time and peak RSS as JSON:
+
+```sh
+pipenv run python scripts/benchmark_spend_chart.py --refresh-from-sheets
+```
+
+The first run can refresh `data/benchmark_transactions.csv` from Sheets. After
+that, the benchmark reuses that cached export automatically. You can also point
+it at another CSV and keep the output if you want to inspect the generated
+HTML:
+
+```sh
+pipenv run python scripts/benchmark_spend_chart.py \
+  --input /path/to/transactions.csv \
+  --output /tmp/spend-profile.html
+```
+
 For datasets with large one-off expenses, the chart applies an automatic
 visual-only cap to unusually large daily category totals. The cap affects chart
 scaling and rolling averages, while hover labels and outlier reports keep the
@@ -194,8 +213,10 @@ The publisher writes report status to `Settings!F1:G6`, including the latest
 tokenized report URLs, generation timestamp, status, source, and error text.
 If generation fails, it preserves the last successful report URLs when they are
 already present in the sheet.
-The `/generate` endpoint returns immediately and the background job writes the
-sheet status when it finishes.
+The `/generate` endpoint returns immediately, uses the compact report mode
+without the monthly heatmap, and the background job writes the sheet status
+when it finishes. The normal CLI and local chart generation still produce the
+full report by default.
 
 The Fly web service exposes:
 

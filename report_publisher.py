@@ -149,6 +149,7 @@ def generate_report_files(
     end_date: Optional[str] = None,
     cap_daily_spend: Optional[float] = None,
     auto_cap: bool = True,
+    include_heatmap: bool = True,
     job_id: Optional[str] = None,
 ) -> tuple[Path, Path]:
     """Generate the HTML spend report and outlier CSV under output_dir."""
@@ -205,7 +206,12 @@ def generate_report_files(
         _elapsed(spend_start),
     )
     chart_start = time.perf_counter()
-    generate_spend_charts.write_spend_chart(spend_data, report_path, window=window)
+    generate_spend_charts.write_spend_chart(
+        spend_data,
+        report_path,
+        window=window,
+        include_heatmap=include_heatmap,
+    )
     _log(
         job_id, "Wrote spend chart HTML to %s in %s", report_path, _elapsed(chart_start)
     )
@@ -250,6 +256,7 @@ def publish_spend_report(
     update_sheet: bool = False,
     input_path: Optional[Path] = None,
     window: int = 31,
+    include_heatmap: bool = True,
     job_id: Optional[str] = None,
 ) -> SpendReportResult:
     """Generate report files, build tokenized URLs, and update Sheets status."""
@@ -293,7 +300,13 @@ def publish_spend_report(
             raise ValueError(f"Unsupported report source: {source}")
 
         stage_start = time.perf_counter()
-        generate_report_files(txns, output_dir, window=window, job_id=job_id)
+        generate_report_files(
+            txns,
+            output_dir,
+            window=window,
+            include_heatmap=include_heatmap,
+            job_id=job_id,
+        )
         _log(job_id, "Report generation finished in %s", _elapsed(stage_start))
         report_url = ""
         outlier_url = ""

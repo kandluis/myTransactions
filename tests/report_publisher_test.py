@@ -88,8 +88,16 @@ def test_publish_spend_report_calls_loader_writer_and_sheet_update(
         calls.append(f"load:{path}")
         return MagicMock()
 
-    def generate_files(txns, output_dir: Path, *, window: int = 31, job_id=None):
+    def generate_files(
+        txns,
+        output_dir: Path,
+        *,
+        window: int = 31,
+        include_heatmap: bool = True,
+        job_id=None,
+    ):
         calls.append(f"generate:{output_dir}:{window}")
+        assert include_heatmap is True
         return output_dir / "spend_profile.html", output_dir / "outliers.csv"
 
     def write_status(status_sheet, result, *, job_id=None):
@@ -169,7 +177,7 @@ def test_publish_spend_report_logs_stage_progress(
     monkeypatch.setattr(
         report_publisher,
         "generate_report_files",
-        lambda txns, output_dir, *, window=31, job_id=None: (
+        lambda txns, output_dir, *, window=31, include_heatmap=True, job_id=None: (
             output_dir / "spend_profile.html",
             output_dir / "outliers.csv",
         ),
@@ -230,8 +238,8 @@ def test_generate_report_files_logs_each_stage(
     monkeypatch.setattr(
         report_publisher.generate_spend_charts,
         "write_spend_chart",
-        lambda spend_data, output_path, *, window: calls.append(
-            f"chart:{output_path}:{len(spend_data)}:{window}"
+        lambda spend_data, output_path, *, window, include_heatmap=True: calls.append(
+            f"chart:{output_path}:{len(spend_data)}:{window}:{include_heatmap}"
         ),
     )
     monkeypatch.setattr(

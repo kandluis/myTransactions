@@ -555,9 +555,6 @@ def _add_monthly_heatmap(fig: go.Figure, monthly_spend: pd.DataFrame) -> None:
     heatmap = monthly_spend.pivot(
         index="Category", columns="Month", values=DISPLAY_SPEND_COLUMN
     ).fillna(0)
-    raw_heatmap = monthly_spend.pivot(
-        index="Category", columns="Month", values=SPEND_COLUMN
-    ).fillna(0)
     fig.add_trace(
         go.Heatmap(
             x=heatmap.columns,
@@ -582,6 +579,7 @@ def write_spend_chart(
     *,
     window: int,
     job_id: Optional[str] = None,
+    include_heatmap: bool = True,
 ) -> None:
     """Write an interactive multi-view spending report to output_path."""
     chart_start = time.perf_counter()
@@ -607,27 +605,40 @@ def write_spend_chart(
         len(share_data),
         f"{time.perf_counter() - stage_start:.2f}s",
     )
+    monthly_spend = pd.DataFrame()
+    if include_heatmap:
+        stage_start = time.perf_counter()
+        monthly_spend = prepare_monthly_heatmap_data(spend_data)
+        _log(
+            job_id,
+            "Prepared monthly heatmap with %d rows in %s",
+            len(monthly_spend),
+            f"{time.perf_counter() - stage_start:.2f}s",
+        )
     stage_start = time.perf_counter()
-    monthly_spend = prepare_monthly_heatmap_data(spend_data)
-    _log(
-        job_id,
-        "Prepared monthly heatmap with %d rows in %s",
-        len(monthly_spend),
-        f"{time.perf_counter() - stage_start:.2f}s",
-    )
-    stage_start = time.perf_counter()
-    fig = make_subplots(
-        rows=4,
-        cols=1,
-        shared_xaxes=False,
-        vertical_spacing=0.07,
-        row_heights=[0.18, 0.34, 0.24, 0.24],
-        subplot_titles=(
+    rows = 4 if include_heatmap else 3
+    row_heights = [0.18, 0.34, 0.24, 0.24] if include_heatmap else [0.22, 0.44, 0.34]
+    subplot_titles = (
+        (
             "Total rolling daily spend",
             "Rolling daily spend by category",
             "Rolling category share of spend",
             "Monthly category spend",
-        ),
+        )
+        if include_heatmap
+        else (
+            "Total rolling daily spend",
+            "Rolling daily spend by category",
+            "Rolling category share of spend",
+        )
+    )
+    fig = make_subplots(
+        rows=rows,
+        cols=1,
+        shared_xaxes=False,
+        vertical_spacing=0.07,
+        row_heights=row_heights,
+        subplot_titles=subplot_titles,
     )
     _log(
         job_id,
@@ -649,8 +660,9 @@ def write_spend_chart(
         trace_count += len(categories)
         _add_category_share_traces(fig, share_data, category_colors)
         trace_count += len(categories)
-        _add_monthly_heatmap(fig, monthly_spend)
-        trace_count += 1
+        if include_heatmap:
+            _add_monthly_heatmap(fig, monthly_spend)
+            trace_count += 1
     _log(
         job_id,
         "Added %d traces to the figure in %s",
@@ -692,7 +704,8 @@ def write_spend_chart(
     fig.update_xaxes(title_text="Date", row=1, col=1)
     fig.update_xaxes(title_text="Date", row=2, col=1)
     fig.update_xaxes(title_text="Date", row=3, col=1)
-    fig.update_xaxes(title_text="Month", row=4, col=1)
+    if include_heatmap:
+        fig.update_xaxes(title_text="Month", row=4, col=1)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     _log(job_id, "Writing chart HTML to %s", output_path)
     fig.write_html(

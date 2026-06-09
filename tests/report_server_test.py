@@ -95,6 +95,7 @@ def test_generate_starts_background_job_and_returns_accepted(
 
     def publish(**kwargs):
         started.set()
+        assert kwargs["include_heatmap"] is False
         release.wait(timeout=5)
         return result
 
@@ -127,6 +128,7 @@ def test_generate_rejects_concurrent_request(client) -> None:
 
     def publish(**kwargs):
         started.set()
+        assert kwargs["include_heatmap"] is False
         release.wait(timeout=5)
         return report_publisher.SpendReportResult(
             report_url="",
@@ -166,6 +168,7 @@ def test_generate_failure_returns_500(client, monkeypatch: pytest.MonkeyPatch) -
 
     def publish(**kwargs):
         started.set()
+        assert kwargs["include_heatmap"] is False
         return result
 
     monkeypatch.setattr(

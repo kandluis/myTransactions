@@ -168,6 +168,64 @@ Useful flags:
   unusual high-spend days.
 - `--skip-cleanup`: keep ignored categories/accounts in the chart for debugging.
 
+## Publish Hosted Spend Report
+
+Use `scripts/publish_spend_report.py` to generate both `spend_profile.html` and
+`outliers.csv` into a directory for serving. On Fly, the web service stores
+these files under `/data/reports` so they survive restarts.
+
+```sh
+REPORT_TOKEN=<secret> REPORT_BASE_URL=https://mint-scraper.fly.dev \
+  pipenv run python scripts/publish_spend_report.py --source sheets --update-sheet
+```
+
+For local testing:
+
+```sh
+pipenv run python scripts/publish_spend_report.py \
+  --source sheets \
+  --output-dir /tmp/spend-report \
+  --base-url http://localhost:8080 \
+  --token test \
+  --update-sheet
+```
+
+The publisher writes report status to `Settings!F1:G6`, including the latest
+tokenized report URLs, generation timestamp, status, source, and error text.
+If generation fails, it preserves the last successful report URLs when they are
+already present in the sheet.
+
+The Fly web service exposes:
+
+- `GET /health`: unauthenticated health check.
+- `POST /generate?token=<REPORT_TOKEN>`: regenerate reports from Sheets and
+  update `Settings!F1:G6`.
+- `GET /reports/spend_profile.html?token=<REPORT_TOKEN>`: open the latest
+  HTML report.
+- `GET /reports/outliers.csv?token=<REPORT_TOKEN>`: download the latest
+  outlier CSV.
+
+Set Fly secrets before deploying:
+
+```sh
+fly secrets set REPORT_TOKEN=<secret> REPORT_BASE_URL=https://mint-scraper.fly.dev
+fly deploy
+```
+
+To trigger generation from Google Sheets, add this optional Apps Script and
+bind `generateSpendReport` to a drawing, button, or custom menu:
+
+```javascript
+function generateSpendReport() {
+  const token = PropertiesService.getScriptProperties().getProperty('REPORT_TOKEN');
+  const url = 'https://mint-scraper.fly.dev/generate?token=' + encodeURIComponent(token);
+  const response = UrlFetchApp.fetch(url, { method: 'post', muteHttpExceptions: true });
+  if (response.getResponseCode() >= 300) {
+    throw new Error(response.getContentText());
+  }
+}
+```
+
 ## Generate Merchant Category Maps
 
 Use `scripts/generate_keyword_map.py` to refresh category coverage from the

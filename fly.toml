@@ -14,8 +14,22 @@ kill_timeout = "5s"
   
 [processes]
   scraper = "/app/serve.sh"
+  web = "gunicorn report_server:app --bind 0.0.0.0:8080 --workers 1 --threads 4 --timeout 300"
 
 
 [mounts]
   source = "mint_session_data"
-  destination = "data"
+  destination = "/data"
+
+[[services]]
+  processes = ["web"]
+  internal_port = 8080
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]

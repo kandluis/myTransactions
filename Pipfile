@@ -11,6 +11,8 @@ mintotp = "*"
 google-auth = "*"
 pyyaml = "*"
 plotly = "*"
+flask = "*"
+gunicorn = "*"
 
 [dev-packages]
 flake8 = "*"

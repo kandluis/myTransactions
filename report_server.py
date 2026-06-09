@@ -139,7 +139,6 @@ def _run_generate_job(job_id: str) -> None:
             base_url=_configured_base_url(),
             token=_report_token(),
             update_sheet=True,
-            include_heatmap=False,
             job_id=job.job_id,
         )
         with _job_state_lock:

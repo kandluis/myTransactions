@@ -102,7 +102,7 @@ def test_generate_starts_background_job_and_returns_accepted(
         **kwargs,
     ):
         started.set()
-        assert include_heatmap is False
+        assert include_heatmap is True
         assert include_total_spend is True
         assert include_category_share is True
         assert include_customdata is True
@@ -145,7 +145,7 @@ def test_generate_rejects_concurrent_request(client) -> None:
         **kwargs,
     ):
         started.set()
-        assert include_heatmap is False
+        assert include_heatmap is True
         assert include_total_spend is True
         assert include_category_share is True
         assert include_customdata is True
@@ -195,7 +195,7 @@ def test_generate_failure_returns_500(client, monkeypatch: pytest.MonkeyPatch) -
         **kwargs,
     ):
         started.set()
-        assert include_heatmap is False
+        assert include_heatmap is True
         assert include_total_spend is True
         assert include_category_share is True
         assert include_customdata is True

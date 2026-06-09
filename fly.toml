@@ -21,6 +21,10 @@ kill_timeout = "5s"
   source = "mint_session_data"
   destination = "/data"
 
+[[vm]]
+  memory = "512mb"
+  processes = ["web"]
+
 [[services]]
   processes = ["web"]
   internal_port = 8080

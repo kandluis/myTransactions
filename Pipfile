@@ -15,6 +15,7 @@ pandas = "==2.3.0"
 numpy = "==2.3.1"
 pytz = "*"
 rsa = "*"
+cachetools = "*"
 
 [dev-packages]
 flake8 = "*"

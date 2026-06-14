@@ -18,9 +18,15 @@ kill_timeout = "5s"
   web = "gunicorn report_server:app --bind 0.0.0.0:8080 --workers 1 --threads 4 --timeout 300"
 
 
-[mounts]
+[[mounts]]
   source = "mint_session_data"
   destination = "/data"
+  processes = ["scraper"]
+
+[[mounts]]
+  source = "mint_session_data_web"
+  destination = "/data"
+  processes = ["web"]
 
 [[vm]]
   memory = "512mb"

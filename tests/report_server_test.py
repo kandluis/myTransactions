@@ -116,9 +116,9 @@ def test_generate_starts_background_job_and_returns_accepted(
         **kwargs,
     ):
         started.set()
-        assert include_heatmap is False
-        assert include_total_spend is False
-        assert include_customdata is False
+        assert include_heatmap is True
+        assert include_total_spend is True
+        assert include_customdata is True
         release.wait(timeout=5)
         return result
 
@@ -157,9 +157,9 @@ def test_generate_rejects_concurrent_request(client) -> None:
         **kwargs,
     ):
         started.set()
-        assert include_heatmap is False
-        assert include_total_spend is False
-        assert include_customdata is False
+        assert include_heatmap is True
+        assert include_total_spend is True
+        assert include_customdata is True
         release.wait(timeout=5)
         return report_publisher.SpendReportResult(
             report_url="",
@@ -205,9 +205,9 @@ def test_generate_failure_returns_500(client, monkeypatch: pytest.MonkeyPatch) -
         **kwargs,
     ):
         started.set()
-        assert include_heatmap is False
-        assert include_total_spend is False
-        assert include_customdata is False
+        assert include_heatmap is True
+        assert include_total_spend is True
+        assert include_customdata is True
         return result
 
     monkeypatch.setattr(

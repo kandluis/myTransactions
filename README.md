@@ -221,10 +221,8 @@ The publisher writes report status to `Settings!F1:G6`, including the latest
 tokenized report URLs, generation timestamp, status, source, and error text.
 If generation fails, it preserves the last successful report URLs when they are
 already present in the sheet.
-The `/generate` endpoint returns immediately and uses the compact report mode
-without the monthly heatmap. The background job writes the sheet status when
-it finishes. The normal CLI and local chart generation still produce the full
-report by default.
+The `/generate` endpoint returns immediately and produces the full report. The
+background job writes the sheet status when it finishes.
 
 ## Trigger Scraper From Sheets
 

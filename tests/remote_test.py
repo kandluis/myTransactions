@@ -205,6 +205,24 @@ def test_config_category_rules_for_costco_and_meal_delivery(
             },
             {
                 "Date": "2026-01-06",
+                "Merchant": "Hgstoday",
+                "Amount": -55.00,
+                "Category": "Groceries",
+                "Account": "Checking",
+                "ID": "hgstoday-1",
+                "Description": "Hgstoday",
+            },
+            {
+                "Date": "2026-01-07",
+                "Merchant": "Sp Hgstoday Hgstoday",
+                "Amount": -65.00,
+                "Category": "Groceries",
+                "Account": "Checking",
+                "ID": "sp-hgstoday-1",
+                "Description": "Sp Hgstoday Hgstoday",
+            },
+            {
+                "Date": "2026-01-08",
                 "Merchant": "Doordash",
                 "Amount": -40.00,
                 "Category": "Food/Dining Restaurants",
@@ -213,7 +231,7 @@ def test_config_category_rules_for_costco_and_meal_delivery(
                 "Description": "Doordash",
             },
             {
-                "Date": "2026-01-07",
+                "Date": "2026-01-09",
                 "Merchant": "Instacart",
                 "Amount": -50.00,
                 "Category": "Food/Dining Restaurants",
@@ -232,6 +250,8 @@ def test_config_category_rules_for_costco_and_meal_delivery(
         "Meal Delivery",
         "Meal Delivery",
         "Meal Delivery",
+        "Meal Delivery",
+        "Meal Delivery",
         "Food/Dining Restaurants",
         "Food/Dining Restaurants",
     ]
@@ -241,6 +261,7 @@ def test_keyword_generator_preserves_costco_and_meal_delivery() -> None:
     assert generate_keyword_map.BRAND_KEYWORDS["costco"] == "Groceries"
     assert generate_keyword_map.BRAND_KEYWORDS["thistle"] == "Meal Delivery"
     assert generate_keyword_map.BRAND_KEYWORDS["cookunity"] == "Meal Delivery"
+    assert generate_keyword_map.BRAND_KEYWORDS["hgstoday"] == "Meal Delivery"
     assert generate_keyword_map.BRAND_KEYWORDS["nurture life"] == "Meal Delivery"
     assert generate_keyword_map.BRAND_KEYWORDS["cerebelly"] == "Meal Delivery"
     assert generate_keyword_map.BRAND_KEYWORDS["doordash"] == "Food/Dining Restaurants"

@@ -628,6 +628,7 @@ EXACT_MERCHANT_TO_CATEGORY_MAP:
   Happy Hollow Park: Entertainment
   Happy Hollow Park Zo: Entertainment
   Happy Lemon: "Food/Dining Coffee/Cafes"
+  Hgstoday: "Meal Delivery"
   Honorio Robles Cupertino: Groceries
   Hook Lsanta Cruz: "Food/Dining Restaurants"
   Inkd Bluestonaustin Tx: "Food/Dining Coffee/Cafes"
@@ -856,6 +857,7 @@ MERCHANT_TO_CATEGORY_MAP:
   health: Healthcare
   healthcare: Healthcare
   hertz: Travel
+  hgstoday: "Meal Delivery"
   hien: "Food/Dining Restaurants"
   homestead: "Food/Dining Coffee/Cafes"
   hometown: "Food/Dining Restaurants"

@@ -255,6 +255,7 @@ BRAND_KEYWORDS: dict[str, str] = {
     # Meal Delivery
     "cerebelly": "Meal Delivery",
     "cookunity": "Meal Delivery",
+    "hgstoday": "Meal Delivery",
     "nurture life": "Meal Delivery",
     "thistle": "Meal Delivery",
     # Shopping

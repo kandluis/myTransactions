@@ -71,13 +71,23 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: python:3.12.1-slim-bookworm
+    env:
+      PIP_CACHE_DIR: /tmp/pip-cache
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PIP_ROOT_USER_ACTION: ignore
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends curl git
+          rm -rf /var/lib/apt/lists/*
+
       - name: Install pipenv
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install --upgrade pipenv wheel
+          mkdir -p "$PIP_CACHE_DIR"
+          python -m pip install pipenv wheel
 
       - name: Install dependencies
         run: |

@@ -600,7 +600,7 @@ def _add_monthly_heatmap(fig: go.Figure, monthly_spend: pd.DataFrame) -> None:
     )
 
 
-def write_spend_chart(
+def write_spend_chart(  # noqa: C901
     spend_data: pd.DataFrame,
     output_path: Path,
     *,

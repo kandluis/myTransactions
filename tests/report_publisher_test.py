@@ -8,6 +8,40 @@ import report_publisher
 from scripts import publish_spend_report
 
 
+def _fake_generated_files(
+    txns,
+    output_dir: Path,
+    *,
+    window: int = 31,
+    include_heatmap: bool = True,
+    include_total_spend: bool = True,
+    include_category_share: bool = True,
+    include_customdata: bool = True,
+    job_id=None,
+):
+    del txns, window, include_heatmap, include_total_spend
+    del include_category_share, include_customdata, job_id
+    return output_dir / "spend_profile.html", output_dir / "outliers.csv"
+
+
+def _record_chart_call(
+    calls: list[str],
+    spend_data,
+    output_path: Path,
+    *,
+    window,
+    include_heatmap: bool = True,
+    include_total_spend: bool = True,
+    include_category_share: bool = True,
+    include_customdata: bool = True,
+):
+    calls.append(
+        "chart:"
+        f"{output_path}:{len(spend_data)}:{window}:{include_heatmap}:"
+        f"{include_total_spend}:{include_category_share}:{include_customdata}"
+    )
+
+
 def test_build_report_urls_include_token() -> None:
     report_url, outlier_url = report_publisher.build_report_urls(
         "https://example.test/", "secret token"
@@ -177,10 +211,7 @@ def test_publish_spend_report_logs_stage_progress(
     monkeypatch.setattr(
         report_publisher,
         "generate_report_files",
-        lambda txns, output_dir, *, window=31, include_heatmap=True, include_total_spend=True, include_category_share=True, include_customdata=True, job_id=None: (
-            output_dir / "spend_profile.html",
-            output_dir / "outliers.csv",
-        ),
+        _fake_generated_files,
     )
     monkeypatch.setattr(report_publisher, "open_configured_spreadsheet", lambda: sheet)
     monkeypatch.setattr(
@@ -238,8 +269,8 @@ def test_generate_report_files_logs_each_stage(
     monkeypatch.setattr(
         report_publisher.generate_spend_charts,
         "write_spend_chart",
-        lambda spend_data, output_path, *, window, include_heatmap=True, include_total_spend=True, include_category_share=True, include_customdata=True: calls.append(
-            f"chart:{output_path}:{len(spend_data)}:{window}:{include_heatmap}:{include_total_spend}:{include_category_share}:{include_customdata}"
+        lambda spend_data, output_path, **kwargs: _record_chart_call(
+            calls, spend_data, output_path, **kwargs
         ),
     )
     monkeypatch.setattr(

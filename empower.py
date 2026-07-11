@@ -4,6 +4,7 @@ import re
 import os
 import pickle
 import subprocess
+import sys
 
 from dateutil.relativedelta import relativedelta
 from datetime import datetime, date
@@ -168,6 +169,12 @@ class PersonalCapital:
                     logger.error(f"SMS_COMMAND failed: {e}")
 
         if not sms_code:
+            if not sys.stdin or not sys.stdin.isatty():
+                raise RuntimeError(
+                    "SMS authentication required, but no non-interactive SMS code "
+                    "source is configured. Set SMS_CODE or SMS_COMMAND, or refresh "
+                    "the saved session."
+                )
             sms_code = input("Enter SMS code: ")
 
         auth_sms_endpoint = "/api/credential/authenticateSmsFreemium"

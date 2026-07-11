@@ -77,6 +77,7 @@ def test_login(mocker):
     mocker.patch.object(pc, "_api_request", return_value=mock_token_response)
 
     # Mock Step 4: Authenticate SMS
+    mocker.patch("empower.sys.stdin.isatty", return_value=True)
     mocker.patch("empower.input", return_value="123456")
 
     pc.login("test_email", "test_password")
@@ -97,6 +98,31 @@ def test_login(mocker):
     )
     assert pc._email == "test_email"
     assert pc._csrf == "test_csrf"
+
+
+def test_login_requires_noninteractive_sms_source_when_headless(mocker, monkeypatch):
+    pc = empower.PersonalCapital()
+    mock_session = mocker.MagicMock()
+    pc.session = mock_session
+
+    mock_auth_response = mocker.MagicMock()
+    mock_auth_response.json.return_value = {"success": True, "idToken": "test_token"}
+    mock_session.post.return_value = mock_auth_response
+
+    mock_token_response = {
+        "spHeader": {
+            "success": False,
+            "errors": [{"code": 200, "message": "Authorization required."}],
+            "csrf": "test_csrf",
+        }
+    }
+    mocker.patch.object(pc, "_api_request", return_value=mock_token_response)
+    monkeypatch.delenv("SMS_CODE", raising=False)
+    monkeypatch.delenv("SMS_COMMAND", raising=False)
+    mocker.patch("empower.sys.stdin.isatty", return_value=False)
+
+    with pytest.raises(RuntimeError, match="SMS authentication required"):
+        pc.login("test_email", "test_password")
 
 
 def test_is_logged_in_false():

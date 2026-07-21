@@ -239,6 +239,15 @@ def test_config_category_rules_for_costco_and_meal_delivery(
                 "ID": "instacart-1",
                 "Description": "Instacart",
             },
+            {
+                "Date": "2026-01-10",
+                "Merchant": "El Camino Hospital Ica",
+                "Amount": -30.00,
+                "Category": "Uncategorized",
+                "Account": "Checking",
+                "ID": "el-camino-1",
+                "Description": "El Camino Hospital Ica Xxxxxx7220 Ca",
+            },
         ]
     )
 
@@ -254,6 +263,7 @@ def test_config_category_rules_for_costco_and_meal_delivery(
         "Meal Delivery",
         "Food/Dining Restaurants",
         "Food/Dining Restaurants",
+        "Healthcare",
     ]
 
 

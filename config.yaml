@@ -26,6 +26,12 @@ RAW_ACCOUNTS_TITLE: "Raw - All Accounts"
 SETTINGS_SHEET_TITLE: "Settings"
 WORKSHEET_TITLE: "Transactions Worksheet"
 CLEAN_UP_OLD_TXNS: true
+# Empower occasionally classifies posted purchases on these cards as an
+# Uncategorized/Unknown transaction with neither spending flag set.  Keep this
+# narrowly scoped so that card payments, refunds, transfers, and pending
+# authorizations remain excluded by the normal transaction filter.
+MISCLASSIFIED_CARD_PURCHASE_ACCOUNTS:
+  - "Smartly"
 NUM_TXN_FOR_CUTOFF: 300
 PC_MIGRATION_DATE: "2023-12-08"
 SKIPPED_ACCOUNTS:

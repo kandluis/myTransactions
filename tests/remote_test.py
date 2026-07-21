@@ -267,6 +267,128 @@ def test_keyword_generator_preserves_costco_and_meal_delivery() -> None:
     assert generate_keyword_map.BRAND_KEYWORDS["doordash"] == "Food/Dining Restaurants"
 
 
+def test_select_spending_transactions_includes_only_safe_smartly_fallback(
+    config: MonkeyPatch,
+) -> None:
+    txns = pd.DataFrame(
+        [
+            {
+                "accountName": "Smartly",
+                "status": "posted",
+                "isCredit": False,
+                "categoryName": "Uncategorized",
+                "transactionType": "Unknown",
+                "isSpending": False,
+                "isCashOut": False,
+                "investmentType": None,
+                "userTransactionId": "included-smartly",
+            },
+            {
+                "accountName": "Smartly",
+                "status": "pending",
+                "isCredit": False,
+                "categoryName": "Uncategorized",
+                "transactionType": "Unknown",
+                "isSpending": False,
+                "isCashOut": False,
+                "investmentType": None,
+                "userTransactionId": "pending-smartly",
+            },
+            {
+                "accountName": "Smartly",
+                "status": "posted",
+                "isCredit": True,
+                "categoryName": "Uncategorized",
+                "transactionType": "Unknown",
+                "isSpending": False,
+                "isCashOut": False,
+                "investmentType": None,
+                "userTransactionId": "smartly-refund",
+            },
+            {
+                "accountName": "Smartly",
+                "status": "posted",
+                "isCredit": False,
+                "categoryName": "Transfers",
+                "transactionType": "Transfer",
+                "isSpending": False,
+                "isCashOut": False,
+                "investmentType": None,
+                "userTransactionId": "smartly-transfer",
+            },
+            {
+                "accountName": "Other Card",
+                "status": "posted",
+                "isCredit": False,
+                "categoryName": "Uncategorized",
+                "transactionType": "Unknown",
+                "isSpending": False,
+                "isCashOut": False,
+                "investmentType": None,
+                "userTransactionId": "other-card",
+            },
+            {
+                "accountName": "Other Card",
+                "status": "pending",
+                "isCredit": False,
+                "categoryName": "Groceries",
+                "transactionType": "Purchase",
+                "isSpending": True,
+                "isCashOut": False,
+                "investmentType": None,
+                "userTransactionId": "existing-behavior",
+            },
+            {
+                "accountName": "Smartly",
+                "status": "posted",
+                "isCredit": False,
+                "categoryName": "Uncategorized",
+                "transactionType": "Unknown",
+                "isSpending": False,
+                "isCashOut": False,
+                "investmentType": "Transfer",
+                "userTransactionId": "investment-transfer",
+            },
+        ]
+    )
+
+    with config.context() as c:
+        c.setattr(
+            remote.config.GLOBAL,
+            "MISCLASSIFIED_CARD_PURCHASE_ACCOUNTS",
+            ["Smartly"],
+        )
+        included = remote._select_spending_transactions(txns)
+
+    assert included.userTransactionId.tolist() == [
+        "included-smartly",
+        "existing-behavior",
+    ]
+
+
+def test_select_spending_transactions_fails_closed_without_fallback_metadata() -> None:
+    txns = pd.DataFrame(
+        [
+            {
+                "isSpending": True,
+                "isCashOut": False,
+                "investmentType": None,
+                "userTransactionId": "normal-spend",
+            },
+            {
+                "isSpending": False,
+                "isCashOut": False,
+                "investmentType": None,
+                "userTransactionId": "not-spend",
+            },
+        ]
+    )
+
+    included = remote._select_spending_transactions(txns)
+
+    assert included.userTransactionId.tolist() == ["normal-spend"]
+
+
 def test_authenticate(
     mocker, test_env: MonkeyPatch, test_creds: service_account.Credentials
 ) -> None:

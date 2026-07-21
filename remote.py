@@ -311,6 +311,35 @@ def _get_new_transactions(
     return txns
 
 
+def _select_spending_transactions(txns: pd.DataFrame) -> pd.DataFrame:
+    """Select normal spending plus narrowly identified misclassified purchases.
+
+    Empower can label a posted debit purchase as ``Uncategorized`` / ``Unknown``
+    without setting either spending flag.  The fallback is deliberately limited
+    to configured card accounts and excludes pending activity and credits.
+    """
+    normal_spending = txns.isSpending | txns.isCashOut
+    fallback_columns = {
+        "accountName",
+        "status",
+        "isCredit",
+        "categoryName",
+        "transactionType",
+    }
+    misclassified_card_purchase = pd.Series(False, index=txns.index)
+    if fallback_columns.issubset(txns.columns):
+        misclassified_card_purchase = (
+            txns.accountName.isin(config.GLOBAL.MISCLASSIFIED_CARD_PURCHASE_ACCOUNTS)
+            & txns.status.eq("posted")
+            & txns.isCredit.eq(False)
+            & txns.categoryName.eq("Uncategorized")
+            & txns.transactionType.eq("Unknown")
+        )
+    return txns[
+        (normal_spending | misclassified_card_purchase) & txns.investmentType.isna()
+    ].copy()
+
+
 def RetrieveTransactions(
     conn: empower.PersonalCapital, sheet: pygsheets.Spreadsheet
 ) -> pd.DataFrame:
@@ -331,9 +360,7 @@ def RetrieveTransactions(
     old_txns, cutoff = _get_old_transactions(sheet)
     new_txns = _get_new_transactions(conn, cutoff)
 
-    spend_txns = new_txns[
-        (new_txns.isSpending | new_txns.isCashOut) & new_txns.investmentType.isna()
-    ].copy()
+    spend_txns = _select_spending_transactions(new_txns)
     spend_txns["amount"] = spend_txns["amount"] * spend_txns["isCredit"].map(
         lambda isCredit: 1 if isCredit else -1
     )

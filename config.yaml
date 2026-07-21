@@ -833,6 +833,7 @@ MERCHANT_TO_CATEGORY_MAP:
   easyjet: Travel
   eatery: "Food/Dining Restaurants"
   eats: "Food/Dining Restaurants"
+  el camino hospital: Healthcare
   electric: Utilities
   energy: Utilities
   enterprise: Travel

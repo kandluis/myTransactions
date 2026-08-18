@@ -26,6 +26,10 @@ class PersonalCapitalSessionExpiredException(RuntimeError):
     pass
 
 
+class PersonalCapitalCloudflareChallengeException(RuntimeError):
+    """Raised when Cloudflare challenges an Empower API request."""
+
+
 class PersonalCapital:
     _ROOT_URL: str = "https://pc-api.empower-retirement.com"
     _USER_AGENT: str = (
@@ -86,15 +90,25 @@ class PersonalCapital:
         )
         resp_txt = response.text
 
+        self._raise_for_cloudflare_challenge(response, path)
+
         is_json_resp = re.match(
             "text/json|application/json", response.headers.get("content-type", "")
         )
 
         if response.status_code != requests.codes.ok or not is_json_resp:
-            logger.error(f"__api_request failed response: {resp_txt}")
+            body_preview = " ".join(resp_txt.split())[:500]
+            logger.error(
+                "Empower API request failed: path=%s status=%s content_type=%s "
+                "body_preview=%r",
+                path,
+                response.status_code,
+                response.headers.get("content-type", ""),
+                body_preview,
+            )
             raise RuntimeError(
-                f"Request for {path} {data} failed: \
-                {response.status_code} {response.headers}"
+                f"Empower API request for {path} failed with HTTP "
+                f"{response.status_code}."
             )
 
         json_res: Response = json.loads(resp_txt)
@@ -113,6 +127,26 @@ class PersonalCapital:
             )
 
         return json_res
+
+    @staticmethod
+    def _raise_for_cloudflare_challenge(response: requests.Response, path: str) -> None:
+        if response.headers.get("cf-mitigated", "").lower() != "challenge":
+            return
+
+        ray_id = response.headers.get("cf-ray", "unknown")
+        logger.warning(
+            "Empower API request was challenged by Cloudflare: path=%s "
+            "status=%s ray=%s",
+            path,
+            response.status_code,
+            ray_id,
+        )
+        raise PersonalCapitalCloudflareChallengeException(
+            "Empower is presenting a Cloudflare browser challenge, so automated "
+            f"API access is unavailable (HTTP {response.status_code}, "
+            f"Ray {ray_id}). Retry the session diagnostic later; do not repeatedly "
+            "retry the scrape."
+        )
 
     def is_logged_in(self) -> bool:
         """Returns true if logged in."""
@@ -220,6 +254,9 @@ class PersonalCapital:
             "accu": "MYERIRA",
         }
         response = self.session.post(auth_url, json=auth_payload)
+        self._raise_for_cloudflare_challenge(
+            response, "/api/auth/multiauth/noauth/authenticate"
+        )
         response.raise_for_status()
         auth_response = response.json()
 

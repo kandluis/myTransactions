@@ -32,6 +32,10 @@ kill_timeout = "5s"
   memory = "512mb"
   processes = ["web"]
 
+[[restart]]
+  policy = "never"
+  processes = ["scraper"]
+
 [[services]]
   processes = ["web"]
   internal_port = 8080

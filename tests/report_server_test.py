@@ -5,6 +5,7 @@ import time
 
 import pytest
 
+import empower
 import report_publisher
 import report_server
 
@@ -295,6 +296,29 @@ def test_scrape_starts_background_job_and_returns_accepted(
     finished = _wait_for_scrape_status(client, "succeeded")
     assert finished["job_id"] == payload["job_id"]
     assert finished["error"] == ""
+    assert finished["error_code"] == ""
+
+
+def test_scrape_reports_cloudflare_challenge(
+    client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(report_server, "_load_last_scrape_at", lambda: None)
+    monkeypatch.setattr(report_server.scraper, "scrape_lock_available", lambda: True)
+    monkeypatch.setattr(report_server.auth, "GetCredentials", object)
+
+    def run_scrape(options, credentials):
+        raise empower.PersonalCapitalCloudflareChallengeException("retry later")
+
+    monkeypatch.setattr(report_server.scraper, "scrape_and_push", run_scrape)
+
+    response = client.post("/scrape?token=test-token")
+
+    assert response.status_code == 202
+    finished = _wait_for_scrape_status(client, "failed")
+    assert finished["error_code"] == "empower_cloudflare_challenge"
+    assert finished["error"] == "retry later"
+    assert finished["active"] is False
 
 
 def test_scrape_rejects_concurrent_request(

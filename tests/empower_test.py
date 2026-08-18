@@ -28,6 +28,30 @@ def test_api_request_non_json_response(mocker):
         pc._api_request("get", "/test")
 
 
+def test_api_request_cloudflare_challenge_has_concise_error(mocker, caplog):
+    session = mocker.MagicMock()
+    response = mocker.MagicMock()
+    response.status_code = 403
+    response.headers = {
+        "cf-mitigated": "challenge",
+        "cf-ray": "test-ray-SJC",
+        "content-type": "text/html",
+    }
+    response.text = "<html>large challenge response that must not be logged</html>"
+    session.request.return_value = response
+    pc = empower.PersonalCapital()
+    pc.session = session
+
+    with pytest.raises(
+        empower.PersonalCapitalCloudflareChallengeException,
+        match="Ray test-ray-SJC",
+    ):
+        pc._api_request("post", "/api/newaccount/getAccounts2")
+
+    assert "large challenge response" not in caplog.text
+    assert "test-ray-SJC" in caplog.text
+
+
 def test_api_request_success_false(mocker):
     session = mocker.MagicMock()
     response = mocker.MagicMock()
@@ -100,6 +124,26 @@ def test_login(mocker):
     assert pc._csrf == "test_csrf"
 
 
+def test_login_preserves_cloudflare_challenge(mocker):
+    pc = empower.PersonalCapital()
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 403
+    mock_response.headers = {
+        "cf-mitigated": "challenge",
+        "cf-ray": "login-ray-SJC",
+    }
+    pc.session = mocker.MagicMock()
+    pc.session.post.return_value = mock_response
+
+    with pytest.raises(
+        empower.PersonalCapitalCloudflareChallengeException,
+        match="login-ray-SJC",
+    ):
+        pc.login("test_email", "test_password")
+
+    mock_response.raise_for_status.assert_not_called()
+
+
 def test_login_requires_noninteractive_sms_source_when_headless(mocker, monkeypatch):
     pc = empower.PersonalCapital()
     mock_session = mocker.MagicMock()
@@ -148,3 +192,16 @@ def test_is_logged_in_session_expired(mocker):
     )
     assert not pc.is_logged_in()
     pc.get_account_data.assert_called_once()
+
+
+def test_is_logged_in_does_not_treat_cloudflare_challenge_as_expired(mocker):
+    pc = empower.PersonalCapital()
+    pc._email = "test@test.com"
+    mocker.patch.object(
+        pc,
+        "get_account_data",
+        side_effect=empower.PersonalCapitalCloudflareChallengeException,
+    )
+
+    with pytest.raises(empower.PersonalCapitalCloudflareChallengeException):
+        pc.is_logged_in()

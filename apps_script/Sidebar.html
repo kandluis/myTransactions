@@ -126,7 +126,10 @@
 
               setStatus(
                 jobType + ' failed.\n' +
-                (p.error ? p.error : JSON.stringify(p, null, 2)),
+                (p.error ? p.error : JSON.stringify(p, null, 2)) +
+                (p.error_code === 'empower_cloudflare_challenge'
+                  ? '\n\nWait before retrying. Repeated requests can prolong the block.'
+                  : ''),
                 'err'
               );
             })

@@ -80,6 +80,27 @@ Example:
 pipenv run python scraper.py --types='transactions' --dry_run --debug
 ```
 
+### Check Empower Access Without Scraping
+
+Use the session diagnostic before retrying after an Empower or Cloudflare
+failure. It loads the configured session file, makes exactly one account API
+request, does not attempt password login, and does not print account data:
+
+```sh
+pipenv run python scripts/check_empower_access.py
+```
+
+Exit codes distinguish the result:
+
+- `0`: the saved session passed the API check.
+- `1`: the check failed for another reason or the session file could not load.
+- `2`: Empower returned a Cloudflare browser challenge; wait before retrying.
+- `3`: the saved session is expired and must be refreshed with MFA.
+
+Do not repeatedly run the diagnostic when it reports a challenge. Cloudflare
+challenge responses are detected from the `cf-mitigated: challenge` header and
+are not treated as ordinary expired sessions.
+
 ## Reapply Category Rules
 
 Use `updater.py` when transaction data already exists in Google Sheets and you
@@ -265,6 +286,12 @@ The Fly web service exposes:
 - `POST /scrape?token=<REPORT_TOKEN>`: enqueue a scraper run when the last
   successful scrape is stale enough.
 - `GET /scrape/status?token=<REPORT_TOKEN>`: poll the latest scrape job state.
+
+When Empower returns a Cloudflare browser challenge, scrape status uses
+`error_code: "empower_cloudflare_challenge"` and a concise retry-later message.
+The scheduled `scraper` process has a `never` restart policy so one failed daily
+run stops instead of retrying ten times; the next scheduled run remains
+eligible to start normally.
 
 Set Fly secrets before deploying:
 

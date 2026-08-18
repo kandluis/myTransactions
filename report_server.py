@@ -16,6 +16,7 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 
 import auth
 import config
+import empower
 import report_publisher
 import remote
 import scraper
@@ -74,6 +75,7 @@ class ScrapeJob:
     last_successful_at: str = ""
     skip_reason: str = ""
     error: str = ""
+    error_code: str = ""
     source: str = "sheets"
     freshness_window_seconds: int = int(_SCRAPE_FRESHNESS_WINDOW.total_seconds())
 
@@ -253,6 +255,12 @@ def _run_scrape_job(job_id: str) -> None:
             if _current_scrape_job is not None and _current_scrape_job.job_id == job_id:
                 _current_scrape_job.state = "succeeded"
                 _current_scrape_job.last_successful_at = completed_at
+    except empower.PersonalCapitalCloudflareChallengeException as exc:
+        with _job_state_lock:
+            if _current_scrape_job is not None and _current_scrape_job.job_id == job_id:
+                _current_scrape_job.state = "failed"
+                _current_scrape_job.error_code = "empower_cloudflare_challenge"
+                _current_scrape_job.error = str(exc)
     except Exception as exc:  # pragma: no cover - defensive guard
         with _job_state_lock:
             if _current_scrape_job is not None and _current_scrape_job.job_id == job_id:

@@ -451,7 +451,10 @@ def plaid_connect() -> Response | tuple[Response, int]:
             ),
             409,
         )
-    link = plaid_source.PlaidClient().create_link_token()
+    try:
+        link = plaid_source.PlaidClient().create_link_token()
+    except plaid_source.PlaidError as exc:
+        return jsonify({"error": str(exc), "error_code": exc.code}), 400
     session["plaid_link_authorized"] = True
     session["plaid_link_token"] = link["link_token"]
     return Response(

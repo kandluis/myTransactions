@@ -149,7 +149,6 @@ class PlaidClient:
             "user": {"client_user_id": "mytransactions"},
             "client_name": "My Transactions",
             "products": ["transactions"],
-            "additional_consented_products": ["balance"],
             "country_codes": ["US"],
             "language": "en",
             "transactions": {"days_requested": 90},

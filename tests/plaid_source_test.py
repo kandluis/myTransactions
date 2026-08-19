@@ -13,7 +13,16 @@ class FakeWorksheet:
         return self.values.get(cell, "")
 
     def update_values(self, cell, values):
-        self.values[cell] = values[0][0]
+        start_row = int(cell[1:])
+        for offset, value in enumerate(values):
+            self.values[f"A{start_row + offset}"] = value[0]
+
+    def get_values(self, start, end, include_tailing_empty=False):
+        start_row = int(start[1:])
+        end_row = int(end[1:])
+        return [
+            [self.values.get(f"A{row}", "")] for row in range(start_row, end_row + 1)
+        ]
 
 
 class FakeSheet:
@@ -41,6 +50,18 @@ def test_state_is_encrypted_and_round_trips(monkeypatch):
     assert "secret" not in sheet.ws.values[plaid_source.STATE_CELL]
     assert store.load()["items"]["item"]["access_token"] == "secret"
     assert sheet.ws.hidden is True
+
+
+def test_large_state_is_split_across_encrypted_cells(monkeypatch):
+    monkeypatch.setenv("PLAID_STATE_KEY", "a test state key")
+    sheet = FakeSheet()
+    store = plaid_source.SheetStateStore(sheet)
+    payload = "x" * (plaid_source.STATE_MAX_CHUNK_SIZE * 2)
+
+    store.save({"version": 1, "items": {"item": {"pending": payload}}})
+
+    assert sheet.ws.values["A3"]
+    assert store.load()["items"]["item"]["pending"] == payload
 
 
 def test_state_rejects_wrong_key(monkeypatch):

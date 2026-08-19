@@ -24,6 +24,8 @@ import utils
 
 STATE_SHEET_TITLE = "Plaid State"
 STATE_CELL = "A2"
+STATE_MAX_CHUNK_SIZE = 45_000
+STATE_MAX_CHUNKS = 200
 MAX_ITEMS = 10
 RESERVED_ITEMS = 1
 
@@ -71,7 +73,14 @@ class SheetStateStore:
 
     def load(self) -> dict[str, Any]:
         try:
-            raw = str(self._worksheet().get_value(STATE_CELL) or "").strip()
+            worksheet = self._worksheet()
+            if hasattr(worksheet, "get_values"):
+                cells = worksheet.get_values(
+                    "A2", f"A{STATE_MAX_CHUNKS + 1}", include_tailing_empty=False
+                )
+                raw = "".join(str(row[0]) for row in cells if row and row[0]).strip()
+            else:  # Small test doubles and old pygsheets versions.
+                raw = str(worksheet.get_value(STATE_CELL) or "").strip()
             if not raw:
                 return {"version": 1, "items": {}}
             data = _fernet().decrypt(raw.encode())
@@ -98,7 +107,19 @@ class SheetStateStore:
             .encrypt(json.dumps(state, separators=(",", ":")).encode())
             .decode()
         )
-        self._worksheet().update_values(STATE_CELL, [[encrypted]])
+        chunks = [
+            encrypted[offset : offset + STATE_MAX_CHUNK_SIZE]
+            for offset in range(0, len(encrypted), STATE_MAX_CHUNK_SIZE)
+        ]
+        if len(chunks) >= STATE_MAX_CHUNKS:
+            raise PlaidError(
+                "state_decryption_failed", "Plaid state is too large to store"
+            )
+        # The last blank value clears a stale trailing chunk from an earlier,
+        # larger state write. Each individual Sheet cell remains below 50k.
+        self._worksheet().update_values(
+            STATE_CELL, [[chunk] for chunk in chunks] + [[""]]
+        )
 
 
 class PlaidClient:

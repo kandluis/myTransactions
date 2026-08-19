@@ -549,12 +549,66 @@ def plaid_exchange() -> Response | tuple[Response, int]:
     item["reconciliation"] = review
     state.setdefault("items", {})[item_id] = item
     store.save(state)
+    session["plaid_pending_item_id"] = item_id
     return jsonify(
         {
             "item_id": item_id,
             "review": review,
             "message": "Initial reconciliation stored; approve after reviewing it.",
         }
+    )
+
+
+@app.get("/plaid/review")
+def plaid_review() -> Response | tuple[Response, int]:
+    """Show the staged reconciliation before allowing an initial merge."""
+    if not session.get("plaid_link_authorized") and not is_authorized_token(
+        _request_token()
+    ):
+        return _forbidden()
+    state = plaid_source.SheetStateStore(_open_plaid_sheet()).load()
+    item_id = str(session.get("plaid_pending_item_id", ""))
+    item = state.get("items", {}).get(item_id)
+    if not item or item.get("status") != "pending_review":
+        pending = [
+            (stored_id, stored_item)
+            for stored_id, stored_item in state.get("items", {}).items()
+            if stored_item.get("status") == "pending_review"
+        ]
+        if len(pending) != 1:
+            return jsonify({"error": "No unambiguous pending Plaid review"}), 404
+        item_id, item = pending[0]
+    review = item.get("reconciliation", {})
+    accounts = list(dict.fromkeys(item.get("account_mappings", {}).values()))
+    return Response(
+        render_template_string(
+            """<!doctype html><title>Plaid reconciliation review</title>
+<style>
+body{font:16px system-ui;margin:2rem;max-width:42rem}
+dt{font-weight:600}dd{margin:0 0 1rem}
+.warning{color:#9a3412}button{padding:.6rem 1rem}
+</style>
+<h1>Review initial Plaid import</h1>
+<p>This is a staged 90-day import. Nothing has been written to Raw transactions.</p>
+<dl><dt>Matched overlap</dt><dd>{{ review.matched_overlap }}</dd>
+<dt>Plaid-only candidates</dt><dd>{{ review.plaid_only_candidates }}</dd>
+<dt>Ambiguous matches</dt><dd>{{ review.ambiguous_matches }}</dd>
+<dt>Account-mapping gaps</dt><dd>{{ review.account_mapping_gaps }}</dd></dl>
+<h2>Linked accounts</h2><p>{{ accounts|join(', ') or 'No accounts returned' }}</p>
+<p class="warning">Approve only if the linked accounts are the intended US Bank
+accounts and the counts look expected.</p>
+<button id="approve">Approve initial merge</button><p id="result"></p>
+<script>
+document.getElementById('approve').onclick=async()=>{
+  const r=await fetch('/plaid/approve/{{ item_id }}',{method:'POST'});
+  const result=await r.json();
+  document.getElementById('result').textContent=result.message||'Could not approve.';
+};
+</script>""",
+            item_id=item_id,
+            review=review,
+            accounts=accounts,
+        )
     )
 
 
@@ -631,6 +685,7 @@ def plaid_approve(item_id: str) -> Response | tuple[Response, int]:
     store.save(state)
     session.pop("plaid_link_authorized", None)
     session.pop("plaid_link_token", None)
+    session.pop("plaid_pending_item_id", None)
     return jsonify(
         {"message": "Initial Plaid transactions merged and daily cursor sync enabled."}
     )

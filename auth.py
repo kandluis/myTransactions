@@ -61,3 +61,8 @@ def GetCredentials() -> Credentials:
         password=password,
         sheets=sheets_creds,
     )
+
+
+def GetGoogleCredentials() -> service_account.Credentials:
+    """Return Sheets credentials without requiring legacy Empower secrets."""
+    return _getGoogleCredentials()

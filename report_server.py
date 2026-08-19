@@ -12,7 +12,15 @@ from threading import Lock, Thread
 from typing import Optional
 from uuid import uuid4
 
-from flask import Flask, Response, jsonify, request, send_from_directory
+from flask import (
+    Flask,
+    Response,
+    jsonify,
+    request,
+    render_template_string,
+    session,
+    send_from_directory,
+)
 
 import auth
 import config
@@ -20,9 +28,13 @@ import empower
 import report_publisher
 import remote
 import scraper
+import plaid_source
 import utils
 
 app = Flask(__name__)
+app.secret_key = os.getenv(
+    "FLASK_SESSION_SECRET", os.getenv("REPORT_TOKEN", "development-only-change-me")
+)
 _job_state_lock = Lock()
 _SCRAPE_FRESHNESS_WINDOW = timedelta(
     seconds=int(os.getenv("SCRAPE_FRESHNESS_SECONDS", "900"))
@@ -76,7 +88,7 @@ class ScrapeJob:
     skip_reason: str = ""
     error: str = ""
     error_code: str = ""
-    source: str = "sheets"
+    source: str = "plaid"
     freshness_window_seconds: int = int(_SCRAPE_FRESHNESS_WINDOW.total_seconds())
 
     def to_dict(self) -> dict[str, object]:
@@ -248,13 +260,19 @@ def _run_scrape_job(job_id: str) -> None:
             job.state = "running"
             job.started_at = _utc_now()
         options = utils.ScraperOptions()
-        creds = auth.GetCredentials()
+        creds = None if plaid_source.is_configured() else auth.GetCredentials()
         scraper.scrape_and_push(options, creds)
         completed_at = _utc_now()
         with _job_state_lock:
             if _current_scrape_job is not None and _current_scrape_job.job_id == job_id:
                 _current_scrape_job.state = "succeeded"
                 _current_scrape_job.last_successful_at = completed_at
+    except plaid_source.PlaidError as exc:
+        with _job_state_lock:
+            if _current_scrape_job is not None and _current_scrape_job.job_id == job_id:
+                _current_scrape_job.state = "failed"
+                _current_scrape_job.error_code = exc.code
+                _current_scrape_job.error = str(exc)
     except empower.PersonalCapitalCloudflareChallengeException as exc:
         with _job_state_lock:
             if _current_scrape_job is not None and _current_scrape_job.job_id == job_id:
@@ -362,6 +380,7 @@ def scrape() -> tuple[Response, int]:
             finished_at=_utc_now(),
             last_successful_at=last_scrape_at.isoformat() if last_scrape_at else "",
             skip_reason="last successful scrape is still within the freshness window",
+            source="plaid" if plaid_source.is_configured() else "empower",
         )
         _mark_scrape_terminal(job)
         payload = job.to_dict()
@@ -374,6 +393,7 @@ def scrape() -> tuple[Response, int]:
             state="queued",
             created_at=_utc_now(),
             last_successful_at=last_scrape_at.isoformat() if last_scrape_at else "",
+            source="plaid" if plaid_source.is_configured() else "empower",
         )
         _set_current_scrape_job(job)
         worker = Thread(target=_run_scrape_job, args=(job.job_id,), daemon=True)
@@ -389,3 +409,252 @@ def scrape_status() -> Response | tuple[Response, int]:
     if not is_authorized_token(_request_token()):
         return _forbidden()
     return jsonify(_scrape_status_payload())
+
+
+def _open_plaid_sheet():
+    return report_publisher.open_configured_spreadsheet()
+
+
+def _require_plaid_configured() -> Optional[tuple[Response, int]]:
+    if not plaid_source.is_configured():
+        return (
+            jsonify({"error": "Plaid is not configured", "error_code": "sync_failed"}),
+            503,
+        )
+    return None
+
+
+@app.get("/plaid/connect")
+def plaid_connect() -> Response | tuple[Response, int]:
+    """Create a one-time Link session outside the Apps Script iframe."""
+    if not is_authorized_token(_request_token()):
+        return _forbidden()
+    unavailable = _require_plaid_configured()
+    if unavailable:
+        return unavailable
+    reserve = request.args.get("use_reserve") == "1"
+    store = plaid_source.SheetStateStore(_open_plaid_sheet())
+    state = store.load()
+    count = len(state.get("items", {}))
+    if count >= plaid_source.MAX_ITEMS or (
+        count >= plaid_source.MAX_ITEMS - plaid_source.RESERVED_ITEMS and not reserve
+    ):
+        return (
+            jsonify(
+                {
+                    "error": "Plaid Item limit reached",
+                    "error_code": "item_limit_reached",
+                    "items": count,
+                    "use_reserve_required": count
+                    == plaid_source.MAX_ITEMS - plaid_source.RESERVED_ITEMS,
+                }
+            ),
+            409,
+        )
+    link = plaid_source.PlaidClient().create_link_token()
+    session["plaid_link_authorized"] = True
+    session["plaid_link_token"] = link["link_token"]
+    return Response(
+        render_template_string(
+            """<!doctype html><title>Connect account</title>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<button id="connect">Connect Plaid account</button><p id="status"></p>
+<script>
+const status = document.getElementById('status');
+async function exchange(public_token) {
+  status.textContent = 'Saving connection and preparing review…';
+  const response = await fetch('/plaid/exchange', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({public_token})
+  });
+  const result = await response.json();
+  status.textContent = response.ok ? 'Connected. Review then approve below.' :
+    (result.error || 'Could not connect.');
+  if (response.ok) {
+    const button = document.createElement('button');
+    button.textContent = 'Approve initial merge';
+    button.onclick = async () => {
+      const approved = await fetch('/plaid/approve/' + result.item_id, {method:'POST'});
+      status.textContent = (await approved.json()).message || 'Approved';
+    };
+    document.body.appendChild(button);
+  }
+}
+const handler = Plaid.create({token: {{ token|tojson }},
+  receivedRedirectUri: {{ redirect_uri|tojson }}, onSuccess: exchange,
+  onExit: err => { if (err) status.textContent = 'Link was not completed.'; }});
+document.getElementById('connect').onclick = () => handler.open();
+</script>""",
+            token=link["link_token"],
+            redirect_uri="",
+        )
+    )
+
+
+@app.post("/plaid/exchange")
+def plaid_exchange() -> Response | tuple[Response, int]:
+    if not session.get("plaid_link_authorized"):
+        return _forbidden()
+    public_token = str((request.get_json(silent=True) or {}).get("public_token", ""))
+    if not public_token:
+        return jsonify({"error": "missing Link result"}), 400
+    client = plaid_source.PlaidClient()
+    result = client.exchange_public_token(public_token)
+    sheet = _open_plaid_sheet()
+    store = plaid_source.SheetStateStore(sheet)
+    state = store.load()
+    if len(state.get("items", {})) >= plaid_source.MAX_ITEMS:
+        return (
+            jsonify(
+                {
+                    "error": "Plaid Item limit reached",
+                    "error_code": "item_limit_reached",
+                }
+            ),
+            409,
+        )
+    item_id = str(result["item_id"])
+    added, modified, removed, cursor = client.sync(str(result["access_token"]))
+    # Keep the initial batch encrypted until the user reviews the bounded result.
+    txns = added + modified
+    linked_accounts = client.accounts(str(result["access_token"]))
+    item = {
+        "access_token": result["access_token"],
+        "cursor": cursor,
+        "status": "pending_review",
+        "selected_account_ids": [
+            str(account["account_id"]) for account in linked_accounts
+        ],
+        "account_mappings": {
+            str(account["account_id"]): str(
+                account.get("name") or account.get("official_name") or "Unknown Account"
+            )
+            for account in linked_accounts
+        },
+        "pending_transactions": txns,
+        "created_at": _utc_now(),
+        "last_sync_at": "",
+        "last_error": "",
+    }
+    existing = sheet.worksheet_by_title(
+        title=config.GLOBAL.RAW_TRANSACTIONS_TITLE
+    ).get_as_df(numerize=False)
+    review = plaid_source.reconcile(
+        existing.reindex(columns=config.GLOBAL.COLUMN_NAMES, fill_value=""),
+        plaid_source.transaction_frame(txns, item),
+    )
+    item["reconciliation"] = review
+    state.setdefault("items", {})[item_id] = item
+    store.save(state)
+    return jsonify(
+        {
+            "item_id": item_id,
+            "review": review,
+            "message": "Initial reconciliation stored; approve after reviewing it.",
+        }
+    )
+
+
+@app.get("/plaid/reauth/<item_id>")
+def plaid_reauth(item_id: str) -> Response | tuple[Response, int]:
+    if not is_authorized_token(_request_token()):
+        return _forbidden()
+    unavailable = _require_plaid_configured()
+    if unavailable:
+        return unavailable
+    state = plaid_source.SheetStateStore(_open_plaid_sheet()).load()
+    item = state.get("items", {}).get(item_id)
+    if not item:
+        return jsonify({"error": "Plaid Item not found"}), 404
+    link = plaid_source.PlaidClient().create_link_token(
+        update_access_token=str(item["access_token"])
+    )
+    session["plaid_reauth_item_id"] = item_id
+    return Response(
+        render_template_string(
+            """<script src="//cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<p>Reauthenticating account…</p><script>
+Plaid.create({token: {{ token|tojson }}, onSuccess: async () => {
+  const response = await fetch('/plaid/reauth/complete', {method: 'POST'});
+  document.body.innerText = (await response.json()).message || 'Updated.';
+}}).open();</script>""",
+            token=link["link_token"],
+        )
+    )
+
+
+@app.post("/plaid/reauth/complete")
+def plaid_reauth_complete() -> Response | tuple[Response, int]:
+    item_id = session.pop("plaid_reauth_item_id", "")
+    if not item_id:
+        return _forbidden()
+    store = plaid_source.SheetStateStore(_open_plaid_sheet())
+    state = store.load()
+    item = state.get("items", {}).get(item_id)
+    if not item:
+        return jsonify({"error": "Plaid Item not found"}), 404
+    item["status"] = "active"
+    item["last_error"] = ""
+    state["items"][item_id] = item
+    store.save(state)
+    return jsonify({"message": "Plaid connection reauthenticated."})
+
+
+@app.post("/plaid/approve/<item_id>")
+def plaid_approve(item_id: str) -> Response | tuple[Response, int]:
+    if not session.get("plaid_link_authorized") and not is_authorized_token(
+        _request_token()
+    ):
+        return _forbidden()
+    sheet = _open_plaid_sheet()
+    store = plaid_source.SheetStateStore(sheet)
+    state = store.load()
+    item = state.get("items", {}).get(item_id)
+    if not item or item.get("status") != "pending_review":
+        return jsonify({"error": "No pending initial reconciliation"}), 404
+    existing = (
+        sheet.worksheet_by_title(title=config.GLOBAL.RAW_TRANSACTIONS_TITLE)
+        .get_as_df(numerize=False)
+        .reindex(columns=config.GLOBAL.COLUMN_NAMES, fill_value="")
+    )
+    additions = plaid_source.transaction_frame(
+        item.pop("pending_transactions", []), item
+    )
+    merged = plaid_source.merge_transactions(existing, additions, set(), set())
+    remote.UpdateGoogleSheet(sheet, merged, None)
+    item["status"] = "active"
+    item["approved_at"] = _utc_now()
+    state["items"][item_id] = item
+    store.save(state)
+    session.pop("plaid_link_authorized", None)
+    session.pop("plaid_link_token", None)
+    return jsonify(
+        {"message": "Initial Plaid transactions merged and daily cursor sync enabled."}
+    )
+
+
+@app.get("/plaid/oauth/redirect")
+def plaid_oauth_redirect() -> Response:
+    # Plaid Link receives the registered URL and resumes in the same browser.
+    token = session.get("plaid_link_token")
+    if not token:
+        return Response(
+            "Plaid Link session expired; return to Sheets and start again.", status=400
+        )
+    return Response(
+        render_template_string(
+            """<script src="//cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<p>Resuming bank authentication…</p><script>
+async function exchange(public_token) {
+  const response = await fetch('/plaid/exchange', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({public_token})
+  });
+  document.body.innerText = (await response.json()).message || 'Connected.';
+}
+Plaid.create({token: {{ token|tojson }}, receivedRedirectUri: window.location.href,
+  onSuccess: exchange}).open();
+</script>""",
+            token=token,
+        )
+    )

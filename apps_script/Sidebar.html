@@ -53,6 +53,9 @@
       <button class="primary" onclick="runJob('generate')">Run report</button>
       <button class="primary" onclick="runJob('scrape')">Run scrape</button>
     </div>
+    <div class="row">
+      <button onclick="connectPlaid()">Connect Plaid account</button>
+    </div>
 
     <div id="status" class="status muted">Idle.</div>
 
@@ -84,6 +87,14 @@
             setStatus(jobType + ' start error:\n' + err.message, 'err');
           })
           .startJob(jobType);
+      }
+
+      function connectPlaid() {
+        setStatus('Opening secure Plaid connection…', 'muted');
+        google.script.run
+          .withSuccessHandler(function(url) { window.open(url, '_blank'); setStatus('Complete Plaid Link in the new tab, then return here.', 'muted'); })
+          .withFailureHandler(function(err) { setStatus('Could not open Plaid Link:\n' + err.message, 'err'); })
+          .getPlaidConnectUrl();
       }
 
       function startPolling(jobType) {

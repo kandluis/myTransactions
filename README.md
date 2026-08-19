@@ -464,3 +464,13 @@ For the last command, you can replace `mint-scraper-fly` with the name of the ap
 # Version
 
 3.0.0
+# Plaid migration configuration
+
+The deployed sync uses Plaid when `PLAID_CLIENT_ID` and `PLAID_SECRET` are set.
+Set these Fly secrets along with `PLAID_ENV=production`, a strong
+`PLAID_STATE_KEY`, `FLASK_SESSION_SECRET`, and
+`PLAID_REDIRECT_URI=https://mint-scraper.fly.dev/plaid/oauth/redirect`.
+Keep `GOOGLE_SHEETS_CREDENTIALS` and `REPORT_TOKEN` unchanged. `Plaid State`
+is created as a hidden sheet and contains only encrypted state; do not copy its
+contents into logs or issue reports. Link one institution, review its initial
+90-day reconciliation, and approve it before it becomes part of daily sync.

@@ -81,8 +81,7 @@ def build_report_urls(base_url: str, token: str) -> tuple[str, str]:
 
 def open_configured_spreadsheet() -> pygsheets.Spreadsheet:
     """Open the configured Google Sheet using the repo's auth helper."""
-    creds = auth.GetCredentials()
-    client = pygsheets.authorize(custom_credentials=creds.sheets)
+    client = pygsheets.authorize(custom_credentials=auth.GetGoogleCredentials())
     return client.open(config.GLOBAL.WORKSHEET_TITLE)
 
 

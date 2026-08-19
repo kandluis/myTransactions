@@ -16,6 +16,8 @@ numpy = "==2.3.1"
 pytz = "*"
 rsa = "*"
 cachetools = "*"
+cryptography = "*"
+requests = "*"
 
 [dev-packages]
 flake8 = "*"

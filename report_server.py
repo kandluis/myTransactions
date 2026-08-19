@@ -579,7 +579,14 @@ def plaid_review() -> Response | tuple[Response, int]:
             return jsonify({"error": "No unambiguous pending Plaid review"}), 404
         item_id, item = pending[0]
     review = item.get("reconciliation", {})
-    accounts = list(dict.fromkeys(item.get("account_mappings", {}).values()))
+    accounts = [
+        {
+            "id": account_id,
+            "name": account_name,
+            "selected": account_id in item.get("selected_account_ids", []),
+        }
+        for account_id, account_name in item.get("account_mappings", {}).items()
+    ]
     return Response(
         render_template_string(
             """<!doctype html><title>Plaid reconciliation review</title>
@@ -594,11 +601,23 @@ dt{font-weight:600}dd{margin:0 0 1rem}
 <dt>Plaid-only candidates</dt><dd>{{ review.plaid_only_candidates }}</dd>
 <dt>Ambiguous matches</dt><dd>{{ review.ambiguous_matches }}</dd>
 <dt>Account-mapping gaps</dt><dd>{{ review.account_mapping_gaps }}</dd></dl>
-<h2>Linked accounts</h2><p>{{ accounts|join(', ') or 'No accounts returned' }}</p>
+<h2>Linked accounts</h2>
+{% for account in accounts %}<label><input type="checkbox"
+value="{{ account.id }}" {% if account.selected %}checked{% endif %}>
+{{ account.name }}</label><br>{% endfor %}
+<button id="selection">Update selected accounts</button>
 <p class="warning">Approve only if the linked accounts are the intended US Bank
 accounts and the counts look expected.</p>
 <button id="approve">Approve initial merge</button><p id="result"></p>
 <script>
+document.getElementById('selection').onclick=async()=>{
+  const account_ids=[...document.querySelectorAll('input:checked')].map(x=>x.value);
+  await fetch('/plaid/selection/{{ item_id }}',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({account_ids})
+  });
+  location.reload();
+};
 document.getElementById('approve').onclick=async()=>{
   const r=await fetch('/plaid/approve/{{ item_id }}',{method:'POST'});
   const result=await r.json();
@@ -610,6 +629,42 @@ document.getElementById('approve').onclick=async()=>{
             accounts=accounts,
         )
     )
+
+
+@app.post("/plaid/selection/<item_id>")
+def plaid_selection(item_id: str) -> Response | tuple[Response, int]:
+    if not session.get("plaid_link_authorized") and not is_authorized_token(
+        _request_token()
+    ):
+        return _forbidden()
+    requested = (request.get_json(silent=True) or {}).get("account_ids", [])
+    if not isinstance(requested, list):
+        return jsonify({"error": "account_ids must be a list"}), 400
+    sheet = _open_plaid_sheet()
+    store = plaid_source.SheetStateStore(sheet)
+    state = store.load()
+    item = state.get("items", {}).get(item_id)
+    if not item or item.get("status") != "pending_review":
+        return jsonify({"error": "No pending initial reconciliation"}), 404
+    available = set(item.get("account_mappings", {}))
+    selected = [
+        str(account_id) for account_id in requested if str(account_id) in available
+    ]
+    if not selected:
+        return jsonify({"error": "Select at least one linked account"}), 400
+    item["selected_account_ids"] = selected
+    existing = (
+        sheet.worksheet_by_title(title=config.GLOBAL.RAW_TRANSACTIONS_TITLE)
+        .get_as_df(numerize=False)
+        .reindex(columns=config.GLOBAL.COLUMN_NAMES, fill_value="")
+    )
+    item["reconciliation"] = plaid_source.reconcile(
+        existing,
+        plaid_source.transaction_frame(item.get("pending_transactions", []), item),
+    )
+    state["items"][item_id] = item
+    store.save(state)
+    return jsonify({"message": "Selected accounts and reconciliation updated."})
 
 
 @app.get("/plaid/reauth/<item_id>")

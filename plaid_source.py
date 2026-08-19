@@ -265,19 +265,24 @@ def overlap_fingerprint(row: pd.Series) -> str:
 
 def reconcile(existing: pd.DataFrame, candidate: pd.DataFrame) -> dict[str, int]:
     existing_fps = (
-        set(existing.apply(overlap_fingerprint, axis=1))
+        existing.apply(overlap_fingerprint, axis=1)
         if not existing.empty
-        else set()
+        else pd.Series(dtype=str)
     )
+    existing_counts = existing_fps.value_counts()
     candidate_fps = (
         candidate.apply(overlap_fingerprint, axis=1)
         if not candidate.empty
         else pd.Series(dtype=str)
     )
     return {
-        "matched_overlap": int(candidate_fps.isin(existing_fps).sum()),
-        "plaid_only_candidates": int((~candidate_fps.isin(existing_fps)).sum()),
-        "ambiguous_matches": int(candidate_fps.duplicated(keep=False).sum()),
+        "matched_overlap": int(candidate_fps.isin(existing_counts.index).sum()),
+        "plaid_only_candidates": int(
+            (~candidate_fps.isin(existing_counts.index)).sum()
+        ),
+        "ambiguous_matches": int(
+            candidate_fps.map(existing_counts).fillna(0).gt(1).sum()
+        ),
         "account_mapping_gaps": (
             int(candidate["Account"].eq("Unknown Account").sum())
             if not candidate.empty

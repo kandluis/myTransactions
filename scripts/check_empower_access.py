@@ -12,7 +12,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import empower  # noqa: E402
 
-
 EXIT_AVAILABLE = 0
 EXIT_ERROR = 1
 EXIT_CHALLENGED = 2

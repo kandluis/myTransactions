@@ -1,6 +1,5 @@
 from typing import Literal, TypedDict
 
-
 TChallengeMethod = Literal["OP", "TP", "TOTP"]
 
 

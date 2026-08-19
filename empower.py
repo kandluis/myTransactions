@@ -18,7 +18,6 @@ from empower_types import (
     TransactionData,
 )
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -113,10 +112,9 @@ class PersonalCapital:
 
         json_res: Response = json.loads(resp_txt)
 
-        if check_success and not json_res.get("spHeader", {}).get("success", False):
-            resp_code = (
-                json_res.get("spHeader", {}).get("errors", [{}])[0].get("code", None)
-            )
+        if check_success and not json_res["spHeader"].get("success", False):
+            errors = json_res["spHeader"].get("errors", [])
+            resp_code = errors[0].get("code") if errors else None
             if resp_code == 201:
                 self._csrf = None
                 raise PersonalCapitalSessionExpiredException(

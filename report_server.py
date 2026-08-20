@@ -36,6 +36,7 @@ app.secret_key = os.getenv(
     "FLASK_SESSION_SECRET", os.getenv("REPORT_TOKEN", "development-only-change-me")
 )
 _job_state_lock = Lock()
+_plaid_approval_lock = Lock()
 _SCRAPE_FRESHNESS_WINDOW = timedelta(
     seconds=int(os.getenv("SCRAPE_FRESHNESS_SECONDS", "900"))
 )
@@ -474,13 +475,10 @@ async function exchange(public_token) {
   status.textContent = response.ok ? 'Connected. Review then approve below.' :
     (result.error || 'Could not connect.');
   if (response.ok) {
-    const button = document.createElement('button');
-    button.textContent = 'Approve initial merge';
-    button.onclick = async () => {
-      const approved = await fetch('/plaid/approve/' + result.item_id, {method:'POST'});
-      status.textContent = (await approved.json()).message || 'Approved';
-    };
-    document.body.appendChild(button);
+    const review = document.createElement('a');
+    review.href = '/plaid/review' + window.location.search;
+    review.textContent = 'Review staged import';
+    document.body.appendChild(review);
   }
 }
 const handler = Plaid.create({token: {{ token|tojson }},
@@ -698,9 +696,22 @@ headers:{'Content-Type':'application/json'},
 body:JSON.stringify({account_ids:selected(),account_mappings:mappings()})});
 const p=await r.json();document.getElementById('result').textContent=
 p.message||p.error||'Could not save.';if(r.ok)location.reload()}
-document.getElementById('approve').onclick=async()=>{const r=await fetch(
-'/plaid/approve/{{ item_id }}',{method:'POST'});const p=await r.json();
-document.getElementById('result').textContent=p.message||p.error||'Could not approve.'}
+const approve=document.getElementById('approve');let approvalPoll;
+const approvalStatusUrl='/plaid/approve/{{ item_id }}/status';
+async function approvalStatus(){
+const r=await fetch(approvalStatusUrl+window.location.search);
+const p=await r.json();if(p.state==='active'){clearInterval(approvalPoll);
+approve.disabled=true;document.getElementById('result').textContent=
+'Merged successfully. You may close this page.'}}
+approve.onclick=async()=>{approve.disabled=true;
+document.getElementById('result').textContent='Merging safely into Google Sheets…';
+approvalPoll=setInterval(approvalStatus,5000);try{const r=await fetch(
+'/plaid/approve/{{ item_id }}'+window.location.search,{method:'POST'});
+const p=await r.json();
+document.getElementById('result').textContent=p.message||p.error||'Could not approve.';
+if(!r.ok){clearInterval(approvalPoll);approve.disabled=false}}catch(error){
+document.getElementById('result').textContent='Connection interrupted. Do not retry; '+
+'this page is checking merge status.'}}
 </script>""",
             item_id=item_id,
             review=review,
@@ -804,31 +815,94 @@ def plaid_approve(item_id: str) -> Response | tuple[Response, int]:
         _request_token()
     ):
         return _forbidden()
-    sheet = _open_plaid_sheet()
-    store = plaid_source.SheetStateStore(sheet)
-    state = store.load()
+    if not _plaid_approval_lock.acquire(blocking=False):
+        return (
+            jsonify(
+                {
+                    "error": "An initial merge is already in progress.",
+                    "error_code": "approval_in_progress",
+                }
+            ),
+            409,
+        )
+    try:
+        sheet = _open_plaid_sheet()
+        store = plaid_source.SheetStateStore(sheet)
+        state = store.load()
+        item = state.get("items", {}).get(item_id)
+        if not item:
+            return jsonify({"error": "Plaid Item not found"}), 404
+        if item.get("status") == "active":
+            return jsonify({"message": "Initial Plaid merge already completed."})
+        if item.get("status") not in {"pending_review", "merging"}:
+            return jsonify({"error": "No pending initial reconciliation"}), 404
+
+        # Persist intent before writing the raw tab. If the process restarts
+        # mid-write, a later request can safely resume because merging is
+        # idempotent under the source-independent overlap fingerprint.
+        item["status"] = "merging"
+        item["approval_started_at"] = _utc_now()
+        item["last_error"] = ""
+        state["items"][item_id] = item
+        store.save(state)
+
+        existing = (
+            sheet.worksheet_by_title(title=config.GLOBAL.RAW_TRANSACTIONS_TITLE)
+            .get_as_df(numerize=False)
+            .reindex(columns=config.GLOBAL.COLUMN_NAMES, fill_value="")
+        )
+        additions = plaid_source.transaction_frame(
+            item.get("pending_transactions", []), item
+        )
+        merged = plaid_source.merge_transactions(existing, additions, set(), set())
+        remote.UpdateGoogleSheet(sheet, merged, None)
+
+        item["status"] = "active"
+        item["approved_at"] = _utc_now()
+        item["pending_transactions"] = []
+        state["items"][item_id] = item
+        store.save(state)
+        session.pop("plaid_link_authorized", None)
+        session.pop("plaid_link_token", None)
+        session.pop("plaid_pending_item_id", None)
+        return jsonify(
+            {
+                "message": (
+                    "Initial Plaid transactions merged and daily cursor sync enabled."
+                )
+            }
+        )
+    except Exception:
+        logging.exception("Plaid initial merge failed")
+        return (
+            jsonify(
+                {
+                    "error": "Initial merge needs a safe retry.",
+                    "error_code": "sync_failed",
+                }
+            ),
+            502,
+        )
+    finally:
+        _plaid_approval_lock.release()
+
+
+@app.get("/plaid/approve/<item_id>/status")
+def plaid_approve_status(item_id: str) -> Response | tuple[Response, int]:
+    if not session.get("plaid_link_authorized") and not is_authorized_token(
+        _request_token()
+    ):
+        return _forbidden()
+    state = plaid_source.SheetStateStore(_open_plaid_sheet()).load()
     item = state.get("items", {}).get(item_id)
-    if not item or item.get("status") != "pending_review":
-        return jsonify({"error": "No pending initial reconciliation"}), 404
-    existing = (
-        sheet.worksheet_by_title(title=config.GLOBAL.RAW_TRANSACTIONS_TITLE)
-        .get_as_df(numerize=False)
-        .reindex(columns=config.GLOBAL.COLUMN_NAMES, fill_value="")
-    )
-    additions = plaid_source.transaction_frame(
-        item.pop("pending_transactions", []), item
-    )
-    merged = plaid_source.merge_transactions(existing, additions, set(), set())
-    remote.UpdateGoogleSheet(sheet, merged, None)
-    item["status"] = "active"
-    item["approved_at"] = _utc_now()
-    state["items"][item_id] = item
-    store.save(state)
-    session.pop("plaid_link_authorized", None)
-    session.pop("plaid_link_token", None)
-    session.pop("plaid_pending_item_id", None)
+    if not item:
+        return jsonify({"error": "Plaid Item not found"}), 404
     return jsonify(
-        {"message": "Initial Plaid transactions merged and daily cursor sync enabled."}
+        {
+            "state": item.get("status", ""),
+            "pending_transactions": len(item.get("pending_transactions", [])),
+            "last_error": item.get("last_error", ""),
+        }
     )
 
 

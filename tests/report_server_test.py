@@ -4,8 +4,11 @@ import threading
 import time
 
 import pytest
+import pandas as pd
 
+import config
 import empower
+import plaid_source
 import report_publisher
 import report_server
 
@@ -24,6 +27,7 @@ def reset_job_registry(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(report_server, "_last_terminal_job", None)
     monkeypatch.setattr(report_server, "_current_scrape_job", None)
     monkeypatch.setattr(report_server, "_last_terminal_scrape_job", None)
+    monkeypatch.setattr(report_server, "_plaid_approval_lock", threading.Lock())
 
 
 def test_token_validation_accepts_correct_token_and_rejects_missing_or_wrong(
@@ -41,6 +45,108 @@ def test_health_is_public(client) -> None:
 
     assert response.status_code == 200
     assert response.get_json() == {"status": "ok"}
+
+
+class _ApprovalStore:
+    def __init__(self, state):
+        self.state = state
+        self.saves = 0
+
+    def load(self):
+        return self.state
+
+    def save(self, state) -> None:
+        self.state = state
+        self.saves += 1
+
+
+class _ApprovalWorksheet:
+    def __init__(self, frame: pd.DataFrame):
+        self.frame = frame
+
+    def get_as_df(self, numerize=False) -> pd.DataFrame:
+        return self.frame.copy()
+
+
+class _ApprovalSheet:
+    def __init__(self, frame: pd.DataFrame):
+        self.raw = _ApprovalWorksheet(frame)
+
+    def worksheet_by_title(self, title: str) -> _ApprovalWorksheet:
+        assert title == config.GLOBAL.RAW_TRANSACTIONS_TITLE
+        return self.raw
+
+
+def _pending_approval_state(status: str = "pending_review") -> dict:
+    return {
+        "items": {
+            "item": {
+                "status": status,
+                "selected_account_ids": ["account"],
+                "account_mappings": {"account": "Amex"},
+                "pending_transactions": [
+                    {
+                        "account_id": "account",
+                        "transaction_id": "transaction",
+                        "date": "2026-08-01",
+                        "amount": 12.5,
+                        "merchant_name": "Coffee Shop",
+                        "name": "Coffee Shop",
+                    }
+                ],
+            }
+        }
+    }
+
+
+def test_plaid_approval_is_single_flight_and_idempotent(client, monkeypatch) -> None:
+    store = _ApprovalStore(_pending_approval_state())
+    sheet = _ApprovalSheet(pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES))
+    writes = []
+    monkeypatch.setattr(report_server, "_open_plaid_sheet", lambda: sheet)
+    monkeypatch.setattr(plaid_source, "SheetStateStore", lambda _: store)
+    monkeypatch.setattr(
+        report_server.remote,
+        "UpdateGoogleSheet",
+        lambda _sheet, transactions, _accounts: writes.append(transactions),
+    )
+
+    first = client.post("/plaid/approve/item?token=test-token")
+    second = client.post("/plaid/approve/item?token=test-token")
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert len(writes) == 1
+    assert store.state["items"]["item"]["status"] == "active"
+    assert store.state["items"]["item"]["pending_transactions"] == []
+
+
+def test_plaid_approval_resumes_a_persisted_merge(client, monkeypatch) -> None:
+    store = _ApprovalStore(_pending_approval_state("merging"))
+    sheet = _ApprovalSheet(pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES))
+    monkeypatch.setattr(report_server, "_open_plaid_sheet", lambda: sheet)
+    monkeypatch.setattr(plaid_source, "SheetStateStore", lambda _: store)
+    monkeypatch.setattr(report_server.remote, "UpdateGoogleSheet", lambda *_: None)
+
+    response = client.post("/plaid/approve/item?token=test-token")
+    status = client.get("/plaid/approve/item/status?token=test-token")
+
+    assert response.status_code == 200
+    assert status.get_json()["state"] == "active"
+
+
+def test_plaid_approval_rejects_a_second_in_flight_request(client, monkeypatch) -> None:
+    store = _ApprovalStore(_pending_approval_state())
+    sheet = _ApprovalSheet(pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES))
+    monkeypatch.setattr(report_server, "_open_plaid_sheet", lambda: sheet)
+    monkeypatch.setattr(plaid_source, "SheetStateStore", lambda _: store)
+    assert report_server._plaid_approval_lock.acquire(blocking=False)
+
+    response = client.post("/plaid/approve/item?token=test-token")
+
+    report_server._plaid_approval_lock.release()
+    assert response.status_code == 409
+    assert response.get_json()["error_code"] == "approval_in_progress"
 
 
 def test_report_file_requires_valid_token(client, tmp_path: Path) -> None:

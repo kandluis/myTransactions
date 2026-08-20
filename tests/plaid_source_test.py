@@ -130,6 +130,27 @@ def test_plaid_transaction_frame_filters_amex_autopay_payment():
     assert incoming.empty
 
 
+def test_plaid_transaction_frame_filters_payment_thank_you_variant():
+    item = {"selected_account_ids": ["acct"], "account_mappings": {"acct": "Smartly"}}
+
+    incoming = plaid_source.transaction_frame(
+        [
+            {
+                "account_id": "acct",
+                "transaction_id": "payment",
+                "date": "2026-08-10",
+                "amount": -2873.77,
+                "merchant_name": "Payment Thank You",
+                "name": "Payment Thank You",
+                "personal_finance_category": {"primary": "Transferin"},
+            }
+        ],
+        item,
+    )
+
+    assert incoming.empty
+
+
 def test_modified_and_removed_ids_replace_only_plaid_rows():
     existing = pd.DataFrame(
         [

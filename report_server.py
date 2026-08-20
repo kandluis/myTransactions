@@ -534,6 +534,12 @@ def plaid_exchange() -> Response | tuple[Response, int]:
             )
             for account in linked_accounts
         },
+        "account_original_names": {
+            str(account["account_id"]): str(
+                account.get("name") or account.get("official_name") or "Unknown Account"
+            )
+            for account in linked_accounts
+        },
         "pending_transactions": txns,
         "created_at": _utc_now(),
         "last_sync_at": "",
@@ -579,59 +585,114 @@ def plaid_review() -> Response | tuple[Response, int]:
             return jsonify({"error": "No unambiguous pending Plaid review"}), 404
         item_id, item = pending[0]
     review = item.get("reconciliation", {})
+    raw_accounts = (
+        _open_plaid_sheet()
+        .worksheet_by_title(title=config.GLOBAL.RAW_TRANSACTIONS_TITLE)
+        .get_as_df(numerize=False)
+        .get("Account", [])
+    )
+    known_accounts = sorted(
+        {str(account).strip() for account in raw_accounts if str(account).strip()}
+    )
+    original_names = item.get("account_original_names", {})
     accounts = [
         {
             "id": account_id,
-            "name": account_name,
+            "plaid_name": original_names.get(account_id, account_name),
+            "canonical_name": account_name,
             "selected": account_id in item.get("selected_account_ids", []),
         }
         for account_id, account_name in item.get("account_mappings", {}).items()
     ]
     return Response(
         render_template_string(
-            """<!doctype html><title>Plaid reconciliation review</title>
+            """<!doctype html><title>Plaid import review</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body{font:16px system-ui;margin:2rem;max-width:42rem}
-dt{font-weight:600}dd{margin:0 0 1rem}
-.warning{color:#9a3412}button{padding:.6rem 1rem}
-</style>
-<h1>Review initial Plaid import</h1>
-<p>This is a staged 90-day import. Nothing has been written to Raw transactions.</p>
-<dl><dt>Matched overlap</dt><dd>{{ review.matched_overlap }}</dd>
-<dt>Plaid-only candidates</dt><dd>{{ review.plaid_only_candidates }}</dd>
-<dt>Ambiguous matches</dt><dd>{{ review.ambiguous_matches }}</dd>
-<dt>Account-mapping gaps</dt><dd>{{ review.account_mapping_gaps }}</dd></dl>
-<h2>Linked accounts</h2>
-{% for account in accounts %}<label><input type="checkbox"
+:root{color-scheme:light;font-family:Inter,ui-sans-serif,system-ui,sans-serif;
+--ink:#14213d;--muted:#667085;--line:#e6eaf0;--canvas:#f6f8fb;--mint:#0e7a62;
+--mint-soft:#e9f7f2;--amber:#a15c07;--amber-soft:#fff5e5}
+*{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink)}
+main{max-width:900px;margin:auto;padding:48px 24px 80px}.eyebrow{color:var(--mint);
+font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+h1{font-size:36px;letter-spacing:-.04em;margin:8px 0 10px}.lede{color:var(--muted);
+font-size:17px;line-height:1.55;margin:0 0 30px}.card{background:white;border:1px solid
+var(--line);border-radius:18px;padding:24px;margin:18px 0;
+box-shadow:0 8px 25px #14213d08}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metric{padding:16px;
+background:#fbfcfe;border:1px solid var(--line);border-radius:14px}
+.metric b{display:block;
+font-size:28px;letter-spacing:-.04em}.metric span{font-size:12px;color:var(--muted)}
+.notice{background:var(--amber-soft);border:1px solid #f4d7a5;
+border-radius:12px;padding:14px;
+color:#754507;line-height:1.45}.account{display:grid;grid-template-columns:28px 1fr 1fr;
+gap:14px;align-items:center;border-top:1px solid var(--line);padding:18px 0}
+.account:first-of-type{border-top:0}.account input[type=checkbox]{width:18px;
+height:18px;accent-color:var(--mint)}.plaid-name{font-weight:700}
+.subtle{font-size:13px;color:var(--muted);margin-top:3px}
+.field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
+.field input{width:100%;border:1px solid #cfd6e1;border-radius:9px;padding:10px 11px;
+font:inherit;color:var(--ink)}.actions{display:flex;gap:12px;align-items:center;
+margin-top:22px}button{border:0;border-radius:10px;padding:11px 15px;
+font:inherit;font-weight:750;cursor:pointer}
+.secondary{background:#edf1f6;color:var(--ink)}
+.primary{background:var(--mint);color:white}
+.primary:disabled{opacity:.45;cursor:not-allowed}#result{color:var(--muted);margin:0}
+@media(max-width:680px){main{padding:28px 16px}
+.metrics{grid-template-columns:repeat(2,1fr)}
+.account{grid-template-columns:25px 1fr}.field{grid-column:2}
+.actions{align-items:stretch;
+flex-direction:column}button{width:100%}}
+</style><main>
+<div class="eyebrow">Plaid · staged import</div><h1>Review with confidence.</h1>
+<p class="lede">This 90-day import is staged only. Saving account choices updates the
+reconciliation; approval is the only action that writes new transaction rows.</p>
+<section class="metrics">
+<div class="metric"><b>{{ review.matched_overlap }}</b><span>already in Sheet</span>
+</div><div class="metric"><b>{{ review.plaid_only_candidates }}</b>
+<span>new candidates</span>
+</div><div class="metric"><b>{{ review.ambiguous_matches }}</b>
+<span>ambiguous matches</span>
+</div><div class="metric"><b>{{ review.account_mapping_gaps }}</b>
+<span>mapping gaps</span></div>
+</section><section class="card"><h2>Choose accounts and canonical names</h2>
+<p class="lede">Map a Plaid account to an existing Sheet label, or type a new one.</p>
+<datalist id="known-accounts">{% for name in known_accounts %}
+<option value="{{ name }}">
+{% endfor %}</datalist>
+{% for account in accounts %}<div class="account"><input type="checkbox"
 value="{{ account.id }}" {% if account.selected %}checked{% endif %}>
-{{ account.name }}</label><input class="mapping"
-data-account="{{ account.id }}" value="{{ account.name }}"
-aria-label="Canonical name for {{ account.name }}"><br>{% endfor %}
-<button id="selection">Update selected accounts</button>
-<p class="warning">Approve only if the linked accounts are the intended US Bank
-accounts and the counts look expected.</p>
-<button id="approve">Approve initial merge</button><p id="result"></p>
-<script>
-document.getElementById('selection').onclick=async()=>{
-  const account_ids=[...document.querySelectorAll('input:checked')].map(x=>x.value);
-  const account_mappings=Object.fromEntries(
-    [...document.querySelectorAll('.mapping')].map(x=>[x.dataset.account,x.value])
-  );
-  await fetch('/plaid/selection/{{ item_id }}',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({account_ids,account_mappings})
-  });
-  location.reload();
-};
-document.getElementById('approve').onclick=async()=>{
-  const r=await fetch('/plaid/approve/{{ item_id }}',{method:'POST'});
-  const result=await r.json();
-  document.getElementById('result').textContent=result.message||'Could not approve.';
-};
+<div><div class="plaid-name">{{ account.plaid_name }}</div>
+<div class="subtle">Connected through Plaid</div></div><div class="field">
+<label>Use in Sheet as</label>
+<input class="mapping" data-account="{{ account.id }}" list="known-accounts"
+value="{{ account.canonical_name }}"></div></div>{% endfor %}
+<div class="actions"><button class="secondary" id="selection">
+Save account choices</button>
+<span id="result"></span></div></section><section class="card"><h2>Ready to merge?</h2>
+<div class="notice">Approve only after confirming the selected accounts and the
+candidate count. This appends only non-overlapping Plaid transactions.</div>
+<div class="actions"><button class="primary" id="approve">
+Approve initial merge</button></div>
+</section></main><script>
+function selected(){return [...document.querySelectorAll('input:checked')]
+.map(x=>x.value)}
+function mappings(){return Object.fromEntries([...document.querySelectorAll('.mapping')]
+.map(x=>[x.dataset.account,x.value]))}
+document.getElementById('selection').onclick=async()=>{const r=await fetch(
+'/plaid/selection/{{ item_id }}',{method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({account_ids:selected(),account_mappings:mappings()})});
+const p=await r.json();document.getElementById('result').textContent=
+p.message||p.error||'Could not save.';if(r.ok)location.reload()}
+document.getElementById('approve').onclick=async()=>{const r=await fetch(
+'/plaid/approve/{{ item_id }}',{method:'POST'});const p=await r.json();
+document.getElementById('result').textContent=p.message||p.error||'Could not approve.'}
 </script>""",
             item_id=item_id,
             review=review,
             accounts=accounts,
+            known_accounts=known_accounts,
         )
     )
 

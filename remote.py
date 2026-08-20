@@ -122,12 +122,24 @@ def _cleanTxns(txns: pd.DataFrame) -> pd.DataFrame:
     ignored_merchant = cleaned["Merchant"].isin(
         [_NormalizeMerchant(merchant) for merchant in config.GLOBAL.IGNORED_MERCHANTS]
     )
+    ignored_merchant_prefix = cleaned["Merchant"].map(
+        lambda merchant: any(
+            merchant.startswith(_NormalizeMerchant(prefix))
+            for prefix in getattr(config.GLOBAL, "IGNORED_MERCHANT_PREFIXES", [])
+        )
+    )
     ignored_txn = cleaned["ID"].isin(config.GLOBAL.IGNORED_TXNS)
     ignored_account = cleaned["Account"].isin(
         [_Normalize(account) for account in config.GLOBAL.SKIPPED_ACCOUNTS]
     )
     cleaned = cleaned[
-        ~(ignored_category | ignored_merchant | ignored_txn | ignored_account)
+        ~(
+            ignored_category
+            | ignored_merchant
+            | ignored_merchant_prefix
+            | ignored_txn
+            | ignored_account
+        )
     ]
     return cleaned
 

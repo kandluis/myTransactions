@@ -151,6 +151,46 @@ def test_plaid_transaction_frame_filters_payment_thank_you_variant():
     assert incoming.empty
 
 
+def test_plaid_transaction_frame_filters_chase_payment_and_realtime_credits():
+    item = {
+        "selected_account_ids": ["acct"],
+        "account_mappings": {"acct": "Chase Ihg Luis"},
+    }
+    incoming = plaid_source.transaction_frame(
+        [
+            {
+                "account_id": "acct",
+                "transaction_id": "payment",
+                "date": "2026-08-03",
+                "amount": -17.19,
+                "merchant_name": "Automatic Payment Thank You",
+                "name": "Automatic Payment Thank You",
+                "personal_finance_category": {"primary": "Transferin"},
+            },
+            {
+                "account_id": "acct",
+                "transaction_id": "credit",
+                "date": "2026-07-06",
+                "amount": -800,
+                "merchant_name": "Real Time Payment Credit Recd From Bank",
+                "name": "Real Time Payment Credit Recd From Bank",
+                "personal_finance_category": {"primary": "Transferin"},
+            },
+            {
+                "account_id": "acct",
+                "transaction_id": "refund",
+                "date": "2026-06-02",
+                "amount": -14.11,
+                "merchant_name": "Amazon",
+                "name": "Amazon Refund",
+                "personal_finance_category": {"primary": "Shopping"},
+            },
+        ],
+        item,
+    )
+    assert incoming["ID"].tolist() == ["plaid:refund"]
+
+
 def test_modified_and_removed_ids_replace_only_plaid_rows():
     existing = pd.DataFrame(
         [

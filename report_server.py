@@ -631,7 +631,8 @@ gap:14px;align-items:center;border-top:1px solid var(--line);padding:18px 0}
 height:18px;accent-color:var(--mint)}.plaid-name{font-weight:700}
 .subtle{font-size:13px;color:var(--muted);margin-top:3px}
 .field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px}
-.field input{width:100%;border:1px solid #cfd6e1;border-radius:9px;padding:10px 11px;
+.field select,.field input{width:100%;border:1px solid #cfd6e1;border-radius:9px;
+padding:10px 11px;
 font:inherit;color:var(--ink)}.actions{display:flex;gap:12px;align-items:center;
 margin-top:22px}button{border:0;border-radius:10px;padding:11px 15px;
 font:inherit;font-weight:750;cursor:pointer}
@@ -656,17 +657,23 @@ reconciliation; approval is the only action that writes new transaction rows.</p
 </div><div class="metric"><b>{{ review.account_mapping_gaps }}</b>
 <span>mapping gaps</span></div>
 </section><section class="card"><h2>Choose accounts and canonical names</h2>
-<p class="lede">Map a Plaid account to an existing Sheet label, or type a new one.</p>
-<datalist id="known-accounts">{% for name in known_accounts %}
-<option value="{{ name }}">
-{% endfor %}</datalist>
+<p class="lede">Choose an existing Sheet label from the menu, or use a new one.</p>
 {% for account in accounts %}<div class="account"><input type="checkbox"
 value="{{ account.id }}" {% if account.selected %}checked{% endif %}>
 <div><div class="plaid-name">{{ account.plaid_name }}</div>
 <div class="subtle">Connected through Plaid</div></div><div class="field">
 <label>Use in Sheet as</label>
-<input class="mapping" data-account="{{ account.id }}" list="known-accounts"
-value="{{ account.canonical_name }}"></div></div>{% endfor %}
+<select class="mapping-picker" data-account="{{ account.id }}">
+{% for name in known_accounts %}<option value="{{ name }}"
+{% if name == account.canonical_name %}selected{% endif %}>{{ name }}</option>
+{% endfor %}<option value="__custom__"
+{% if account.canonical_name not in known_accounts %}selected{% endif %}>
+Use a new name…</option>
+</select><input class="mapping custom-name" data-account="{{ account.id }}"
+{% if account.canonical_name not in known_accounts %}
+value="{{ account.canonical_name }}" placeholder="New Sheet account name">
+{% else %}value="" hidden placeholder="New Sheet account name">{% endif %}
+</div></div>{% endfor %}
 <div class="actions"><button class="secondary" id="selection">
 Save account choices</button>
 <span id="result"></span></div></section><section class="card"><h2>Ready to merge?</h2>
@@ -677,8 +684,14 @@ Approve initial merge</button></div>
 </section></main><script>
 function selected(){return [...document.querySelectorAll('input:checked')]
 .map(x=>x.value)}
-function mappings(){return Object.fromEntries([...document.querySelectorAll('.mapping')]
-.map(x=>[x.dataset.account,x.value]))}
+function mappings(){return Object.fromEntries(
+[...document.querySelectorAll('.mapping-picker')]
+.map(x=>{const custom=x.parentElement.querySelector('.custom-name');return
+[x.dataset.account,x.value==='__custom__'?custom.value:x.value]}))}
+for(const picker of document.querySelectorAll('.mapping-picker'))picker.onchange=()=>{
+  const custom=picker.parentElement.querySelector('.custom-name');
+  custom.hidden=picker.value!=='__custom__';if(!custom.hidden)custom.focus()
+}
 document.getElementById('selection').onclick=async()=>{const r=await fetch(
 '/plaid/selection/{{ item_id }}',{method:'POST',
 headers:{'Content-Type':'application/json'},

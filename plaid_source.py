@@ -11,6 +11,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Hashable, Iterable, Optional
 
@@ -272,25 +273,42 @@ def overlap_fingerprint(row: pd.Series) -> str:
 
 def _overlap_components(row: pd.Series) -> tuple[str, float, str]:
     """Return the stable portions of an initial-import overlap key."""
-    merchant_or_description = str(row.get("Merchant") or row.get("Description", ""))
+    aliases = getattr(config.GLOBAL, "HISTORICAL_ACCOUNT_ALIASES", {})
+    account = str(row.get("Account", ""))
+    canonical_account = aliases.get(account, account)
     return (
-        remote._Normalize(str(row.get("Account", ""))).lower(),
+        remote._Normalize(canonical_account).lower(),
         round(float(row.get("Amount", 0)), 2),
-        remote._NormalizeMerchant(merchant_or_description).lower(),
+        _overlap_merchant(row),
     )
 
 
-def tolerant_overlap_matches(
-    existing: pd.DataFrame, candidate: pd.DataFrame, max_date_delta_days: int = 3
-) -> list[tuple[Hashable, Hashable]]:
-    """Match initial-import rows to existing history, once each.
+def _overlap_merchant(row: pd.Series) -> str:
+    merchant_or_description = str(row.get("Merchant") or row.get("Description", ""))
+    return remote._NormalizeMerchant(merchant_or_description).lower()
 
-    Empower and Plaid can assign adjacent posting dates to the same settled
-    card transaction.  Exact date matching made those rows look new during an
-    initial import.  Match only when account, normalized merchant, and amount
-    agree, and consume each row at most once so repeated same-value purchases
-    are not collapsed.
-    """
+
+def _merchants_overlap(left: str, right: str) -> bool:
+    """Allow only conservative label variations between transaction sources."""
+    if not left or not right:
+        return False
+    if left == right:
+        return True
+    if min(len(left), len(right)) >= 4 and (left in right or right in left):
+        return True
+    left_tokens = set(re.findall(r"[a-z0-9]+", left))
+    right_tokens = set(re.findall(r"[a-z0-9]+", right))
+    shared_tokens = left_tokens & right_tokens
+    return (
+        len(shared_tokens) >= 2
+        and len(shared_tokens) >= min(len(left_tokens), len(right_tokens)) / 2
+    )
+
+
+def _tolerant_overlap_pairs(
+    existing: pd.DataFrame, candidate: pd.DataFrame, max_date_delta_days: int = 3
+) -> list[tuple[int, Hashable, Hashable]]:
+    """Return all conservative candidate/history overlap pairs."""
     if existing.empty or candidate.empty:
         return []
 
@@ -301,23 +319,45 @@ def tolerant_overlap_matches(
     old = old[old["_overlap_date"].notna()]
     new = new[new["_overlap_date"].notna()]
 
-    buckets: dict[tuple[str, float, str], list[tuple[Hashable, pd.Timestamp]]] = {}
+    buckets: dict[tuple[str, float], list[tuple[Hashable, pd.Timestamp, str]]] = {}
     for old_index, row in old.iterrows():
-        buckets.setdefault(_overlap_components(row), []).append(
-            (old_index, row["_overlap_date"])
+        account, amount, merchant = _overlap_components(row)
+        buckets.setdefault((account, amount), []).append(
+            (old_index, row["_overlap_date"], merchant)
         )
 
     possible: list[tuple[int, Hashable, Hashable]] = []
     for new_index, row in new.iterrows():
-        for old_index, old_date in buckets.get(_overlap_components(row), []):
+        account, amount, merchant = _overlap_components(row)
+        for old_index, old_date, old_merchant in buckets.get((account, amount), []):
             date_delta = abs((row["_overlap_date"] - old_date).days)
-            if date_delta <= max_date_delta_days:
+            merchant_matches = _merchants_overlap(merchant, old_merchant)
+            # A fuzzy provider-label match is only safe across an adjacent
+            # posting date; exact labels retain the established three-day
+            # window for pending/posted timing differences.
+            allowed_date_delta = max_date_delta_days if merchant == old_merchant else 1
+            if date_delta <= allowed_date_delta and merchant_matches:
                 possible.append((date_delta, new_index, old_index))
+    return possible
+
+
+def tolerant_overlap_matches(
+    existing: pd.DataFrame, candidate: pd.DataFrame, max_date_delta_days: int = 3
+) -> list[tuple[Hashable, Hashable]]:
+    """Match initial-import rows to existing history, once each.
+
+    Empower and Plaid can assign adjacent posting dates to the same settled
+    card transaction.  The match includes a configured historical account
+    alias, amount, a small date window, and conservative merchant comparison.
+    Each row is consumed at most once so repeated same-value purchases remain.
+    """
 
     matched_new: set[Hashable] = set()
     matched_old: set[Hashable] = set()
     matches: list[tuple[Hashable, Hashable]] = []
-    for _, new_index, old_index in sorted(possible):
+    for _, new_index, old_index in sorted(
+        _tolerant_overlap_pairs(existing, candidate, max_date_delta_days)
+    ):
         if new_index in matched_new or old_index in matched_old:
             continue
         matched_new.add(new_index)
@@ -331,21 +371,8 @@ def reconcile(existing: pd.DataFrame, candidate: pd.DataFrame) -> dict[str, int]
     # A candidate with more than one otherwise-valid historical row deserves
     # review, even though the one-to-one matcher chooses the nearest row.
     possible_counts: dict[Hashable, int] = {}
-    if not existing.empty and not candidate.empty:
-        old = existing.copy()
-        new = candidate.copy()
-        old["_overlap_date"] = pd.to_datetime(old["Date"], errors="coerce")
-        new["_overlap_date"] = pd.to_datetime(new["Date"], errors="coerce")
-        buckets: dict[tuple[str, float, str], list[pd.Timestamp]] = {}
-        for _, row in old[old["_overlap_date"].notna()].iterrows():
-            buckets.setdefault(_overlap_components(row), []).append(
-                row["_overlap_date"]
-            )
-        for candidate_index, row in new[new["_overlap_date"].notna()].iterrows():
-            possible_counts[candidate_index] = sum(
-                abs((row["_overlap_date"] - old_date).days) <= 3
-                for old_date in buckets.get(_overlap_components(row), [])
-            )
+    for _, candidate_index, _ in _tolerant_overlap_pairs(existing, candidate):
+        possible_counts[candidate_index] = possible_counts.get(candidate_index, 0) + 1
     return {
         "matched_overlap": len(matches),
         "plaid_only_candidates": len(candidate) - len(matches),

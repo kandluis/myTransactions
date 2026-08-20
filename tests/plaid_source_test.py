@@ -306,3 +306,29 @@ def test_initial_merge_keeps_same_amount_purchase_outside_date_window():
         existing, incoming, set(), set(), initial_import=True
     )
     assert merged["ID"].tolist() == ["legacy", "plaid:one"]
+
+
+def test_initial_merge_uses_historical_account_alias_and_merchant_variant():
+    existing = pd.DataFrame(
+        [
+            {
+                "Date": "2026-06-22",
+                "Merchant": "Apple",
+                "Amount": -1194.81,
+                "Category": "Shopping",
+                "Account": "Gold Card Luis",
+                "ID": "legacy",
+                "Description": "Apple",
+            }
+        ]
+    )
+    incoming = existing.assign(
+        Date="2026-06-23",
+        Merchant="Apple Online Store",
+        Account="American Express Gold Card",
+        ID="plaid:apple",
+    )
+    merged = plaid_source.merge_transactions(
+        existing, incoming, set(), set(), initial_import=True
+    )
+    assert merged["ID"].tolist() == ["legacy"]

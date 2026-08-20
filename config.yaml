@@ -54,6 +54,11 @@ SKIPPED_ACCOUNTS:
   - "Visa Signature Business"
   - "Way2save Savings Ending in 7505"
   - "Wealthfront Cash Account"
+# Legacy-provider names for accounts now supplied by Plaid.
+HISTORICAL_ACCOUNT_ALIASES:
+  "Gold Card Luis": "American Express Gold Card"
+  "Charles Schwab Platinum Card Ending In 1006": "Platinum Card Luis"
+  "Charles Schwab Platinum Card Ending In 2009": "Platinum Card Belinda"
 IGNORED_MERCHANTS:
   - "Amzstorecrdpmt Payment"
   - "Autopay Payment Thank You"

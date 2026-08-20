@@ -198,5 +198,49 @@ def test_reconciliation_reports_overlap_and_new_candidates():
         [existing, existing.assign(Date="2026-08-02")], ignore_index=True
     )
     result = plaid_source.reconcile(existing, candidate)
+    # One historical row may only suppress one incoming row; a nearby second
+    # same-value purchase remains a candidate rather than being silently lost.
     assert result["matched_overlap"] == 1
     assert result["plaid_only_candidates"] == 1
+
+
+def test_initial_merge_deduplicates_small_posting_date_shift_once():
+    existing = pd.DataFrame(
+        [
+            {
+                "Date": "2026-06-20",
+                "Merchant": "Coffee Shop",
+                "Amount": -12.34,
+                "Category": "X",
+                "Account": "Smartly",
+                "ID": "legacy",
+                "Description": "Coffee Shop",
+            }
+        ]
+    )
+    incoming = existing.assign(Date="2026-06-21", ID="plaid:one")
+    merged = plaid_source.merge_transactions(
+        existing, incoming, set(), set(), initial_import=True
+    )
+    assert merged["ID"].tolist() == ["legacy"]
+
+
+def test_initial_merge_keeps_same_amount_purchase_outside_date_window():
+    existing = pd.DataFrame(
+        [
+            {
+                "Date": "2026-06-01",
+                "Merchant": "Coffee Shop",
+                "Amount": -12.34,
+                "Category": "X",
+                "Account": "Smartly",
+                "ID": "legacy",
+                "Description": "Coffee Shop",
+            }
+        ]
+    )
+    incoming = existing.assign(Date="2026-06-06", ID="plaid:one")
+    merged = plaid_source.merge_transactions(
+        existing, incoming, set(), set(), initial_import=True
+    )
+    assert merged["ID"].tolist() == ["legacy", "plaid:one"]

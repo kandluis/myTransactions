@@ -854,7 +854,9 @@ def plaid_approve(item_id: str) -> Response | tuple[Response, int]:
         additions = plaid_source.transaction_frame(
             item.get("pending_transactions", []), item
         )
-        merged = plaid_source.merge_transactions(existing, additions, set(), set())
+        merged = plaid_source.merge_transactions(
+            existing, additions, set(), set(), initial_import=True
+        )
         remote.UpdateGoogleSheet(sheet, merged, None)
 
         item["status"] = "active"

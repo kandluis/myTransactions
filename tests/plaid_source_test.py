@@ -191,6 +191,28 @@ def test_plaid_transaction_frame_filters_chase_payment_and_realtime_credits():
     assert incoming["ID"].tolist() == ["plaid:refund"]
 
 
+def test_plaid_transaction_frame_filters_transferin_activity():
+    item = {
+        "selected_account_ids": ["acct"],
+        "account_mappings": {"acct": "Starone Checking"},
+    }
+    incoming = plaid_source.transaction_frame(
+        [
+            {
+                "account_id": "acct",
+                "transaction_id": "transfer",
+                "date": "2026-08-10",
+                "amount": -2800,
+                "merchant_name": "Depositoverdraft",
+                "name": "Depositoverdraft",
+                "personal_finance_category": {"primary": "Transferin"},
+            }
+        ],
+        item,
+    )
+    assert incoming.empty
+
+
 def test_modified_and_removed_ids_replace_only_plaid_rows():
     existing = pd.DataFrame(
         [

@@ -123,6 +123,7 @@ IGNORED_CATEGORIES:
   - "Taxes"
   - "Transfer For Cash Spending"
   - "Transfer"
+  - "Transferin"
   - "Transfers"
 IGNORED_TXNS:
   - "75164122_2980191656_0"

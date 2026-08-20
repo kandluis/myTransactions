@@ -253,12 +253,13 @@ def transaction_frame(
 
 
 def overlap_fingerprint(row: pd.Series) -> str:
+    merchant_or_description = str(row.get("Merchant") or row.get("Description", ""))
     return "|".join(
         [
-            str(row.get("Account", "")).strip().lower(),
+            remote._Normalize(str(row.get("Account", ""))).lower(),
             str(row.get("Date", "")),
             f"{float(row.get('Amount', 0)):.2f}",
-            str(row.get("Description", row.get("Merchant", ""))).strip().lower(),
+            remote._NormalizeMerchant(merchant_or_description).lower(),
         ]
     )
 

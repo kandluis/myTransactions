@@ -604,7 +604,9 @@ dt{font-weight:600}dd{margin:0 0 1rem}
 <h2>Linked accounts</h2>
 {% for account in accounts %}<label><input type="checkbox"
 value="{{ account.id }}" {% if account.selected %}checked{% endif %}>
-{{ account.name }}</label><br>{% endfor %}
+{{ account.name }}</label><input class="mapping"
+data-account="{{ account.id }}" value="{{ account.name }}"
+aria-label="Canonical name for {{ account.name }}"><br>{% endfor %}
 <button id="selection">Update selected accounts</button>
 <p class="warning">Approve only if the linked accounts are the intended US Bank
 accounts and the counts look expected.</p>
@@ -612,9 +614,12 @@ accounts and the counts look expected.</p>
 <script>
 document.getElementById('selection').onclick=async()=>{
   const account_ids=[...document.querySelectorAll('input:checked')].map(x=>x.value);
+  const account_mappings=Object.fromEntries(
+    [...document.querySelectorAll('.mapping')].map(x=>[x.dataset.account,x.value])
+  );
   await fetch('/plaid/selection/{{ item_id }}',{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({account_ids})
+    body:JSON.stringify({account_ids,account_mappings})
   });
   location.reload();
 };
@@ -638,8 +643,11 @@ def plaid_selection(item_id: str) -> Response | tuple[Response, int]:
     ):
         return _forbidden()
     requested = (request.get_json(silent=True) or {}).get("account_ids", [])
+    mappings = (request.get_json(silent=True) or {}).get("account_mappings", {})
     if not isinstance(requested, list):
         return jsonify({"error": "account_ids must be a list"}), 400
+    if not isinstance(mappings, dict):
+        return jsonify({"error": "account_mappings must be an object"}), 400
     sheet = _open_plaid_sheet()
     store = plaid_source.SheetStateStore(sheet)
     state = store.load()
@@ -652,6 +660,10 @@ def plaid_selection(item_id: str) -> Response | tuple[Response, int]:
     ]
     if not selected:
         return jsonify({"error": "Select at least one linked account"}), 400
+    item["account_mappings"] = {
+        account_id: str(mappings.get(account_id, current_name)).strip() or current_name
+        for account_id, current_name in item.get("account_mappings", {}).items()
+    }
     item["selected_account_ids"] = selected
     existing = (
         sheet.worksheet_by_title(title=config.GLOBAL.RAW_TRANSACTIONS_TITLE)

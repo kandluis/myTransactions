@@ -78,7 +78,12 @@ class SheetStateStore:
                 cells = worksheet.get_values(
                     "A2", f"A{STATE_MAX_CHUNKS + 1}", include_tailing_empty=False
                 )
-                raw = "".join(str(row[0]) for row in cells if row and row[0]).strip()
+                chunks = []
+                for row in cells:
+                    if not row or not row[0]:
+                        break
+                    chunks.append(str(row[0]))
+                raw = "".join(chunks).strip()
             else:  # Small test doubles and old pygsheets versions.
                 raw = str(worksheet.get_value(STATE_CELL) or "").strip()
             if not raw:
@@ -111,14 +116,15 @@ class SheetStateStore:
             encrypted[offset : offset + STATE_MAX_CHUNK_SIZE]
             for offset in range(0, len(encrypted), STATE_MAX_CHUNK_SIZE)
         ]
-        if len(chunks) >= STATE_MAX_CHUNKS:
+        if len(chunks) > STATE_MAX_CHUNKS:
             raise PlaidError(
                 "state_decryption_failed", "Plaid state is too large to store"
             )
-        # The last blank value clears a stale trailing chunk from an earlier,
-        # larger state write. Each individual Sheet cell remains below 50k.
+        # Clear every remaining state cell so a later, smaller save cannot leave
+        # encrypted fragments that a future read might accidentally consume.
         self._worksheet().update_values(
-            STATE_CELL, [[chunk] for chunk in chunks] + [[""]]
+            STATE_CELL,
+            [[chunk] for chunk in chunks] + [[""]] * (STATE_MAX_CHUNKS - len(chunks)),
         )
 
 

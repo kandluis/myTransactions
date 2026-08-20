@@ -64,6 +64,19 @@ def test_large_state_is_split_across_encrypted_cells(monkeypatch):
     assert store.load()["items"]["item"]["pending"] == payload
 
 
+def test_smaller_state_clears_stale_encrypted_chunks(monkeypatch):
+    monkeypatch.setenv("PLAID_STATE_KEY", "a test state key")
+    sheet = FakeSheet()
+    store = plaid_source.SheetStateStore(sheet)
+    large_payload = "x" * (plaid_source.STATE_MAX_CHUNK_SIZE * 2)
+
+    store.save({"version": 1, "items": {"item": {"pending": large_payload}}})
+    store.save({"version": 1, "items": {"item": {"status": "active"}}})
+
+    assert sheet.ws.values["A3"] == ""
+    assert store.load()["items"]["item"]["status"] == "active"
+
+
 def test_state_rejects_wrong_key(monkeypatch):
     monkeypatch.setenv("PLAID_STATE_KEY", "first key")
     sheet = FakeSheet()

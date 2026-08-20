@@ -684,10 +684,10 @@ Approve initial merge</button></div>
 </section></main><script>
 function selected(){return [...document.querySelectorAll('input:checked')]
 .map(x=>x.value)}
-function mappings(){return Object.fromEntries(
-[...document.querySelectorAll('.mapping-picker')]
-.map(x=>{const custom=x.parentElement.querySelector('.custom-name');return
-[x.dataset.account,x.value==='__custom__'?custom.value:x.value]}))}
+function mappings(){const values={};for(const picker of
+document.querySelectorAll('.mapping-picker')){const custom=
+picker.parentElement.querySelector('.custom-name');values[picker.dataset.account]=
+picker.value==='__custom__'?custom.value:picker.value}return values}
 for(const picker of document.querySelectorAll('.mapping-picker'))picker.onchange=()=>{
   const custom=picker.parentElement.querySelector('.custom-name');
   custom.hidden=picker.value!=='__custom__';if(!custom.hidden)custom.focus()

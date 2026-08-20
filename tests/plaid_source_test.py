@@ -110,6 +110,26 @@ def test_transaction_sign_mapping_and_overlap_deduplication():
     assert len(merged) == 1
 
 
+def test_plaid_transaction_frame_filters_amex_autopay_payment():
+    item = {"selected_account_ids": ["acct"], "account_mappings": {"acct": "Amex"}}
+
+    incoming = plaid_source.transaction_frame(
+        [
+            {
+                "account_id": "acct",
+                "transaction_id": "payment",
+                "date": "2026-08-03",
+                "amount": 1012.93,
+                "merchant_name": "Autopay Payment Thank You",
+                "name": "Autopay Payment Thank You",
+            }
+        ],
+        item,
+    )
+
+    assert incoming.empty
+
+
 def test_modified_and_removed_ids_replace_only_plaid_rows():
     existing = pd.DataFrame(
         [

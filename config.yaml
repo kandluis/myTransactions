@@ -56,6 +56,7 @@ SKIPPED_ACCOUNTS:
   - "Wealthfront Cash Account"
 IGNORED_MERCHANTS:
   - "Amzstorecrdpmt Payment"
+  - "Autopay Payment Thank You"
   - "Anita Borg Institute"
   - "Cardmember Services"
   - "Chase Autopay"

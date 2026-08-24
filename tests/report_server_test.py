@@ -7,7 +7,6 @@ import pytest
 import pandas as pd
 
 import config
-import empower
 import plaid_source
 import report_publisher
 import report_server
@@ -28,6 +27,12 @@ def reset_job_registry(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(report_server, "_current_scrape_job", None)
     monkeypatch.setattr(report_server, "_last_terminal_scrape_job", None)
     monkeypatch.setattr(report_server, "_plaid_approval_lock", threading.Lock())
+    monkeypatch.setattr(report_server, "_load_durable_scrape_job", lambda: None)
+    monkeypatch.setattr(report_server, "_save_durable_scrape_job", lambda _job: None)
+    monkeypatch.setattr(report_server.fly_machine, "is_configured", lambda: True)
+    monkeypatch.setattr(
+        report_server.fly_machine, "start_scraper_machine", lambda: None
+    )
 
 
 def test_token_validation_accepts_correct_token_and_rejects_missing_or_wrong(
@@ -600,26 +605,13 @@ def test_scrape_skips_when_recent(
     assert payload["age_seconds"] is not None
 
 
-def test_scrape_starts_background_job_and_returns_accepted(
+def test_scrape_queues_durable_worker_and_returns_accepted(
     client,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    release = threading.Event()
-    started = threading.Event()
-    creds = object()
+    saved: list[report_server.ScrapeJob] = []
     monkeypatch.setattr(report_server, "_load_last_scrape_at", lambda: None)
-    monkeypatch.setattr(report_server.scraper, "scrape_lock_available", lambda: True)
-    monkeypatch.setattr(report_server.auth, "GetCredentials", lambda: creds)
-
-    def run_scrape(options, credentials):
-        started.set()
-        assert options.scrape_transactions is True
-        assert options.scrape_accounts is True
-        assert options.dry_run is False
-        assert credentials is creds
-        release.wait(timeout=5)
-
-    monkeypatch.setattr(report_server.scraper, "scrape_and_push", run_scrape)
+    monkeypatch.setattr(report_server, "_save_durable_scrape_job", saved.append)
 
     response = client.post("/scrape?token=test-token")
 
@@ -629,69 +621,66 @@ def test_scrape_starts_background_job_and_returns_accepted(
     assert payload["active"] is True
     assert payload["job_id"]
     assert payload["status_url"] == "/scrape/status?token=test-token"
-    assert started.wait(timeout=5)
-
-    running = _wait_for_scrape_status(client, "running")
-    assert running["job_id"] == payload["job_id"]
-
-    release.set()
-    finished = _wait_for_scrape_status(client, "succeeded")
-    assert finished["job_id"] == payload["job_id"]
-    assert finished["error"] == ""
-    assert finished["error_code"] == ""
+    assert saved[0].state == "queued"
+    assert saved[0].job_id == payload["job_id"]
 
 
-def test_scrape_reports_cloudflare_challenge(
+def test_scrape_reports_worker_dispatch_failure(
     client,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    saved: list[report_server.ScrapeJob] = []
     monkeypatch.setattr(report_server, "_load_last_scrape_at", lambda: None)
-    monkeypatch.setattr(report_server.scraper, "scrape_lock_available", lambda: True)
-    monkeypatch.setattr(report_server.auth, "GetCredentials", object)
+    monkeypatch.setattr(report_server, "_save_durable_scrape_job", saved.append)
 
-    def run_scrape(options, credentials):
-        raise empower.PersonalCapitalCloudflareChallengeException("retry later")
+    def fail_start() -> None:
+        raise report_server.fly_machine.FlyMachineError("Fly API unavailable")
 
-    monkeypatch.setattr(report_server.scraper, "scrape_and_push", run_scrape)
+    monkeypatch.setattr(report_server.fly_machine, "start_scraper_machine", fail_start)
 
     response = client.post("/scrape?token=test-token")
 
-    assert response.status_code == 202
-    finished = _wait_for_scrape_status(client, "failed")
-    assert finished["error_code"] == "empower_cloudflare_challenge"
-    assert finished["error"] == "retry later"
-    assert finished["active"] is False
+    assert response.status_code == 503
+    assert response.get_json()["error_code"] == "scrape_worker_unavailable"
+    assert saved[-1].state == "failed"
 
 
-def test_scrape_rejects_concurrent_request(
+def test_scrape_rejects_active_durable_job(
     client,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    release = threading.Event()
-    started = threading.Event()
-    creds = object()
+    running = report_server.ScrapeJob(
+        job_id="active-job",
+        state="running",
+        created_at=datetime.now(timezone.utc).isoformat(),
+        started_at=datetime.now(timezone.utc).isoformat(),
+    )
     monkeypatch.setattr(report_server, "_load_last_scrape_at", lambda: None)
-    monkeypatch.setattr(report_server.scraper, "scrape_lock_available", lambda: True)
-    monkeypatch.setattr(report_server.auth, "GetCredentials", lambda: creds)
+    monkeypatch.setattr(report_server, "_load_durable_scrape_job", lambda: running)
 
-    def run_scrape(options, credentials):
-        started.set()
-        release.wait(timeout=5)
+    response = client.post("/scrape?token=test-token")
 
-    monkeypatch.setattr(report_server.scraper, "scrape_and_push", run_scrape)
+    assert response.status_code == 409
+    assert response.get_json()["job_id"] == "active-job"
 
-    try:
-        first = client.post("/scrape?token=test-token")
-        assert first.status_code == 202
-        assert started.wait(timeout=5)
 
-        response = client.post("/scrape?token=test-token")
+def test_scrape_status_uses_durable_worker_result(client, monkeypatch) -> None:
+    completed = report_server.ScrapeJob(
+        job_id="durable-job",
+        state="succeeded",
+        created_at="2026-08-24T00:00:00+00:00",
+        started_at="2026-08-24T00:00:01+00:00",
+        finished_at="2026-08-24T00:01:00+00:00",
+        last_successful_at="2026-08-24T00:01:00+00:00",
+        source="plaid",
+    )
+    monkeypatch.setattr(report_server, "_load_durable_scrape_job", lambda: completed)
 
-        assert response.status_code == 409
-        assert response.get_json()["error"] == "scrape already running"
-    finally:
-        release.set()
-        _wait_for_scrape_status(client, "succeeded")
+    response = client.get("/scrape/status?token=test-token")
+
+    assert response.status_code == 200
+    assert response.get_json()["job_id"] == "durable-job"
+    assert response.get_json()["state"] == "succeeded"
 
 
 def test_scrape_status_is_idle_before_any_job(client) -> None:

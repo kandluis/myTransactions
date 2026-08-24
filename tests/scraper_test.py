@@ -9,6 +9,17 @@ from google.oauth2 import service_account
 from unittest.mock import MagicMock
 
 
+class _StateStore:
+    def __init__(self, state):
+        self.state = state
+
+    def load(self):
+        return self.state
+
+    def save(self, state) -> None:
+        self.state = state
+
+
 def test_scraper(
     test_env: MonkeyPatch,
     test_creds: service_account.Credentials,
@@ -92,3 +103,26 @@ def test_main_entrypoint(mocker, test_env: MonkeyPatch):
     # Clear argv to avoid pytest args being passed to scraper
     sys.argv = ["scraper.py"]
     runpy.run_module("scraper", run_name="__main__")
+
+
+def test_durable_scrape_worker_claims_and_finishes_requested_job(mocker) -> None:
+    state = {
+        "items": {},
+        "scrape_job": {
+            "job_id": "job-1",
+            "state": "queued",
+            "created_at": "2026-08-24T00:00:00+00:00",
+        },
+    }
+    store = _StateStore(state)
+    mocker.patch.object(scraper, "_open_sheet", return_value=object())
+    mocker.patch.object(scraper.auth, "GetGoogleCredentials", return_value=object())
+    mocker.patch.object(scraper.plaid_source, "SheetStateStore", return_value=store)
+
+    job_id = scraper._claim_durable_scrape_job()
+    scraper._finish_durable_scrape_job(job_id)
+
+    assert job_id == "job-1"
+    assert store.state["scrape_job"]["state"] == "succeeded"
+    assert store.state["scrape_job"]["started_at"]
+    assert store.state["scrape_job"]["finished_at"]

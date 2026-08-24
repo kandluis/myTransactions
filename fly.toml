@@ -12,6 +12,7 @@ kill_timeout = "5s"
   PRIMARY_REGION = "sea"
   SESSION_FILE_PATH = "/data/.session.pkl"
   SCRAPE_LOCK_FILE = "/data/scraper.lock"
+  SCRAPER_MACHINE_ID = "7847345fe5ee18"
   
 [processes]
   scraper = "/app/serve.sh"

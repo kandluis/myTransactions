@@ -300,6 +300,20 @@ fly secrets set REPORT_TOKEN=<secret> REPORT_BASE_URL=https://mint-scraper.fly.d
 fly deploy
 ```
 
+Manual Plaid scrapes are dispatched to the existing stopped `scraper` Machine,
+so the web machine is never kept running just to finish a background sync. The
+web service needs an app-scoped Fly token to start that one Machine:
+
+```sh
+fly tokens create deploy --app mint-scraper --name mint-scraper-scrape-worker --json
+# Store the returned token as FLY_API_TOKEN without printing it again.
+fly secrets set --app mint-scraper FLY_API_TOKEN=<token>
+```
+
+`FLY_API_TOKEN` is a secret and must not be committed. The scraper Machine ID
+is deployment configuration in `fly.toml`; update `SCRAPER_MACHINE_ID` if the
+one-shot worker is ever recreated.
+
 To trigger generation from Google Sheets, use the bound Apps Script in
 `apps_script/`. It adds the **Mint Tools** menu and its sidebar includes report,
 scrape, and Plaid controls.

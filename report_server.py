@@ -25,6 +25,7 @@ from flask import (
 import auth
 import config
 import empower
+import fly_machine
 import report_publisher
 import remote
 import scraper
@@ -39,6 +40,9 @@ _job_state_lock = Lock()
 _plaid_approval_lock = Lock()
 _SCRAPE_FRESHNESS_WINDOW = timedelta(
     seconds=int(os.getenv("SCRAPE_FRESHNESS_SECONDS", "900"))
+)
+_SCRAPE_JOB_STALE_AFTER = timedelta(
+    seconds=int(os.getenv("SCRAPE_JOB_STALE_SECONDS", "900"))
 )
 
 
@@ -193,6 +197,58 @@ def _get_scrape_job_snapshot() -> Optional[ScrapeJob]:
         return _current_scrape_job or _last_terminal_scrape_job
 
 
+def _scrape_job_from_state(value: object) -> Optional[ScrapeJob]:
+    """Deserialize the non-secret, Sheet-backed manual-scrape job metadata."""
+    if not isinstance(value, dict):
+        return None
+    required = {"job_id", "state", "created_at"}
+    if not required.issubset(value):
+        return None
+    return ScrapeJob(
+        job_id=str(value["job_id"]),
+        state=str(value["state"]),
+        created_at=str(value["created_at"]),
+        started_at=str(value.get("started_at") or "") or None,
+        finished_at=str(value.get("finished_at") or "") or None,
+        last_successful_at=str(value.get("last_successful_at") or ""),
+        error=str(value.get("error") or ""),
+        error_code=str(value.get("error_code") or ""),
+        skip_reason=str(value.get("skip_reason") or ""),
+        source=str(value.get("source") or "plaid"),
+    )
+
+
+def _load_durable_scrape_job() -> Optional[ScrapeJob]:
+    state = plaid_source.SheetStateStore(_open_plaid_sheet()).load()
+    return _scrape_job_from_state(state.get("scrape_job"))
+
+
+def _save_durable_scrape_job(job: ScrapeJob) -> None:
+    sheet = _open_plaid_sheet()
+    store = plaid_source.SheetStateStore(sheet)
+    state = store.load()
+    state["scrape_job"] = asdict(job)
+    store.save(state)
+
+
+def _terminalize_stale_scrape_job(job: ScrapeJob) -> None:
+    """Make an interrupted worker visible and allow a later retry."""
+    if job.state not in {"queued", "running"}:
+        return
+    started_or_created = job.started_at or job.created_at
+    try:
+        age = datetime.now(timezone.utc) - datetime.fromisoformat(started_or_created)
+    except (TypeError, ValueError):
+        age = _SCRAPE_JOB_STALE_AFTER
+    if age <= _SCRAPE_JOB_STALE_AFTER:
+        return
+    job.state = "failed"
+    job.finished_at = _utc_now()
+    job.error_code = "worker_interrupted"
+    job.error = "The scraper worker stopped before it finished. Safe retry allowed."
+    _save_durable_scrape_job(job)
+
+
 def _load_last_scrape_at() -> Optional[datetime]:
     try:
         sheet = report_publisher.open_configured_spreadsheet()
@@ -297,7 +353,14 @@ def _status_payload() -> dict[str, object]:
 
 
 def _scrape_status_payload() -> dict[str, object]:
-    job = _get_scrape_job_snapshot()
+    try:
+        job = _load_durable_scrape_job()
+        if job is not None:
+            _terminalize_stale_scrape_job(job)
+            job = _load_durable_scrape_job()
+    except plaid_source.PlaidError:
+        job = None
+    job = job or _get_scrape_job_snapshot()
     if job is None:
         return {"state": "idle", "active": False}
     return job.to_dict()
@@ -360,17 +423,28 @@ def scrape() -> tuple[Response, int]:
     if not is_authorized_token(_request_token()):
         return _forbidden()
 
-    with _job_state_lock:
-        if _current_scrape_job is not None and _current_scrape_job.state in {
-            "queued",
-            "running",
-        }:
-            payload = _current_scrape_job.to_dict()
-            payload["error"] = "scrape already running"
-            return jsonify(payload), 409
+    try:
+        durable_job = _load_durable_scrape_job()
+        if durable_job is not None:
+            _terminalize_stale_scrape_job(durable_job)
+            durable_job = _load_durable_scrape_job()
+    except plaid_source.PlaidError as exc:
+        return jsonify({"error": str(exc), "error_code": exc.code}), 503
+    if durable_job is not None and durable_job.state in {"queued", "running"}:
+        payload = durable_job.to_dict()
+        payload["error"] = "scrape already running"
+        return jsonify(payload), 409
 
-    if not scraper.scrape_lock_available():
-        return jsonify({"error": "scrape already running"}), 409
+    if not fly_machine.is_configured():
+        return (
+            jsonify(
+                {
+                    "error": "The on-demand scraper worker is not configured",
+                    "error_code": "scrape_worker_unavailable",
+                }
+            ),
+            503,
+        )
 
     last_scrape_at = _load_last_scrape_at()
     if _scrape_is_fresh(last_scrape_at):
@@ -388,21 +462,27 @@ def scrape() -> tuple[Response, int]:
         payload["age_seconds"] = _scrape_age_seconds(last_scrape_at)
         return jsonify(payload), 200
 
-    with _job_state_lock:
-        job = ScrapeJob(
-            job_id=_new_job_id(),
-            state="queued",
-            created_at=_utc_now(),
-            last_successful_at=last_scrape_at.isoformat() if last_scrape_at else "",
-            source="plaid" if plaid_source.is_configured() else "empower",
-        )
-        _set_current_scrape_job(job)
-        worker = Thread(target=_run_scrape_job, args=(job.job_id,), daemon=True)
-        worker.start()
-        payload = job.to_dict()
-        payload["status_url"] = f"/scrape/status?token={_report_token()}"
-        payload["age_seconds"] = _scrape_age_seconds(last_scrape_at)
-        return jsonify(payload), 202
+    job = ScrapeJob(
+        job_id=_new_job_id(),
+        state="queued",
+        created_at=_utc_now(),
+        last_successful_at=last_scrape_at.isoformat() if last_scrape_at else "",
+        source="plaid" if plaid_source.is_configured() else "empower",
+    )
+    _save_durable_scrape_job(job)
+    try:
+        fly_machine.start_scraper_machine()
+    except fly_machine.FlyMachineError as exc:
+        job.state = "failed"
+        job.finished_at = _utc_now()
+        job.error_code = "scrape_worker_unavailable"
+        job.error = str(exc)
+        _save_durable_scrape_job(job)
+        return jsonify(job.to_dict()), 503
+    payload = job.to_dict()
+    payload["status_url"] = f"/scrape/status?token={_report_token()}"
+    payload["age_seconds"] = _scrape_age_seconds(last_scrape_at)
+    return jsonify(payload), 202
 
 
 @app.get("/scrape/status")

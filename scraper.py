@@ -54,6 +54,64 @@ def _open_sheet(sheets_credentials: object) -> pygsheets.Spreadsheet:
     return client.open(config.GLOBAL.WORKSHEET_TITLE)
 
 
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _claim_durable_scrape_job() -> Optional[str]:
+    """Mark a queued manual job running on the one-shot scraper Machine."""
+    try:
+        sheet = _open_sheet(auth.GetGoogleCredentials())
+        store = plaid_source.SheetStateStore(sheet)
+        state = store.load()
+        job = state.get("scrape_job")
+        if not isinstance(job, dict) or job.get("state") != "queued":
+            return None
+        job["state"] = "running"
+        job["started_at"] = _utc_now()
+        job["error"] = ""
+        job["error_code"] = ""
+        state["scrape_job"] = job
+        store.save(state)
+        return str(job.get("job_id", "")) or None
+    except Exception:
+        logger.exception("Could not claim the durable manual scrape job")
+        return None
+
+
+def _finish_durable_scrape_job(
+    job_id: Optional[str], *, error: Optional[Exception] = None
+) -> None:
+    """Persist the terminal worker result so web restarts do not lose status."""
+    if not job_id:
+        return
+    try:
+        sheet = _open_sheet(auth.GetGoogleCredentials())
+        store = plaid_source.SheetStateStore(sheet)
+        state = store.load()
+        job = state.get("scrape_job")
+        if not isinstance(job, dict) or str(job.get("job_id", "")) != job_id:
+            return
+        job["finished_at"] = _utc_now()
+        if error is None:
+            job["state"] = "succeeded"
+            job["last_successful_at"] = job["finished_at"]
+            job["error"] = ""
+            job["error_code"] = ""
+        else:
+            job["state"] = "failed"
+            job["error"] = str(error)
+            job["error_code"] = (
+                error.code
+                if isinstance(error, plaid_source.PlaidError)
+                else "sync_failed"
+            )
+        state["scrape_job"] = job
+        store.save(state)
+    except Exception:
+        logger.exception("Could not persist the durable manual scrape result")
+
+
 def scrape_plaid_and_push(options: utils.ScraperOptions) -> None:
     """Run the configured Plaid cursor sync without requiring Empower secrets."""
     with acquire_scrape_lock():
@@ -221,7 +279,13 @@ def main(argv=None) -> None:
     options = utils.ScraperOptions.fromArgsAndEnv(args)
     creds: auth.Credentials = auth.GetCredentials()
 
-    _ = scrape_and_push(options, creds)
+    durable_job_id = _claim_durable_scrape_job()
+    try:
+        _ = scrape_and_push(options, creds)
+    except Exception as exc:
+        _finish_durable_scrape_job(durable_job_id, error=exc)
+        raise
+    _finish_durable_scrape_job(durable_job_id)
 
 
 if __name__ == "__main__":

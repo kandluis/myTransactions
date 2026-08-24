@@ -90,17 +90,29 @@ def scrape_plaid_and_push(options: utils.ScraperOptions) -> None:
                 items[item_id] = item
                 item_errors.append(exc)
                 continue
-            all_added.extend(
-                [
-                    plaid_source.transaction_frame(added, item),
-                    plaid_source.transaction_frame(modified, item),
-                ]
-            )
+            added_frame = plaid_source.transaction_frame(added, item)
+            modified_frame = plaid_source.transaction_frame(modified, item)
+            all_added.extend([added_frame, modified_frame])
             modified_ids.update(
                 "plaid:" + str(t.get("transaction_id", "")) for t in modified
             )
             removed_ids.update(
                 "plaid:" + str(t.get("transaction_id", "")) for t in removed
+            )
+            prior_imported_ids = {
+                str(transaction_id)
+                for transaction_id in item.get("imported_transaction_ids", [])
+            }
+            item["imported_transaction_ids"] = sorted(
+                (
+                    prior_imported_ids
+                    | set(added_frame["ID"].astype(str))
+                    | set(modified_frame["ID"].astype(str))
+                )
+                - {
+                    "plaid:" + str(transaction.get("transaction_id", ""))
+                    for transaction in removed
+                }
             )
             for account in client.accounts(str(item["access_token"])):
                 if (

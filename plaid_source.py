@@ -374,23 +374,41 @@ def tolerant_overlap_matches(
     return matches
 
 
-def reconcile(existing: pd.DataFrame, candidate: pd.DataFrame) -> dict[str, int]:
+def reconciliation_details(
+    existing: pd.DataFrame, candidate: pd.DataFrame
+) -> dict[str, Any]:
+    """Return stable row indexes and counts for an initial-import review."""
     matches = tolerant_overlap_matches(existing, candidate)
     # A candidate with more than one otherwise-valid historical row deserves
     # review, even though the one-to-one matcher chooses the nearest row.
     possible_counts: dict[Hashable, int] = {}
     for _, candidate_index, _ in _tolerant_overlap_pairs(existing, candidate):
         possible_counts[candidate_index] = possible_counts.get(candidate_index, 0) + 1
+    matched_indexes = {candidate_index for _, candidate_index in matches}
     return {
-        "matched_overlap": len(matches),
-        "plaid_only_candidates": len(candidate) - len(matches),
-        "ambiguous_matches": sum(count > 1 for count in possible_counts.values()),
-        "account_mapping_gaps": (
-            int(candidate["Account"].eq("Unknown Account").sum())
-            if not candidate.empty
-            else 0
-        ),
+        "matched_indexes": matched_indexes,
+        "candidate_indexes": set(candidate.index) - matched_indexes,
+        "ambiguous_indexes": {
+            candidate_index
+            for candidate_index, count in possible_counts.items()
+            if count > 1
+        },
+        "summary": {
+            "matched_overlap": len(matches),
+            "plaid_only_candidates": len(candidate) - len(matches),
+            "ambiguous_matches": sum(count > 1 for count in possible_counts.values()),
+            "account_mapping_gaps": (
+                int(candidate["Account"].eq("Unknown Account").sum())
+                if not candidate.empty
+                else 0
+            ),
+        },
     }
+
+
+def reconcile(existing: pd.DataFrame, candidate: pd.DataFrame) -> dict[str, int]:
+    """Return the count summary used by existing reconciliation callers."""
+    return reconciliation_details(existing, candidate)["summary"]
 
 
 def merge_transactions(

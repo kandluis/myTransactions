@@ -327,6 +327,50 @@ def test_reconciliation_reports_overlap_and_new_candidates():
     assert result["plaid_only_candidates"] == 1
 
 
+def test_reconciliation_details_identifies_candidate_and_overlap_rows():
+    existing = pd.DataFrame(
+        [
+            {
+                "Date": "2026-08-01",
+                "Merchant": "Coffee Shop",
+                "Amount": -5.0,
+                "Category": "Food",
+                "Account": "Card",
+                "ID": "legacy-coffee",
+                "Description": "Coffee Shop",
+            }
+        ]
+    )
+    incoming = pd.DataFrame(
+        [
+            {
+                "Date": "2026-08-01",
+                "Merchant": "Coffee Shop",
+                "Amount": -5.0,
+                "Category": "Food",
+                "Account": "Card",
+                "ID": "plaid-coffee",
+                "Description": "Coffee Shop",
+            },
+            {
+                "Date": "2026-08-02",
+                "Merchant": "Book Store",
+                "Amount": -10.0,
+                "Category": "Shopping",
+                "Account": "Card",
+                "ID": "plaid-book",
+                "Description": "Book Store",
+            },
+        ]
+    )
+
+    details = plaid_source.reconciliation_details(existing, incoming)
+
+    assert details["matched_indexes"] == {0}
+    assert details["candidate_indexes"] == {1}
+    assert details["summary"]["matched_overlap"] == 1
+
+
 def test_initial_merge_deduplicates_small_posting_date_shift_once():
     existing = pd.DataFrame(
         [

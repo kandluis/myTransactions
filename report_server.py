@@ -488,9 +488,104 @@ def _connection_rows(state: dict[str, Any]) -> list[dict[str, object]]:
                 "accounts": names,
                 "created_at": str(item.get("created_at", "")),
                 "can_remove": item.get("status") != "merging",
+                "can_delete_rows": bool(item.get("imported_transaction_ids")),
             }
         )
     return rows
+
+
+def _mapping_conflicts(
+    state: dict[str, Any], item_id: str, item: dict[str, Any]
+) -> list[str]:
+    """Return selected canonical names that another active Item already owns."""
+    selected = _selected_account_names(item)
+    active_names: set[str] = set()
+    for stored_id, stored_item in state.get("items", {}).items():
+        if stored_id != item_id and stored_item.get("status") == "active":
+            active_names.update(_selected_account_names(stored_item))
+    return sorted(selected & active_names)
+
+
+def _transaction_rows(frame: Any, indexes: set[Any]) -> list[dict[str, object]]:
+    """Serialize a bounded set of review rows without exposing transaction IDs."""
+    if not indexes:
+        return []
+    rows = frame.loc[list(indexes)].copy().sort_values("Date", ascending=False)
+    return [
+        {
+            "date": str(row["Date"]),
+            "merchant": str(row["Merchant"]),
+            "amount": float(row["Amount"]),
+            "category": str(row["Category"]),
+            "account": str(row["Account"]),
+        }
+        for _, row in rows.head(12).iterrows()
+    ]
+
+
+def _excluded_review_rows(item: dict[str, Any]) -> list[dict[str, object]]:
+    """Explain selected staged rows removed by source or configured filters."""
+    selected = set(item.get("selected_account_ids", []))
+    rows = []
+    for transaction in item.get("pending_transactions", []):
+        if selected and transaction.get("account_id") not in selected:
+            continue
+        if not plaid_source.transaction_frame([transaction], item).empty:
+            continue
+        primary = str(
+            (transaction.get("personal_finance_category") or {}).get("primary", "")
+        )
+        rows.append(
+            {
+                "date": str(transaction.get("date", "")),
+                "merchant": str(
+                    transaction.get("merchant_name") or transaction.get("name") or ""
+                ),
+                "amount": -float(transaction.get("amount", 0)),
+                "category": primary.replace("_", " ").title() or "Uncategorized",
+                "account": str(
+                    item.get("account_mappings", {}).get(
+                        transaction.get("account_id"), "Unknown Account"
+                    )
+                ),
+                "reason": (
+                    "Incoming transfer"
+                    if primary.upper() == "TRANSFER_IN"
+                    else "Configured payment, transfer, or account exclusion"
+                ),
+            }
+        )
+    return sorted(rows, key=lambda row: str(row["date"]), reverse=True)[:12]
+
+
+def _review_context(
+    existing: Any, state: dict[str, Any], item_id: str, item: dict[str, Any]
+) -> dict[str, object]:
+    """Build count, row-level, and safety evidence for a pending initial merge."""
+    additions = plaid_source.transaction_frame(
+        item.get("pending_transactions", []), item
+    )
+    details = plaid_source.reconciliation_details(existing, additions)
+    candidate_indexes = details["candidate_indexes"]
+    candidate_rows = _transaction_rows(additions, candidate_indexes)
+    candidate_amounts = additions.loc[list(candidate_indexes), "Amount"]
+    debit_total = -float(candidate_amounts[candidate_amounts < 0].sum())
+    credit_total = float(candidate_amounts[candidate_amounts > 0].sum())
+    conflicts = _mapping_conflicts(state, item_id, item)
+    return {
+        "review": details["summary"],
+        "candidates": candidate_rows,
+        "overlaps": _transaction_rows(additions, details["matched_indexes"]),
+        "excluded": _excluded_review_rows(item),
+        "safety": {
+            "candidate_debit_total": debit_total,
+            "candidate_credit_total": credit_total,
+            "candidate_debit_count": int((candidate_amounts < 0).sum()),
+            "candidate_credit_count": int((candidate_amounts > 0).sum()),
+            "duplicate_mappings": conflicts,
+            "approval_blocked": bool(conflicts),
+        },
+    }
 
 
 @app.get("/plaid/connections")
@@ -521,8 +616,12 @@ imported Plaid rows.</p>
 <div class="status">{{ connection.status }}</div><ul class="accounts">
 {% for account in connection.accounts %}<li>{{ account }}</li>{% endfor %}</ul>
 {% if connection.can_remove %}<label class="option"><input type="checkbox"
-id="delete-{{ connection.id }}">
+id="delete-{{ connection.id }}"
+{% if not connection.can_delete_rows %}disabled{% endif %}>
 Also remove imported Plaid rows for these accounts (legacy/manual rows stay).</label>
+{% if not connection.can_delete_rows %}<p class="muted">This connection predates
+item-level import tracking, so its existing Sheet rows will be retained for safety.</p>
+{% endif %}
 <button onclick="removeConnection('{{ connection.id }}')">Disconnect and free
 Item slot</button>
 {% else %}<p class="danger">This Item is merging and cannot be removed yet.</p>
@@ -563,9 +662,27 @@ def plaid_remove_connection(item_id: str) -> Response | tuple[Response, int]:
         return jsonify({"error": "Plaid Item not found"}), 404
     if item.get("status") == "merging":
         return jsonify({"error": "An initial merge is in progress"}), 409
+    imported_ids = {
+        str(transaction_id)
+        for transaction_id in item.get("imported_transaction_ids", [])
+        if str(transaction_id).startswith("plaid:")
+    }
+    if remove_transactions and not imported_ids:
+        return (
+            jsonify(
+                {
+                    "error": (
+                        "This connection predates item-level import tracking; "
+                        "its Sheet rows are retained for safety."
+                    ),
+                    "error_code": "transaction_ownership_unknown",
+                }
+            ),
+            409,
+        )
 
     try:
-        plaid_source.PlaidClient().remove_item(str(item["access_token"]))
+        plaid_source.PlaidClient().remove_item(str(item.get("access_token", "")))
     except plaid_source.PlaidError as exc:
         return jsonify({"error": str(exc), "error_code": exc.code}), 502
 
@@ -576,10 +693,7 @@ def plaid_remove_connection(item_id: str) -> Response | tuple[Response, int]:
             .get_as_df(numerize=False)
             .reindex(columns=config.GLOBAL.COLUMN_NAMES, fill_value="")
         )
-        account_names = _selected_account_names(item)
-        imported_for_item = existing["ID"].astype(str).str.startswith("plaid:") & (
-            existing["Account"].isin(account_names)
-        )
+        imported_for_item = existing["ID"].astype(str).isin(imported_ids)
         removed_rows = int(imported_for_item.sum())
         remote.UpdateGoogleSheet(sheet, existing.loc[~imported_for_item], None)
 
@@ -754,13 +868,15 @@ def plaid_review() -> Response | tuple[Response, int]:
         if len(pending) != 1:
             return jsonify({"error": "No unambiguous pending Plaid review"}), 404
         item_id, item = pending[0]
-    review = item.get("reconciliation", {})
-    raw_accounts = (
+    raw_transactions = (
         _open_plaid_sheet()
         .worksheet_by_title(title=config.GLOBAL.RAW_TRANSACTIONS_TITLE)
         .get_as_df(numerize=False)
-        .get("Account", [])
+        .reindex(columns=config.GLOBAL.COLUMN_NAMES, fill_value="")
     )
+    context = _review_context(raw_transactions, state, item_id, item)
+    review = context["review"]
+    raw_accounts = raw_transactions.get("Account", [])
     known_accounts = sorted(
         {str(account).strip() for account in raw_accounts if str(account).strip()}
     )
@@ -817,6 +933,34 @@ reconciliation; approval is the only action that writes new transaction rows.</p
 <span>ambiguous matches</span>
 </div><div class="metric"><b>{{ review.account_mapping_gaps }}</b>
 <span>mapping gaps</span></div>
+</section><section class="card"><h2>Pre-merge safety summary</h2>
+<p class="lede">{{ safety.candidate_debit_count }} debit purchase(s), totaling
+${{ "%.2f"|format(safety.candidate_debit_total) }}, are ready to add.
+{{ safety.candidate_credit_count }} credit/refund row(s), totaling
+${{ "%.2f"|format(safety.candidate_credit_total) }}, remain after filtering.</p>
+{% if excluded %}<p class="notice">{{ excluded|length }} staged row(s) were excluded by
+the spending rules and will not be written.</p>{% endif %}
+{% if safety.duplicate_mappings %}<p class="notice">Approval is blocked: these
+account names are already connected by another active Plaid Item:
+{{ safety.duplicate_mappings|join(", ") }}.
+Deselect the duplicate account before approving.</p>{% endif %}
+</section><section class="card"><h2>Review transactions</h2>
+{% if candidates %}<h3>New candidates</h3><ul>{% for row in candidates %}<li>
+{{ row.date }} ·
+{{ row.merchant }} · ${{ "%.2f"|format(row.amount) }} ·
+{{ row.account }}</li>
+{% endfor %}</ul>{% endif %}
+{% if overlaps %}<h3>Matched overlaps (not added)</h3><ul>{% for row in overlaps %}<li>
+{{ row.date }} ·
+{{ row.merchant }} · ${{ "%.2f"|format(row.amount) }} ·
+{{ row.account }}</li>
+{% endfor %}</ul>{% endif %}
+{% if excluded %}<h3>Excluded (not added)</h3><ul>{% for row in excluded %}<li>
+{{ row.date }} ·
+{{ row.merchant }} · ${{ "%.2f"|format(row.amount) }} ·
+{{ row.reason }}</li>
+{% endfor %}</ul>{% endif %}{% if not candidates and not overlaps and not excluded %}
+<p class="muted">No selected transactions in the initial window.</p>{% endif %}
 </section><section class="card"><h2>Choose accounts and canonical names</h2>
 <p class="lede">Choose an existing Sheet label from the menu, or use a new one.</p>
 {% for account in accounts %}<div class="account"><input type="checkbox"
@@ -843,7 +987,8 @@ Save account choices</button>
 <span id="result"></span></div></section><section class="card"><h2>Ready to merge?</h2>
 <div class="notice">Approve only after confirming the selected accounts and the
 candidate count. This appends only non-overlapping Plaid transactions.</div>
-<div class="actions"><button class="primary" id="approve">
+<div class="actions"><button class="primary" id="approve"
+{% if safety.approval_blocked %}disabled{% endif %}>
 Approve initial merge</button></div>
 </section></main><script>
 function selected(){return [...document.querySelectorAll('input:checked')]
@@ -883,6 +1028,10 @@ document.getElementById('result').textContent='Connection interrupted. Do not re
             review=review,
             accounts=accounts,
             known_accounts=known_accounts,
+            candidates=context["candidates"],
+            overlaps=context["overlaps"],
+            excluded=context["excluded"],
+            safety=context["safety"],
         )
     )
 
@@ -1002,6 +1151,20 @@ def plaid_approve(item_id: str) -> Response | tuple[Response, int]:
             return jsonify({"message": "Initial Plaid merge already completed."})
         if item.get("status") not in {"pending_review", "merging"}:
             return jsonify({"error": "No pending initial reconciliation"}), 404
+        conflicts = _mapping_conflicts(state, item_id, item)
+        if conflicts:
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            "Deselect account names already connected by another Item."
+                        ),
+                        "error_code": "duplicate_account_mapping",
+                        "accounts": conflicts,
+                    }
+                ),
+                409,
+            )
 
         # Persist intent before writing the raw tab. If the process restarts
         # mid-write, a later request can safely resume because merging is
@@ -1028,6 +1191,9 @@ def plaid_approve(item_id: str) -> Response | tuple[Response, int]:
         item["status"] = "active"
         item["approved_at"] = _utc_now()
         item["pending_transactions"] = []
+        item["imported_transaction_ids"] = sorted(
+            set(additions["ID"].astype(str)) & set(merged["ID"].astype(str))
+        )
         state["items"][item_id] = item
         store.save(state)
         session.pop("plaid_link_authorized", None)

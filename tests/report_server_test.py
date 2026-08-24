@@ -78,6 +78,64 @@ def test_review_accounts_displays_official_name_and_last_four() -> None:
     ]
 
 
+def test_review_context_explains_candidates_and_transfer_exclusions() -> None:
+    item = {
+        "selected_account_ids": ["account"],
+        "account_mappings": {"account": "Card"},
+        "pending_transactions": [
+            {
+                "account_id": "account",
+                "transaction_id": "purchase",
+                "date": "2026-08-01",
+                "amount": 12.5,
+                "merchant_name": "Coffee Shop",
+                "name": "Coffee Shop",
+            },
+            {
+                "account_id": "account",
+                "transaction_id": "transfer",
+                "date": "2026-08-02",
+                "amount": -20.0,
+                "merchant_name": "Incoming Transfer",
+                "name": "Incoming Transfer",
+                "personal_finance_category": {"primary": "TRANSFER_IN"},
+            },
+        ],
+    }
+    context = report_server._review_context(
+        pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES),
+        {"items": {"pending": item}},
+        "pending",
+        item,
+    )
+
+    assert context["review"]["plaid_only_candidates"] == 1
+    assert context["candidates"][0]["merchant"] == "Coffee Shop"
+    assert context["excluded"][0]["reason"] == "Incoming transfer"
+    assert context["safety"]["candidate_debit_total"] == 12.5
+
+
+def test_mapping_conflicts_detects_active_duplicate_account() -> None:
+    state = {
+        "items": {
+            "active": {
+                "status": "active",
+                "selected_account_ids": ["old"],
+                "account_mappings": {"old": "Chase Joint Checking"},
+            },
+            "pending": {
+                "status": "pending_review",
+                "selected_account_ids": ["new"],
+                "account_mappings": {"new": "Chase Joint Checking"},
+            },
+        }
+    }
+
+    assert report_server._mapping_conflicts(
+        state, "pending", state["items"]["pending"]
+    ) == ["Chase Joint Checking"]
+
+
 class _ApprovalStore:
     def __init__(self, state):
         self.state = state
@@ -181,6 +239,63 @@ def test_plaid_approval_rejects_a_second_in_flight_request(client, monkeypatch) 
     assert response.get_json()["error_code"] == "approval_in_progress"
 
 
+def test_plaid_approval_blocks_duplicate_active_account_mapping(
+    client, monkeypatch
+) -> None:
+    state = _pending_approval_state()
+    state["items"]["existing"] = {
+        "status": "active",
+        "selected_account_ids": ["other-account"],
+        "account_mappings": {"other-account": "Amex"},
+    }
+    store = _ApprovalStore(state)
+    sheet = _ApprovalSheet(pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES))
+    writes = []
+    monkeypatch.setattr(report_server, "_open_plaid_sheet", lambda: sheet)
+    monkeypatch.setattr(plaid_source, "SheetStateStore", lambda _: store)
+    monkeypatch.setattr(
+        report_server.remote,
+        "UpdateGoogleSheet",
+        lambda *_: writes.append(True),
+    )
+
+    response = client.post("/plaid/approve/item?token=test-token")
+
+    assert response.status_code == 409
+    assert response.get_json()["error_code"] == "duplicate_account_mapping"
+    assert writes == []
+    assert store.state["items"]["item"]["status"] == "pending_review"
+
+
+def test_plaid_review_renders_safety_summary_and_row_details(
+    client, monkeypatch
+) -> None:
+    state = _pending_approval_state()
+    state["items"]["item"]["pending_transactions"].append(
+        {
+            "account_id": "account",
+            "transaction_id": "transfer",
+            "date": "2026-08-02",
+            "amount": -20.0,
+            "merchant_name": "Incoming Transfer",
+            "name": "Incoming Transfer",
+            "personal_finance_category": {"primary": "TRANSFER_IN"},
+        }
+    )
+    store = _ApprovalStore(state)
+    sheet = _ApprovalSheet(pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES))
+    monkeypatch.setattr(report_server, "_open_plaid_sheet", lambda: sheet)
+    monkeypatch.setattr(plaid_source, "SheetStateStore", lambda _: store)
+
+    response = client.get("/plaid/review?token=test-token")
+
+    assert response.status_code == 200
+    assert b"Pre-merge safety summary" in response.data
+    assert b"New candidates" in response.data
+    assert b"Excluded (not added)" in response.data
+    assert b"Incoming transfer" in response.data
+
+
 def test_plaid_connections_lists_and_removes_an_item(client, monkeypatch) -> None:
     store = _ApprovalStore(_pending_approval_state("active"))
     sheet = _ApprovalSheet(pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES))
@@ -206,6 +321,68 @@ def test_plaid_connections_lists_and_removes_an_item(client, monkeypatch) -> Non
     assert response.get_json()["removed_transactions"] == 0
     assert revoked == ["access-token"]
     assert store.state["items"] == {}
+
+
+def test_plaid_removal_only_deletes_rows_owned_by_the_item(client, monkeypatch) -> None:
+    state = _pending_approval_state("active")
+    state["items"]["item"]["imported_transaction_ids"] = ["plaid:owned"]
+    store = _ApprovalStore(state)
+    existing = pd.DataFrame(
+        [
+            ["2026-08-01", "Owned", -10, "Food", "Amex", "plaid:owned", "Owned"],
+            ["2026-08-01", "Other", -20, "Food", "Amex", "plaid:other", "Other"],
+            ["2026-08-01", "Manual", -30, "Food", "Amex", "manual", "Manual"],
+        ],
+        columns=config.GLOBAL.COLUMN_NAMES,
+    )
+    sheet = _ApprovalSheet(existing)
+    writes = []
+
+    class FakePlaidClient:
+        def remove_item(self, _access_token: str) -> None:
+            return None
+
+    monkeypatch.setattr(report_server, "_open_plaid_sheet", lambda: sheet)
+    monkeypatch.setattr(plaid_source, "SheetStateStore", lambda _: store)
+    monkeypatch.setattr(plaid_source, "PlaidClient", FakePlaidClient)
+    monkeypatch.setattr(
+        report_server.remote,
+        "UpdateGoogleSheet",
+        lambda _sheet, transactions, _accounts: writes.append(transactions),
+    )
+
+    response = client.post(
+        "/plaid/connections/item/remove?token=test-token",
+        json={"remove_transactions": True},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["removed_transactions"] == 1
+    assert set(writes[0]["ID"]) == {"plaid:other", "manual"}
+
+
+def test_plaid_removal_preserves_untracked_rows_for_safety(client, monkeypatch) -> None:
+    store = _ApprovalStore(_pending_approval_state("active"))
+    sheet = _ApprovalSheet(pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES))
+    revoked = []
+
+    class FakePlaidClient:
+        def remove_item(self, access_token: str) -> None:
+            revoked.append(access_token)
+
+    monkeypatch.setattr(report_server, "_open_plaid_sheet", lambda: sheet)
+    monkeypatch.setattr(plaid_source, "SheetStateStore", lambda _: store)
+    monkeypatch.setattr(plaid_source, "PlaidClient", FakePlaidClient)
+
+    response = client.post(
+        "/plaid/connections/item/remove?token=test-token",
+        json={"remove_transactions": True},
+    )
+
+    assert response.status_code == 409
+    assert response.get_json()["error_code"] == "transaction_ownership_unknown"
+    assert revoked == []
+    assert "item" in store.state["items"]
 
 
 def test_report_file_requires_valid_token(client, tmp_path: Path) -> None:

@@ -1,0 +1,49 @@
+name: Deploy Apps Script
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".clasp.json"
+      - "apps_script/**"
+      - ".github/workflows/apps-script.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Check Apps Script authorization
+        id: auth
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          if [ -z "$CLASPRC_JSON" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Apps Script deployment is not configured yet; add CLASPRC_JSON and rerun this workflow."
+            exit 0
+          fi
+          umask 077
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      - name: Install clasp
+        if: steps.auth.outputs.configured == 'true'
+        run: npm install --global @google/clasp
+
+      - name: Compare local source with the bound script
+        if: steps.auth.outputs.configured == 'true'
+        run: clasp status
+
+      - name: Push Apps Script source
+        if: steps.auth.outputs.configured == 'true'
+        run: clasp push

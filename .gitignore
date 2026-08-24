@@ -76,6 +76,7 @@ typings/
 .DS_Store
 .env
 .flaskenv
+.clasprc.json
 *.pyc
 *.pyo
 env/

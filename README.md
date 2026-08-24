@@ -300,8 +300,9 @@ fly secrets set REPORT_TOKEN=<secret> REPORT_BASE_URL=https://mint-scraper.fly.d
 fly deploy
 ```
 
-To trigger generation from Google Sheets, add this optional Apps Script and
-bind `generateSpendReport` to a drawing, button, or custom menu:
+To trigger generation from Google Sheets, use the bound Apps Script in
+`apps_script/`. It adds the **Mint Tools** menu and its sidebar includes report,
+scrape, and Plaid controls.
 
 ```javascript
 function generateSpendReport() {
@@ -313,6 +314,33 @@ function generateSpendReport() {
   }
 }
 ```
+
+### Deploying the bound Apps Script
+
+The bound project is tracked with [clasp](https://developers.google.com/apps-script/guides/clasp).
+Its project ID is stored in `.clasp.json`; it is an identifier, not a credential.
+The deploy workflow only runs when `apps_script/` changes.
+
+One-time setup from a machine signed into the Google account that owns the
+spreadsheet:
+
+```sh
+npm install --global @google/clasp
+clasp login
+clasp status
+```
+
+Enable the Apps Script API for the Google account/project if prompted. Review
+the output of `clasp status` before the first push; it should list only the
+expected `Code.gs`, `Sidebar.html`, and `appsscript.json` files. Then add the
+contents of `~/.clasprc.json` as the GitHub repository secret `CLASPRC_JSON`.
+Never commit that file: it contains the authorization used to update the bound
+script.
+
+After adding the secret, run **Deploy Apps Script** manually once from GitHub
+Actions. Later changes under `apps_script/` deploy automatically after they
+land on `main`. Reload the spreadsheet after a deployment to load its newest
+menu and sidebar.
 
 ## Generate Merchant Category Maps
 

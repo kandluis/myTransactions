@@ -77,3 +77,8 @@ function getPlaidConnectUrl() {
   const token = getReportToken_();
   return REPORT_BASE_URL + '/plaid/connect?token=' + encodeURIComponent(token);
 }
+
+function getPlaidConnectionsUrl() {
+  const token = getReportToken_();
+  return REPORT_BASE_URL + '/plaid/connections?token=' + encodeURIComponent(token);
+}

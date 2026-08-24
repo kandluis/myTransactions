@@ -467,6 +467,132 @@ def _review_accounts(item: dict[str, Any]) -> list[dict[str, object]]:
     return accounts
 
 
+def _selected_account_names(item: dict[str, Any]) -> set[str]:
+    mappings = item.get("account_mappings", {})
+    return {
+        str(mappings[account_id])
+        for account_id in item.get("selected_account_ids", [])
+        if account_id in mappings and str(mappings[account_id]).strip()
+    }
+
+
+def _connection_rows(state: dict[str, Any]) -> list[dict[str, object]]:
+    """Return display-safe summaries of stored Plaid Items."""
+    rows = []
+    for item_id, item in state.get("items", {}).items():
+        names = sorted(_selected_account_names(item))
+        rows.append(
+            {
+                "id": item_id,
+                "status": str(item.get("status", "unknown")),
+                "accounts": names,
+                "created_at": str(item.get("created_at", "")),
+                "can_remove": item.get("status") != "merging",
+            }
+        )
+    return rows
+
+
+@app.get("/plaid/connections")
+def plaid_connections() -> Response | tuple[Response, int]:
+    """Show active and staged Items with an explicit disconnect control."""
+    if not is_authorized_token(_request_token()):
+        return _forbidden()
+    state = plaid_source.SheetStateStore(_open_plaid_sheet()).load()
+    return Response(
+        render_template_string(
+            """<!doctype html><title>Plaid connections</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{font-family:Inter,ui-sans-serif,system-ui,sans-serif;background:#f6f8fb;
+color:#14213d;margin:0}main{max-width:760px;margin:auto;padding:48px 24px}
+.card{background:#fff;border:1px solid #e6eaf0;border-radius:16px;padding:20px;
+margin:16px 0}.muted{color:#667085}.accounts{margin:12px 0;padding-left:20px}
+.status{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+color:#0e7a62}.danger{color:#a12626}button{border:0;border-radius:9px;
+padding:10px 13px;font:inherit;font-weight:700;cursor:pointer;background:#fbe9e9;
+color:#8f1d1d}.option{display:block;font-size:14px;margin:14px 0}
+</style><main><h1>Manage Plaid connections</h1>
+<p class="muted">Disconnecting revokes Plaid access and frees an Item slot.
+Existing Sheet transactions are retained unless you explicitly choose to remove
+imported Plaid rows.</p>
+{% if not connections %}<section class="card"><p>No Plaid connections stored.</p>
+</section>{% endif %}{% for connection in connections %}<section class="card">
+<div class="status">{{ connection.status }}</div><ul class="accounts">
+{% for account in connection.accounts %}<li>{{ account }}</li>{% endfor %}</ul>
+{% if connection.can_remove %}<label class="option"><input type="checkbox"
+id="delete-{{ connection.id }}">
+Also remove imported Plaid rows for these accounts (legacy/manual rows stay).</label>
+<button onclick="removeConnection('{{ connection.id }}')">Disconnect and free
+Item slot</button>
+{% else %}<p class="danger">This Item is merging and cannot be removed yet.</p>
+{% endif %}</section>{% endfor %}
+<p id="result" class="muted"></p><script>
+async function removeConnection(id){const removeRows=
+document.getElementById('delete-'+id).checked;const detail=removeRows?
+' Imported Plaid rows for these accounts will also be removed.':
+' Existing Sheet rows will remain.';
+if(!confirm('Disconnect this Plaid connection?'+detail))return;
+const r=await fetch('/plaid/connections/'+id+'/remove'+window.location.search,
+{method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({remove_transactions:removeRows})});const p=await r.json();
+document.getElementById('result').textContent=p.message||p.error||
+'Could not disconnect.';
+if(r.ok)location.reload();}
+</script></main>""",
+            connections=_connection_rows(state),
+        )
+    )
+
+
+@app.post("/plaid/connections/<item_id>/remove")
+def plaid_remove_connection(item_id: str) -> Response | tuple[Response, int]:
+    """Revoke one Item and optionally remove only its imported Plaid rows."""
+    if not is_authorized_token(_request_token()):
+        return _forbidden()
+    payload = request.get_json(silent=True) or {}
+    remove_transactions = payload.get("remove_transactions", False)
+    if not isinstance(remove_transactions, bool):
+        return jsonify({"error": "remove_transactions must be a boolean"}), 400
+
+    sheet = _open_plaid_sheet()
+    store = plaid_source.SheetStateStore(sheet)
+    state = store.load()
+    item = state.get("items", {}).get(item_id)
+    if not item:
+        return jsonify({"error": "Plaid Item not found"}), 404
+    if item.get("status") == "merging":
+        return jsonify({"error": "An initial merge is in progress"}), 409
+
+    try:
+        plaid_source.PlaidClient().remove_item(str(item["access_token"]))
+    except plaid_source.PlaidError as exc:
+        return jsonify({"error": str(exc), "error_code": exc.code}), 502
+
+    removed_rows = 0
+    if remove_transactions:
+        existing = (
+            sheet.worksheet_by_title(title=config.GLOBAL.RAW_TRANSACTIONS_TITLE)
+            .get_as_df(numerize=False)
+            .reindex(columns=config.GLOBAL.COLUMN_NAMES, fill_value="")
+        )
+        account_names = _selected_account_names(item)
+        imported_for_item = existing["ID"].astype(str).str.startswith("plaid:") & (
+            existing["Account"].isin(account_names)
+        )
+        removed_rows = int(imported_for_item.sum())
+        remote.UpdateGoogleSheet(sheet, existing.loc[~imported_for_item], None)
+
+    del state["items"][item_id]
+    store.save(state)
+    return jsonify(
+        {
+            "message": "Plaid connection removed and Item slot freed.",
+            "removed_transactions": removed_rows,
+        }
+    )
+
+
 @app.get("/plaid/connect")
 def plaid_connect() -> Response | tuple[Response, int]:
     """Create a one-time Link session outside the Apps Script iframe."""

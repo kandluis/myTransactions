@@ -216,6 +216,10 @@ class PlaidClient:
             "accounts", []
         )
 
+    def remove_item(self, access_token: str) -> None:
+        """Revoke a Plaid Item after its owner explicitly disconnects it."""
+        self._post("/item/remove", {"access_token": access_token})
+
 
 def _account_name(account: dict[str, Any], item: dict[str, Any]) -> str:
     mappings = item.get("account_mappings", {})

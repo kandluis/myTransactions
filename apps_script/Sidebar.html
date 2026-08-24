@@ -55,6 +55,7 @@
     </div>
     <div class="row">
       <button onclick="connectPlaid()">Connect Plaid account</button>
+      <button onclick="managePlaid()">Manage Plaid connections</button>
     </div>
 
     <div id="status" class="status muted">Idle.</div>
@@ -95,6 +96,16 @@
           .withSuccessHandler(function(url) { window.open(url, '_blank'); setStatus('Complete Plaid Link in the new tab, then return here.', 'muted'); })
           .withFailureHandler(function(err) { setStatus('Could not open Plaid Link:\n' + err.message, 'err'); })
           .getPlaidConnectUrl();
+      }
+
+      function managePlaid() {
+        setStatus('Opening Plaid connection manager…', 'muted');
+        google.script.run
+          .withSuccessHandler(function(url) { window.open(url, '_blank'); })
+          .withFailureHandler(function(err) {
+            setStatus('Could not open Plaid connections:\n' + err.message, 'err');
+          })
+          .getPlaidConnectionsUrl();
       }
 
       function startPolling(jobType) {

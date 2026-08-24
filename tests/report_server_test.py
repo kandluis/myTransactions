@@ -113,6 +113,7 @@ def _pending_approval_state(status: str = "pending_review") -> dict:
         "items": {
             "item": {
                 "status": status,
+                "access_token": "access-token",
                 "selected_account_ids": ["account"],
                 "account_mappings": {"account": "Amex"},
                 "pending_transactions": [
@@ -178,6 +179,33 @@ def test_plaid_approval_rejects_a_second_in_flight_request(client, monkeypatch) 
     report_server._plaid_approval_lock.release()
     assert response.status_code == 409
     assert response.get_json()["error_code"] == "approval_in_progress"
+
+
+def test_plaid_connections_lists_and_removes_an_item(client, monkeypatch) -> None:
+    store = _ApprovalStore(_pending_approval_state("active"))
+    sheet = _ApprovalSheet(pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES))
+    revoked = []
+
+    class FakePlaidClient:
+        def remove_item(self, access_token: str) -> None:
+            revoked.append(access_token)
+
+    monkeypatch.setattr(report_server, "_open_plaid_sheet", lambda: sheet)
+    monkeypatch.setattr(plaid_source, "SheetStateStore", lambda _: store)
+    monkeypatch.setattr(plaid_source, "PlaidClient", FakePlaidClient)
+
+    page = client.get("/plaid/connections?token=test-token")
+    response = client.post(
+        "/plaid/connections/item/remove?token=test-token",
+        json={"remove_transactions": False},
+    )
+
+    assert page.status_code == 200
+    assert b"Manage Plaid connections" in page.data
+    assert response.status_code == 200
+    assert response.get_json()["removed_transactions"] == 0
+    assert revoked == ["access-token"]
+    assert store.state["items"] == {}
 
 
 def test_report_file_requires_valid_token(client, tmp_path: Path) -> None:

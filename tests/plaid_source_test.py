@@ -220,6 +220,15 @@ def test_plaid_transaction_frame_filters_citi_autopay_and_mobile_deposits():
             },
             {
                 "account_id": "acct",
+                "transaction_id": "citi-card-payment",
+                "date": "2026-07-02",
+                "amount": -4.09,
+                "merchant_name": "Autopay Rautopay Autopmt",
+                "name": "Autopay 000000000070680Rautopay Autopmt",
+                "personal_finance_category": {"primary": "Loanpayments"},
+            },
+            {
+                "account_id": "acct",
                 "transaction_id": "refund",
                 "date": "2026-06-14",
                 "amount": -14.11,

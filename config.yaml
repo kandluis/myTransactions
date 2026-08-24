@@ -103,6 +103,7 @@ IGNORED_MERCHANT_PREFIXES:
   # spending. Refunds such as Amazon credits are intentionally not included.
   - "Automatic Payment Thank"
   - "Citi Autopay Payment"
+  - "Autopay Rautopay Autopmt"
   - "Real Time Payment Credit"
   - "Sbi Mobile Deposit"
 IGNORED_CATEGORIES:

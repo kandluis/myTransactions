@@ -191,6 +191,49 @@ def test_plaid_transaction_frame_filters_chase_payment_and_realtime_credits():
     assert incoming["ID"].tolist() == ["plaid:refund"]
 
 
+def test_plaid_transaction_frame_filters_citi_autopay_and_mobile_deposits():
+    item = {
+        "selected_account_ids": ["acct"],
+        "account_mappings": {"acct": "Starone Savings"},
+    }
+    incoming = plaid_source.transaction_frame(
+        [
+            {
+                "account_id": "acct",
+                "transaction_id": "card-payment",
+                "date": "2026-06-02",
+                "amount": -52.26,
+                "merchant_name": "Citi Autopay Payment 260601",
+                "name": "Citi Autopay Payment 260601",
+                "personal_finance_category": {"primary": "Loanpayments"},
+            },
+            {
+                "account_id": "acct",
+                "transaction_id": "deposit",
+                "date": "2026-06-13",
+                "amount": -6884.88,
+                "merchant_name": "Sbi Mobile Deposit Star One Cu",
+                "name": "Sbi 0613 1712 922166 Mobile Deposit Star One Cu",
+                # This intentionally uses Plaid's erroneous category from the
+                # live import: filtering must not depend on the category.
+                "personal_finance_category": {"primary": "Transportation"},
+            },
+            {
+                "account_id": "acct",
+                "transaction_id": "refund",
+                "date": "2026-06-14",
+                "amount": -14.11,
+                "merchant_name": "Amazon",
+                "name": "Amazon Refund",
+                "personal_finance_category": {"primary": "Shopping"},
+            },
+        ],
+        item,
+    )
+
+    assert incoming["ID"].tolist() == ["plaid:refund"]
+
+
 def test_plaid_transaction_frame_filters_transferin_activity():
     item = {
         "selected_account_ids": ["acct"],

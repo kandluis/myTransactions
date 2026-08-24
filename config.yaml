@@ -99,11 +99,12 @@ IGNORED_MERCHANTS:
   - "Wealthfront Edi Pymnts"
   - "Wealthfront Inc"
 IGNORED_MERCHANT_PREFIXES:
-  # Chase uses these for card-payment credits and incoming real-time account
-  # credits; neither is spending.  Refunds such as Amazon credits are not
-  # included here and remain in the raw history.
+  # These are card-payment credits or incoming account deposits rather than
+  # spending. Refunds such as Amazon credits are intentionally not included.
   - "Automatic Payment Thank"
+  - "Citi Autopay Payment"
   - "Real Time Payment Credit"
+  - "Sbi Mobile Deposit"
 IGNORED_CATEGORIES:
   - "Auto Payment"
   - "Buy"

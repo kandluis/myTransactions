@@ -130,6 +130,9 @@ IGNORED_CATEGORIES:
   - "Taxes"
   - "Transfer For Cash Spending"
   - "Transfer"
+  # Plaid's TRANSFER_IN normalizes to "Transfer In"; retain the older
+  # Transferin spelling for legacy-provider data.
+  - "Transfer In"
   - "Transferin"
   - "Transfers"
 IGNORED_TXNS:

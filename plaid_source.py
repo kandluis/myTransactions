@@ -235,13 +235,17 @@ def transaction_frame(
     for txn in transactions:
         if selected and txn.get("account_id") not in selected:
             continue
+        personal_finance_category = txn.get("personal_finance_category") or {}
+        # Plaid's transfer-in classification describes money arriving in the
+        # account, not spending. Filter it before merchant category rules can
+        # relabel an otherwise generic description (for example, as travel).
+        if str(personal_finance_category.get("primary", "")).upper() == "TRANSFER_IN":
+            continue
         # Plaid positive amount is money leaving the account; this project uses
         # negative values for spend, matching the established Empower output.
         amount = -float(txn.get("amount", 0))
         merchant = txn.get("merchant_name") or txn.get("name") or ""
-        category = (txn.get("personal_finance_category") or {}).get(
-            "primary"
-        ) or "Uncategorized"
+        category = personal_finance_category.get("primary") or "Uncategorized"
         rows.append(
             {
                 "Date": txn.get("date", ""),

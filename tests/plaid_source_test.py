@@ -258,7 +258,16 @@ def test_plaid_transaction_frame_filters_transferin_activity():
                 "merchant_name": "Depositoverdraft",
                 "name": "Depositoverdraft",
                 "personal_finance_category": {"primary": "Transferin"},
-            }
+            },
+            {
+                "account_id": "acct",
+                "transaction_id": "plaid-transfer-in",
+                "date": "2026-08-11",
+                "amount": -13.90,
+                "merchant_name": "Online Mobile Recurring",
+                "name": "ONLINE/MOBILE RECURRING",
+                "personal_finance_category": {"primary": "TRANSFER_IN"},
+            },
         ],
         item,
     )

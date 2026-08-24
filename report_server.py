@@ -560,7 +560,7 @@ def _excluded_review_rows(item: dict[str, Any]) -> list[dict[str, object]]:
 
 def _review_context(
     existing: Any, state: dict[str, Any], item_id: str, item: dict[str, Any]
-) -> dict[str, object]:
+) -> dict[str, Any]:
     """Build count, row-level, and safety evidence for a pending initial merge."""
     additions = plaid_source.transaction_frame(
         item.get("pending_transactions", []), item

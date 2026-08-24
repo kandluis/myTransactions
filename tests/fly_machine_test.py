@@ -38,3 +38,15 @@ def test_start_scraper_machine_accepts_an_already_starting_worker(monkeypatch) -
     )
 
     fly_machine.start_scraper_machine()
+
+
+def test_scraper_machine_state_reads_the_machine_api(monkeypatch) -> None:
+    response = MagicMock(ok=True)
+    response.json.return_value = {"state": "stopped"}
+    get = MagicMock(return_value=response)
+    monkeypatch.setenv("FLY_API_TOKEN", "runtime-token")
+    monkeypatch.setenv("SCRAPER_MACHINE_ID", "scraper-machine")
+    monkeypatch.setattr(fly_machine.requests, "get", get)
+
+    assert fly_machine.scraper_machine_state() == "stopped"
+    assert get.call_args.args[0].endswith("/machines/scraper-machine")

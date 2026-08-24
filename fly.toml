@@ -33,6 +33,10 @@ kill_timeout = "5s"
   memory = "512mb"
   processes = ["web"]
 
+[[vm]]
+  memory = "512mb"
+  processes = ["scraper"]
+
 [[restart]]
   policy = "never"
   processes = ["scraper"]

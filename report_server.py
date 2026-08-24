@@ -44,6 +44,9 @@ _SCRAPE_FRESHNESS_WINDOW = timedelta(
 _SCRAPE_JOB_STALE_AFTER = timedelta(
     seconds=int(os.getenv("SCRAPE_JOB_STALE_SECONDS", "900"))
 )
+_SCRAPE_WORKER_START_GRACE = timedelta(
+    seconds=int(os.getenv("SCRAPE_WORKER_START_GRACE_SECONDS", "30"))
+)
 
 
 def _configure_logging() -> None:
@@ -240,7 +243,13 @@ def _terminalize_stale_scrape_job(job: ScrapeJob) -> None:
         age = datetime.now(timezone.utc) - datetime.fromisoformat(started_or_created)
     except (TypeError, ValueError):
         age = _SCRAPE_JOB_STALE_AFTER
-    if age <= _SCRAPE_JOB_STALE_AFTER:
+    worker_stopped = False
+    if job.state == "running" and age > _SCRAPE_WORKER_START_GRACE:
+        try:
+            worker_stopped = fly_machine.scraper_machine_state() == "stopped"
+        except fly_machine.FlyMachineError:
+            pass
+    if age <= _SCRAPE_JOB_STALE_AFTER and not worker_stopped:
         return
     job.state = "failed"
     job.finished_at = _utc_now()

@@ -683,6 +683,26 @@ def test_scrape_status_uses_durable_worker_result(client, monkeypatch) -> None:
     assert response.get_json()["state"] == "succeeded"
 
 
+def test_stopped_worker_marks_running_durable_job_failed(monkeypatch) -> None:
+    saved: list[report_server.ScrapeJob] = []
+    running = report_server.ScrapeJob(
+        job_id="interrupted-job",
+        state="running",
+        created_at="2026-08-24T00:00:00+00:00",
+        started_at="2026-08-24T00:00:00+00:00",
+    )
+    monkeypatch.setattr(report_server, "_save_durable_scrape_job", saved.append)
+    monkeypatch.setattr(
+        report_server.fly_machine, "scraper_machine_state", lambda: "stopped"
+    )
+
+    report_server._terminalize_stale_scrape_job(running)
+
+    assert running.state == "failed"
+    assert running.error_code == "worker_interrupted"
+    assert saved == [running]
+
+
 def test_scrape_status_is_idle_before_any_job(client) -> None:
     response = client.get("/scrape/status?token=test-token")
 

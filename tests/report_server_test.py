@@ -47,6 +47,37 @@ def test_health_is_public(client) -> None:
     assert response.get_json() == {"status": "ok"}
 
 
+def test_review_accounts_displays_official_name_and_last_four() -> None:
+    accounts = report_server._review_accounts(
+        {
+            "selected_account_ids": ["card"],
+            "account_mappings": {"card": "Freedom Unlimited Belinda"},
+            "account_original_names": {"card": "CREDIT CARD"},
+            "account_details": {
+                "card": {
+                    "name": "CREDIT CARD",
+                    "official_name": "Freedom Unlimited®",
+                    "mask": "0940",
+                    "type": "credit",
+                    "subtype": "credit card",
+                }
+            },
+        }
+    )
+
+    assert accounts == [
+        {
+            "id": "card",
+            "plaid_name": "Freedom Unlimited®",
+            "mask": "0940",
+            "type": "credit",
+            "subtype": "credit card",
+            "canonical_name": "Freedom Unlimited Belinda",
+            "selected": True,
+        }
+    ]
+
+
 class _ApprovalStore:
     def __init__(self, state):
         self.state = state

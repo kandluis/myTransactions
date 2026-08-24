@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import Lock, Thread
-from typing import Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 from flask import (
@@ -425,6 +425,48 @@ def _require_plaid_configured() -> Optional[tuple[Response, int]]:
     return None
 
 
+def _plaid_account_details(account: dict[str, Any]) -> dict[str, str]:
+    """Return the non-secret account fields needed to identify a Link account."""
+    name = str(account.get("name") or "Unknown Account")
+    official_name = str(account.get("official_name") or "")
+    return {
+        "name": name,
+        "official_name": official_name,
+        "mask": str(account.get("mask") or ""),
+        "type": str(account.get("type") or ""),
+        "subtype": str(account.get("subtype") or ""),
+    }
+
+
+def _review_accounts(item: dict[str, Any]) -> list[dict[str, object]]:
+    """Build display-safe account rows for a staged Plaid review."""
+    original_names = item.get("account_original_names", {})
+    details_by_id = item.get("account_details", {})
+    selected = set(item.get("selected_account_ids", []))
+    accounts: list[dict[str, object]] = []
+    for account_id, canonical_name in item.get("account_mappings", {}).items():
+        details = details_by_id.get(account_id, {})
+        official_name = str(details.get("official_name") or "")
+        plaid_name = str(
+            official_name
+            or details.get("name")
+            or original_names.get(account_id)
+            or canonical_name
+        )
+        accounts.append(
+            {
+                "id": account_id,
+                "plaid_name": plaid_name,
+                "mask": str(details.get("mask") or ""),
+                "type": str(details.get("type") or ""),
+                "subtype": str(details.get("subtype") or ""),
+                "canonical_name": canonical_name,
+                "selected": account_id in selected,
+            }
+        )
+    return accounts
+
+
 @app.get("/plaid/connect")
 def plaid_connect() -> Response | tuple[Response, int]:
     """Create a one-time Link session outside the Apps Script iframe."""
@@ -538,6 +580,10 @@ def plaid_exchange() -> Response | tuple[Response, int]:
             )
             for account in linked_accounts
         },
+        "account_details": {
+            str(account["account_id"]): _plaid_account_details(account)
+            for account in linked_accounts
+        },
         "pending_transactions": txns,
         "created_at": _utc_now(),
         "last_sync_at": "",
@@ -592,16 +638,7 @@ def plaid_review() -> Response | tuple[Response, int]:
     known_accounts = sorted(
         {str(account).strip() for account in raw_accounts if str(account).strip()}
     )
-    original_names = item.get("account_original_names", {})
-    accounts = [
-        {
-            "id": account_id,
-            "plaid_name": original_names.get(account_id, account_name),
-            "canonical_name": account_name,
-            "selected": account_id in item.get("selected_account_ids", []),
-        }
-        for account_id, account_name in item.get("account_mappings", {}).items()
-    ]
+    accounts = _review_accounts(item)
     return Response(
         render_template_string(
             """<!doctype html><title>Plaid import review</title>
@@ -659,7 +696,10 @@ reconciliation; approval is the only action that writes new transaction rows.</p
 {% for account in accounts %}<div class="account"><input type="checkbox"
 value="{{ account.id }}" {% if account.selected %}checked{% endif %}>
 <div><div class="plaid-name">{{ account.plaid_name }}</div>
-<div class="subtle">Connected through Plaid</div></div><div class="field">
+<div class="subtle">{% if account.mask %}Ending in {{ account.mask }} · {% endif %}
+{{ account.type|title }}{% if account.subtype %}
+ · {{ account.subtype|title }}{% endif %}
+</div></div><div class="field">
 <label>Use in Sheet as</label>
 <select class="mapping-picker" data-account="{{ account.id }}">
 {% for name in known_accounts %}<option value="{{ name }}"

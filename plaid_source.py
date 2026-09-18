@@ -211,6 +211,28 @@ class PlaidClient:
             has_more = bool(data.get("has_more"))
         return added, modified, removed, next_cursor
 
+    def transactions(
+        self, access_token: str, start_date: str, end_date: str
+    ) -> list[dict[str, Any]]:
+        """Fetch a bounded historical window without changing a sync cursor."""
+        transactions: list[dict[str, Any]] = []
+        offset = 0
+        while True:
+            data = self._post(
+                "/transactions/get",
+                {
+                    "access_token": access_token,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "options": {"count": 500, "offset": offset},
+                },
+            )
+            page = data.get("transactions", [])
+            transactions.extend(page)
+            offset += len(page)
+            if offset >= int(data.get("total_transactions", len(transactions))):
+                return transactions
+
     def accounts(self, access_token: str) -> list[dict[str, Any]]:
         return self._post("/accounts/get", {"access_token": access_token}).get(
             "accounts", []
@@ -231,6 +253,27 @@ def _account_name(account: dict[str, Any], item: dict[str, Any]) -> str:
     )
 
 
+def _is_toyota_payment_debit(transaction: dict[str, Any]) -> bool:
+    """Keep StarOne's misclassified outbound Toyota payment as spending.
+
+    Plaid has reported this recurring ACH debit as ``TRANSFER_IN``. Match the
+    stable descriptor and require Plaid's outbound (positive) amount so a
+    credit, refund, or transfer with the same wording cannot become spending.
+    """
+    descriptions = [
+        str(description or "").upper()
+        for description in (transaction.get("merchant_name"), transaction.get("name"))
+    ]
+    normalized_descriptions = {
+        re.sub(r"[^A-Z0-9]+", " ", description).strip() for description in descriptions
+    }
+    try:
+        is_outbound = float(transaction.get("amount", 0)) > 0
+    except (TypeError, ValueError):
+        is_outbound = False
+    return "TOYOTA ACH RTL WEB" in normalized_descriptions and is_outbound
+
+
 def transaction_frame(
     transactions: Iterable[dict[str, Any]], item: dict[str, Any]
 ) -> pd.DataFrame:
@@ -243,13 +286,19 @@ def transaction_frame(
         # Plaid's transfer-in classification describes money arriving in the
         # account, not spending. Filter it before merchant category rules can
         # relabel an otherwise generic description (for example, as travel).
-        if str(personal_finance_category.get("primary", "")).upper() == "TRANSFER_IN":
+        if str(
+            personal_finance_category.get("primary", "")
+        ).upper() == "TRANSFER_IN" and not _is_toyota_payment_debit(txn):
             continue
         # Plaid positive amount is money leaving the account; this project uses
         # negative values for spend, matching the established Empower output.
         amount = -float(txn.get("amount", 0))
         merchant = txn.get("merchant_name") or txn.get("name") or ""
-        category = personal_finance_category.get("primary") or "Uncategorized"
+        category = (
+            "Transportation"
+            if _is_toyota_payment_debit(txn)
+            else personal_finance_category.get("primary") or "Uncategorized"
+        )
         rows.append(
             {
                 "Date": txn.get("date", ""),

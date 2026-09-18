@@ -390,6 +390,121 @@ def test_plaid_removal_preserves_untracked_rows_for_safety(client, monkeypatch) 
     assert "item" in store.state["items"]
 
 
+def test_toyota_backfill_recovers_only_the_missing_debit(client, monkeypatch) -> None:
+    state = _pending_approval_state("active")
+    state["items"]["item"]["account_mappings"] = {"account": "Starone Savings"}
+    store = _ApprovalStore(state)
+    existing = pd.DataFrame(
+        [
+            [
+                "2026-08-06",
+                "Toyota",
+                -511.46,
+                "Transportation",
+                "Starone Savings",
+                "manual-august",
+                "Toyota",
+            ]
+        ],
+        columns=config.GLOBAL.COLUMN_NAMES,
+    )
+    sheet = _ApprovalSheet(existing)
+    writes = []
+
+    class FakePlaidClient:
+        def transactions(self, _access_token: str, _start_date: str, _end_date: str):
+            return [
+                {
+                    "account_id": "account",
+                    "transaction_id": "september-toyota",
+                    "date": "2026-09-06",
+                    "amount": 511.46,
+                    "merchant_name": "Toyota",
+                    "name": "TOYOTA ACH RTL WEB",
+                    "personal_finance_category": {"primary": "TRANSFER_IN"},
+                },
+                {
+                    "account_id": "account",
+                    "transaction_id": "credit",
+                    "date": "2026-09-06",
+                    "amount": -511.46,
+                    "merchant_name": "Toyota ACH RTL WEB",
+                    "name": "TOYOTA ACH RTL WEB",
+                    "personal_finance_category": {"primary": "TRANSFER_IN"},
+                },
+                {
+                    "account_id": "account",
+                    "transaction_id": "unrelated",
+                    "date": "2026-09-06",
+                    "amount": 9.99,
+                    "merchant_name": "Coffee Shop",
+                    "name": "Coffee Shop",
+                },
+            ]
+
+    monkeypatch.setattr(report_server, "_open_plaid_sheet", lambda: sheet)
+    monkeypatch.setattr(plaid_source, "SheetStateStore", lambda _: store)
+    monkeypatch.setattr(plaid_source, "PlaidClient", FakePlaidClient)
+    monkeypatch.setattr(
+        report_server.remote,
+        "UpdateGoogleSheet",
+        lambda _sheet, transactions, _accounts: writes.append(transactions),
+    )
+
+    response = client.post("/plaid/backfill/toyota?token=test-token")
+
+    assert response.status_code == 200
+    assert response.get_json()["added"] == 1
+    assert list(writes[0]["ID"]) == ["manual-august", "plaid:september-toyota"]
+    assert store.state["items"]["item"]["imported_transaction_ids"] == [
+        "plaid:september-toyota"
+    ]
+
+
+def test_toyota_backfill_uses_staged_unconnected_starone_debit(
+    client, monkeypatch
+) -> None:
+    state = _pending_approval_state("active")
+    state["items"]["review"] = {
+        "status": "pending_review",
+        "selected_account_ids": ["savings"],
+        "account_mappings": {"savings": "Starone Savings"},
+        "pending_transactions": [
+            {
+                "account_id": "savings",
+                "transaction_id": "staged-toyota",
+                "date": "2026-09-06",
+                "amount": 511.46,
+                "merchant_name": "Toyota",
+                "name": "TOYOTA ACH RTL WEB",
+                "personal_finance_category": {"primary": "TRANSFER_IN"},
+            }
+        ],
+    }
+    store = _ApprovalStore(state)
+    sheet = _ApprovalSheet(pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES))
+    writes = []
+
+    class FakePlaidClient:
+        def transactions(self, _access_token: str, _start_date: str, _end_date: str):
+            return []
+
+    monkeypatch.setattr(report_server, "_open_plaid_sheet", lambda: sheet)
+    monkeypatch.setattr(plaid_source, "SheetStateStore", lambda _: store)
+    monkeypatch.setattr(plaid_source, "PlaidClient", FakePlaidClient)
+    monkeypatch.setattr(
+        report_server.remote,
+        "UpdateGoogleSheet",
+        lambda _sheet, transactions, _accounts: writes.append(transactions),
+    )
+
+    response = client.post("/plaid/backfill/toyota?token=test-token")
+
+    assert response.get_json()["added"] == 1
+    assert list(writes[0]["ID"]) == ["plaid:staged-toyota"]
+    assert store.state["items"]["review"]["status"] == "pending_review"
+
+
 def test_report_file_requires_valid_token(client, tmp_path: Path) -> None:
     report_path = tmp_path / report_publisher.SPEND_REPORT_FILENAME
     report_path.write_text("<html>report</html>")

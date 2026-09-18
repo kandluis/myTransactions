@@ -12,6 +12,7 @@ from threading import Lock, Thread
 from typing import Any, Optional
 from uuid import uuid4
 
+import pandas as pd
 from flask import (
     Flask,
     Response,
@@ -700,6 +701,10 @@ color:#8f1d1d}.option{display:block;font-size:14px;margin:14px 0}
 <p class="muted">Disconnecting revokes Plaid access and frees an Item slot.
 Existing Sheet transactions are retained unless you explicitly choose to remove
 imported Plaid rows.</p>
+<section class="card"><h2>Repair a missed Toyota payment</h2><p class="muted">
+This checks the 90-day Plaid window for the known StarOne Toyota ACH debit and
+adds only a missing matching payment. Existing rows remain unchanged.</p>
+<button onclick="backfillToyota()">Backfill missed Toyota payment</button></section>
 {% if not connections %}<section class="card"><p>No Plaid connections stored.</p>
 </section>{% endif %}{% for connection in connections %}<section class="card">
 <div class="status">{{ connection.status }}</div><ul class="accounts">
@@ -727,6 +732,10 @@ body:JSON.stringify({remove_transactions:removeRows})});const p=await r.json();
 document.getElementById('result').textContent=p.message||p.error||
 'Could not disconnect.';
 if(r.ok)location.reload();}
+async function backfillToyota(){const r=await fetch('/plaid/backfill/toyota'+
+window.location.search,{method:'POST'});const p=await r.json();
+document.getElementById('result').textContent=p.message||p.error||
+'Could not backfill.';}
 </script></main>""",
             connections=_connection_rows(state),
         )
@@ -794,6 +803,116 @@ def plaid_remove_connection(item_id: str) -> Response | tuple[Response, int]:
             "removed_transactions": removed_rows,
         }
     )
+
+
+@app.post("/plaid/backfill/toyota")
+def plaid_backfill_toyota() -> Response | tuple[Response, int]:
+    """Recover missed Toyota debits without rewinding any live sync cursor.
+
+    A previous version discarded StarOne's Toyota ACH debit while advancing the
+    cursor.  This deliberately re-reads the provider's 90-day window, keeps
+    only the narrowly recognized Toyota outbound debit, and relies on the
+    existing fingerprint merge to make a repeat invocation harmless.
+    """
+    if not is_authorized_token(_request_token()):
+        return _forbidden()
+
+    sheet = _open_plaid_sheet()
+    store = plaid_source.SheetStateStore(sheet)
+    state = store.load()
+    active = [
+        (item_id, item)
+        for item_id, item in state.get("items", {}).items()
+        if item.get("status") == "active"
+    ]
+    if not active:
+        return jsonify({"error": "No active Plaid connection"}), 409
+
+    existing = (
+        sheet.worksheet_by_title(title=config.GLOBAL.RAW_TRANSACTIONS_TITLE)
+        .get_as_df(numerize=False)
+        .reindex(columns=config.GLOBAL.COLUMN_NAMES, fill_value="")
+    )
+    client = plaid_source.PlaidClient()
+    candidates: list[Any] = []
+    candidate_owners: dict[str, str] = {}
+    end_date = datetime.now(timezone.utc).date()
+    start_date = end_date - timedelta(days=90)
+    try:
+        for item_id, item in active:
+            transactions = client.transactions(
+                str(item["access_token"]),
+                start_date.isoformat(),
+                end_date.isoformat(),
+            )
+            # Match before category rules normalize the merchant to "Toyota".
+            # The raw ACH description is the deliberately narrow safety check.
+            raw_toyota = [
+                transaction
+                for transaction in transactions
+                if plaid_source._is_toyota_payment_debit(transaction)
+            ]
+            frame = plaid_source.transaction_frame(raw_toyota, item)
+            if not frame.empty:
+                candidates.append(frame)
+                candidate_owners.update(
+                    {str(transaction_id): item_id for transaction_id in frame["ID"]}
+                )
+    except plaid_source.PlaidError as exc:
+        return jsonify({"error": str(exc), "error_code": exc.code}), 502
+
+    candidates.extend(_staged_toyota_frames(state))
+
+    additions = (
+        pd.concat(candidates, ignore_index=True)
+        if candidates
+        else pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES)
+    )
+    merged = plaid_source.merge_transactions(existing, additions, set(), set())
+    existing_ids = set(existing["ID"].astype(str))
+    added_ids = set(merged["ID"].astype(str)) - existing_ids
+    recovered = additions[additions["ID"].astype(str).isin(added_ids)]
+    if recovered.empty:
+        return jsonify({"message": "No missing Toyota payments found.", "added": 0})
+
+    remote.UpdateGoogleSheet(sheet, merged, None)
+    for item_id, item in active:
+        owned_ids = {
+            transaction_id
+            for transaction_id in recovered["ID"].astype(str)
+            if candidate_owners.get(transaction_id) == item_id
+        }
+        if owned_ids:
+            prior = {str(value) for value in item.get("imported_transaction_ids", [])}
+            item["imported_transaction_ids"] = sorted(prior | owned_ids)
+            state["items"][item_id] = item
+    store.save(state)
+    return jsonify(
+        {
+            "message": "Recovered missed Toyota payment(s).",
+            "added": int(len(recovered)),
+            "transactions": recovered[
+                ["Date", "Merchant", "Amount", "Category", "Account"]
+            ].to_dict("records"),
+        }
+    )
+
+
+def _staged_toyota_frames(state: dict[str, Any]) -> list[pd.DataFrame]:
+    """Return only Toyota debits staged by an intentionally unconnected Item."""
+    frames: list[pd.DataFrame] = []
+    for item in state.get("items", {}).values():
+        if item.get("status") != "pending_review":
+            continue
+        staged_toyota = [
+            transaction
+            for transaction in item.get("pending_transactions", [])
+            if plaid_source._is_toyota_payment_debit(transaction)
+        ]
+        frame = plaid_source.transaction_frame(staged_toyota, item)
+        if not frame.empty:
+            frames.append(frame)
+    return frames
 
 
 @app.get("/plaid/connect")

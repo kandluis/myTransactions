@@ -274,6 +274,39 @@ def test_plaid_transaction_frame_filters_transferin_activity():
     assert incoming.empty
 
 
+def test_plaid_transaction_frame_keeps_outbound_toyota_payment_as_transfer():
+    item = {
+        "selected_account_ids": ["acct"],
+        "account_mappings": {"acct": "Starone Checking"},
+    }
+    incoming = plaid_source.transaction_frame(
+        [
+            {
+                "account_id": "acct",
+                "transaction_id": "toyota-payment",
+                "date": "2026-09-09",
+                "amount": 511.46,
+                "merchant_name": "Toyota",
+                "name": "TOYOTA ACH RTL WEB",
+                "personal_finance_category": {"primary": "TRANSFER_IN"},
+            },
+            {
+                "account_id": "acct",
+                "transaction_id": "toyota-credit",
+                "date": "2026-09-09",
+                "amount": -511.46,
+                "merchant_name": "Toyota ACH RTL WEB",
+                "name": "TOYOTA ACH RTL WEB",
+                "personal_finance_category": {"primary": "TRANSFER_IN"},
+            },
+        ],
+        item,
+    )
+
+    assert incoming["ID"].tolist() == ["plaid:toyota-payment"]
+    assert incoming.iloc[0]["Amount"] == -511.46
+
+
 def test_modified_and_removed_ids_replace_only_plaid_rows():
     existing = pd.DataFrame(
         [

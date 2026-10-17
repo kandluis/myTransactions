@@ -253,12 +253,14 @@ def _account_name(account: dict[str, Any], item: dict[str, Any]) -> str:
     )
 
 
-def _is_toyota_payment_debit(transaction: dict[str, Any]) -> bool:
+def _is_toyota_payment_debit(
+    transaction: dict[str, Any], item: Optional[dict[str, Any]] = None
+) -> bool:
     """Keep StarOne's misclassified outbound Toyota payment as spending.
 
     Plaid has reported this recurring ACH debit as ``TRANSFER_IN``. Match the
-    stable descriptor and require Plaid's outbound (positive) amount so a
-    credit, refund, or transfer with the same wording cannot become spending.
+    stable descriptor and require Plaid's outbound (positive) amount, except
+    for the explicitly confirmed account/amount sign correction in config.
     """
     descriptions = [
         str(description or "").upper()
@@ -268,10 +270,23 @@ def _is_toyota_payment_debit(transaction: dict[str, Any]) -> bool:
         re.sub(r"[^A-Z0-9]+", " ", description).strip() for description in descriptions
     }
     try:
-        is_outbound = float(transaction.get("amount", 0)) > 0
+        amount = float(transaction.get("amount", 0))
     except (TypeError, ValueError):
-        is_outbound = False
-    return "TOYOTA ACH RTL WEB" in normalized_descriptions and is_outbound
+        return False
+    confirmed_amount = getattr(
+        config.GLOBAL, "PLAID_TOYOTA_DEBIT_SIGN_CORRECTIONS", {}
+    ).get(_account_name(transaction, item or {}))
+    confirmed_sign_error = (
+        confirmed_amount is not None
+        and amount == -confirmed_amount
+        and re.sub(
+            r"[^A-Z0-9]+", " ", str(transaction.get("name") or "").upper()
+        ).strip()
+        == "TOYOTA ACH RTL WEB"
+    )
+    return "TOYOTA ACH RTL WEB" in normalized_descriptions and (
+        amount > 0 or confirmed_sign_error
+    )
 
 
 def transaction_frame(
@@ -283,20 +298,28 @@ def transaction_frame(
         if selected and txn.get("account_id") not in selected:
             continue
         personal_finance_category = txn.get("personal_finance_category") or {}
+        is_toyota_payment = _is_toyota_payment_debit(txn, item)
         # Plaid's transfer-in classification describes money arriving in the
         # account, not spending. Filter it before merchant category rules can
         # relabel an otherwise generic description (for example, as travel).
-        if str(
-            personal_finance_category.get("primary", "")
-        ).upper() == "TRANSFER_IN" and not _is_toyota_payment_debit(txn):
+        if (
+            str(personal_finance_category.get("primary", "")).upper() == "TRANSFER_IN"
+            and not is_toyota_payment
+        ):
             continue
         # Plaid positive amount is money leaving the account; this project uses
         # negative values for spend, matching the established Empower output.
         amount = -float(txn.get("amount", 0))
-        merchant = txn.get("merchant_name") or txn.get("name") or ""
+        if is_toyota_payment:
+            amount = -abs(amount)
+        merchant = (
+            "Toyota"
+            if is_toyota_payment
+            else txn.get("merchant_name") or txn.get("name") or ""
+        )
         category = (
             "Transportation"
-            if _is_toyota_payment_debit(txn)
+            if is_toyota_payment
             else personal_finance_category.get("primary") or "Uncategorized"
         )
         rows.append(
@@ -472,6 +495,14 @@ def merge_transactions(
     if "ID" in result:
         result = result[~result["ID"].isin(removed_ids | modified_ids)]
     if not additions.empty:
+        # Plaid transaction IDs are stable across sync retries.  Deduplicate
+        # those retries by ID before applying the source-overlap rules, while
+        # leaving distinct Plaid purchases with the same visible details alone.
+        addition_ids = additions["ID"].astype(str)
+        plaid_additions = addition_ids.str.startswith("plaid:")
+        additions = additions.loc[
+            ~(plaid_additions & addition_ids.duplicated(keep="first"))
+        ]
         if initial_import:
             matched_additions = {
                 addition_index
@@ -479,12 +510,27 @@ def merge_transactions(
             }
             additions = additions.drop(index=list(matched_additions))
         else:
-            current_fps = set(result.apply(overlap_fingerprint, axis=1))
+            existing_ids = result["ID"].astype(str)
+            existing_plaid_ids = set(
+                existing_ids[existing_ids.str.startswith("plaid:")]
+            )
+            additions = additions[
+                ~(
+                    additions["ID"].astype(str).str.startswith("plaid:")
+                    & additions["ID"].astype(str).isin(existing_plaid_ids)
+                )
+            ]
+
+            # Keep the old content-based suppression only for pre-Plaid
+            # history.  Applying it to existing Plaid rows loses separate,
+            # same-day purchases that happen to share their visible fields.
+            legacy_rows = result.loc[~existing_ids.str.startswith("plaid:")]
+            current_fps = set(legacy_rows.apply(overlap_fingerprint, axis=1))
             additions = additions[
                 ~additions.apply(overlap_fingerprint, axis=1).isin(current_fps)
             ]
         result = pd.concat([result, additions], ignore_index=True)
-    return result.sort_values("Date", ascending=True, ignore_index=True)
+    return result.sort_values("Date", ascending=True, ignore_index=True, kind="stable")
 
 
 def initial_window_start() -> str:

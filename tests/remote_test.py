@@ -888,6 +888,20 @@ def test_update_google_sheets_all(mocker) -> None:
         assert mockWs.update_values.call_args.args[0] == remote.SCRAPE_LAST_UPDATED_CELL
 
 
+def test_partial_update_preserves_success_timestamp(mocker) -> None:
+    sheet = mocker.MagicMock()
+    transactions = pd.DataFrame(["test"])
+
+    remote.UpdateGoogleSheet(sheet, transactions, None, mark_scrape_success=False)
+
+    sheet.worksheet_by_title.assert_called_once_with(
+        title=remote.config.GLOBAL.RAW_TRANSACTIONS_TITLE
+    )
+    worksheet = sheet.worksheet_by_title.return_value
+    worksheet.set_dataframe.assert_called_once_with(transactions, "A1", fit=True)
+    worksheet.update_values.assert_not_called()
+
+
 def test_read_last_scrape_at_parses_iso_timestamp(mocker) -> None:
     settings_ws = mocker.MagicMock()
     settings_ws.get_value.return_value = "2026-06-09T12:00:00+00:00"

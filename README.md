@@ -68,6 +68,18 @@ The `--types` option can be one of:
 - `transactions`: scrape only transactions.
 - `accounts`: scrape only accounts.
 
+In Plaid mode, accounts-only runs do not consume transaction cursors. A run
+with failed institutions retains successful updates but reports a failure so
+the missing institutions can be retried. Partial and accounts-only updates do
+not advance the full-scrape freshness timestamp in `Settings!D5`.
+If any account fetch fails, the previous complete account snapshot is retained.
+
+The confirmed StarOne Toyota ACH sign error is corrected only for the account
+and recurring amount configured in `PLAID_TOYOTA_DEBIT_SIGN_CORRECTIONS`, with
+the exact `TOYOTA ACH RTL WEB` descriptor. The Toyota backfill recognizes older
+Savings-labeled payments with a posting-date difference of up to three days,
+so it preserves those rows when recovering a missing Checking payment.
+
 Useful flags:
 
 - `--dry_run`: retrieve and process data without updating Google Sheets.
@@ -255,6 +267,9 @@ machine-readable UTC timestamp into `Settings!D5` so both the endpoint and a
 Sheets script can make the same freshness decision.
 
 The scrape job reuses the existing scraper flow and the shared `REPORT_TOKEN`.
+Completion-status writes are retried before the worker reports success. If
+those retries fail, the worker exits with an error instead of silently losing
+the completion result.
 It is safe to invoke from a menu item or button in Google Sheets:
 
 ```javascript

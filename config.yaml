@@ -32,6 +32,10 @@ CLEAN_UP_OLD_TXNS: true
 # authorizations remain excluded by the normal transaction filter.
 MISCLASSIFIED_CARD_PURCHASE_ACCOUNTS:
   - "Smartly"
+# Confirmed recurring outgoing Toyota payment reported by Plaid with a credit
+# sign. Restrict correction to this account, exact ACH descriptor, and amount.
+PLAID_TOYOTA_DEBIT_SIGN_CORRECTIONS:
+  "Starone Checking": 511.46
 NUM_TXN_FOR_CUTOFF: 300
 PC_MIGRATION_DATE: "2023-12-08"
 SKIPPED_ACCOUNTS:

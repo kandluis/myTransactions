@@ -203,7 +203,7 @@ def test_plaid_approval_is_single_flight_and_idempotent(client, monkeypatch) -> 
     monkeypatch.setattr(
         report_server.remote,
         "UpdateGoogleSheet",
-        lambda _sheet, transactions, _accounts: writes.append(transactions),
+        lambda _sheet, transactions, _accounts, **_kwargs: writes.append(transactions),
     )
 
     first = client.post("/plaid/approve/item?token=test-token")
@@ -353,7 +353,7 @@ def test_plaid_removal_only_deletes_rows_owned_by_the_item(client, monkeypatch) 
     monkeypatch.setattr(
         report_server.remote,
         "UpdateGoogleSheet",
-        lambda _sheet, transactions, _accounts: writes.append(transactions),
+        lambda _sheet, transactions, _accounts, **_kwargs: writes.append(transactions),
     )
 
     response = client.post(
@@ -448,7 +448,7 @@ def test_toyota_backfill_recovers_only_the_missing_debit(client, monkeypatch) ->
     monkeypatch.setattr(
         report_server.remote,
         "UpdateGoogleSheet",
-        lambda _sheet, transactions, _accounts: writes.append(transactions),
+        lambda _sheet, transactions, _accounts, **_kwargs: writes.append(transactions),
     )
 
     response = client.post("/plaid/backfill/toyota?token=test-token")
@@ -459,6 +459,69 @@ def test_toyota_backfill_recovers_only_the_missing_debit(client, monkeypatch) ->
     assert store.state["items"]["item"]["imported_transaction_ids"] == [
         "plaid:september-toyota"
     ]
+
+
+def test_toyota_backfill_corrects_sign_and_preserves_legacy_payment(
+    client, monkeypatch
+) -> None:
+    state = _pending_approval_state("active")
+    state["items"]["item"]["account_mappings"] = {"account": "Starone Checking"}
+    state["items"]["item"]["cursor"] = "keep-cursor"
+    store = _ApprovalStore(state)
+    existing = pd.DataFrame(
+        [
+            [
+                "2026-09-06",
+                "Toyota",
+                -511.46,
+                "Transportation",
+                "Starone Savings",
+                "manual-september",
+                "Toyota",
+            ]
+        ],
+        columns=config.GLOBAL.COLUMN_NAMES,
+    )
+    sheet = _ApprovalSheet(existing)
+    writes = []
+
+    class FakePlaidClient:
+        def transactions(self, _access_token, _start_date, _end_date):
+            return [
+                {
+                    "account_id": "account",
+                    "transaction_id": transaction_id,
+                    "date": date,
+                    "amount": -511.46,
+                    "name": "TOYOTA ACH RTL WEB",
+                    "personal_finance_category": {"primary": "TRANSFER_IN"},
+                }
+                for transaction_id, date in [
+                    ("september", "2026-09-09"),
+                    ("october", "2026-10-06"),
+                ]
+            ]
+
+    def write(_sheet, transactions, _accounts, **kwargs):
+        assert kwargs["mark_scrape_success"] is False
+        writes.append(transactions)
+        sheet.raw.frame = transactions
+
+    monkeypatch.setattr(report_server, "_open_plaid_sheet", lambda: sheet)
+    monkeypatch.setattr(plaid_source, "SheetStateStore", lambda _: store)
+    monkeypatch.setattr(plaid_source, "PlaidClient", FakePlaidClient)
+    monkeypatch.setattr(report_server.remote, "UpdateGoogleSheet", write)
+
+    first = client.post("/plaid/backfill/toyota?token=test-token")
+    second = client.post("/plaid/backfill/toyota?token=test-token")
+
+    assert first.status_code == 200
+    assert first.get_json()["added"] == 1
+    assert second.get_json()["added"] == 0
+    assert len(writes) == 1
+    assert writes[0]["ID"].tolist() == ["manual-september", "plaid:october"]
+    assert writes[0]["Amount"].tolist() == [-511.46, -511.46]
+    assert state["items"]["item"]["cursor"] == "keep-cursor"
 
 
 def test_toyota_backfill_uses_staged_unconnected_starone_debit(
@@ -495,7 +558,7 @@ def test_toyota_backfill_uses_staged_unconnected_starone_debit(
     monkeypatch.setattr(
         report_server.remote,
         "UpdateGoogleSheet",
-        lambda _sheet, transactions, _accounts: writes.append(transactions),
+        lambda _sheet, transactions, _accounts, **_kwargs: writes.append(transactions),
     )
 
     response = client.post("/plaid/backfill/toyota?token=test-token")

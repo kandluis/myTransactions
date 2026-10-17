@@ -110,6 +110,98 @@ def test_transaction_sign_mapping_and_overlap_deduplication():
     assert len(merged) == 1
 
 
+def test_normal_merge_keeps_distinct_same_day_plaid_purchases():
+    existing = pd.DataFrame(
+        columns=[
+            "Date",
+            "Merchant",
+            "Amount",
+            "Category",
+            "Account",
+            "ID",
+            "Description",
+        ]
+    )
+    additions = pd.DataFrame(
+        [
+            {
+                "Date": "2026-08-01",
+                "Merchant": "Coffee Shop",
+                "Amount": -12.50,
+                "Category": "Food",
+                "Account": "Card",
+                "ID": "plaid:first",
+                "Description": "Coffee Shop",
+            },
+            {
+                "Date": "2026-08-01",
+                "Merchant": "Coffee Shop",
+                "Amount": -12.50,
+                "Category": "Food",
+                "Account": "Card",
+                "ID": "plaid:second",
+                "Description": "Coffee Shop",
+            },
+        ]
+    )
+
+    merged = plaid_source.merge_transactions(existing, additions, set(), set())
+
+    assert merged["ID"].tolist() == ["plaid:first", "plaid:second"]
+
+
+def test_normal_merge_deduplicates_retried_plaid_ids():
+    existing = pd.DataFrame(
+        [
+            {
+                "Date": "2026-08-01",
+                "Merchant": "Coffee Shop",
+                "Amount": -12.50,
+                "Category": "Food",
+                "Account": "Card",
+                "ID": "plaid:existing",
+                "Description": "Coffee Shop",
+            }
+        ]
+    )
+    additions = pd.DataFrame(
+        [
+            {
+                "Date": "2026-08-02",
+                "Merchant": "Coffee Shop",
+                "Amount": -12.50,
+                "Category": "Food",
+                "Account": "Card",
+                "ID": "plaid:existing",
+                "Description": "Updated retry",
+            },
+            {
+                "Date": "2026-08-03",
+                "Merchant": "Book Store",
+                "Amount": -20.00,
+                "Category": "Shopping",
+                "Account": "Card",
+                "ID": "plaid:retry",
+                "Description": "Book Store",
+            },
+            {
+                "Date": "2026-08-03",
+                "Merchant": "Book Store",
+                "Amount": -20.00,
+                "Category": "Shopping",
+                "Account": "Card",
+                "ID": "plaid:retry",
+                "Description": "Book Store retry",
+            },
+        ]
+    )
+
+    merged = plaid_source.merge_transactions(existing, additions, set(), set())
+
+    assert merged["ID"].tolist() == ["plaid:existing", "plaid:retry"]
+    assert merged.loc[1, "Description"] == "Book Store"
+
+
 def test_plaid_transaction_frame_filters_amex_autopay_payment():
     item = {"selected_account_ids": ["acct"], "account_mappings": {"acct": "Amex"}}
 
@@ -277,7 +369,7 @@ def test_plaid_transaction_frame_filters_transferin_activity():
 def test_plaid_transaction_frame_keeps_outbound_toyota_payment_as_transfer():
     item = {
         "selected_account_ids": ["acct"],
-        "account_mappings": {"acct": "Starone Checking"},
+        "account_mappings": {"acct": "Starone Savings"},
     }
     incoming = plaid_source.transaction_frame(
         [
@@ -305,6 +397,38 @@ def test_plaid_transaction_frame_keeps_outbound_toyota_payment_as_transfer():
 
     assert incoming["ID"].tolist() == ["plaid:toyota-payment"]
     assert incoming.iloc[0]["Amount"] == -511.46
+
+
+@pytest.mark.parametrize(
+    "account,amount,name,expected",
+    [
+        ("Starone Checking", -511.46, "TOYOTA ACH RTL WEB", True),
+        ("Starone Savings", -511.46, "TOYOTA ACH RTL WEB", False),
+        ("Other Checking", -511.46, "TOYOTA ACH RTL WEB", False),
+        ("Starone Checking", -25, "TOYOTA ACH RTL WEB", False),
+        ("Starone Checking", -511.46, "TOYOTA REFUND", False),
+    ],
+)
+def test_confirmed_toyota_sign_correction(account, amount, name, expected):
+    item = {"account_mappings": {"acct": account}}
+    frame = plaid_source.transaction_frame(
+        [
+            {
+                "account_id": "acct",
+                "transaction_id": "october-toyota",
+                "date": "2026-10-06",
+                "name": name,
+                "amount": amount,
+                "personal_finance_category": {"primary": "TRANSFER_IN"},
+            }
+        ],
+        item,
+    )
+
+    assert (not frame.empty) == expected
+    if expected:
+        assert frame.iloc[0]["Amount"] == -511.46
+        assert frame.iloc[0]["Category"] == "Transportation"
 
 
 def test_modified_and_removed_ids_replace_only_plaid_rows():

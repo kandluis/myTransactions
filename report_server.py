@@ -850,7 +850,7 @@ def plaid_backfill_toyota() -> Response | tuple[Response, int]:
             raw_toyota = [
                 transaction
                 for transaction in transactions
-                if plaid_source._is_toyota_payment_debit(transaction)
+                if plaid_source._is_toyota_payment_debit(transaction, item)
             ]
             frame = plaid_source.transaction_frame(raw_toyota, item)
             if not frame.empty:
@@ -868,6 +868,7 @@ def plaid_backfill_toyota() -> Response | tuple[Response, int]:
         if candidates
         else pd.DataFrame(columns=config.GLOBAL.COLUMN_NAMES)
     )
+    additions = _deduplicate_toyota_history(existing, additions)
     merged = plaid_source.merge_transactions(existing, additions, set(), set())
     existing_ids = set(existing["ID"].astype(str))
     added_ids = set(merged["ID"].astype(str)) - existing_ids
@@ -875,7 +876,7 @@ def plaid_backfill_toyota() -> Response | tuple[Response, int]:
     if recovered.empty:
         return jsonify({"message": "No missing Toyota payments found.", "added": 0})
 
-    remote.UpdateGoogleSheet(sheet, merged, None)
+    remote.UpdateGoogleSheet(sheet, merged, None, mark_scrape_success=False)
     for item_id, item in active:
         owned_ids = {
             transaction_id
@@ -898,6 +899,25 @@ def plaid_backfill_toyota() -> Response | tuple[Response, int]:
     )
 
 
+def _deduplicate_toyota_history(
+    existing: pd.DataFrame, additions: pd.DataFrame
+) -> pd.DataFrame:
+    """Respect historical Toyota rows with the legacy StarOne account label.
+
+    Older Toyota payments are labeled Savings in the Sheet but Checking in
+    Plaid, with posting dates up to three days apart. This equivalence applies
+    only to this narrow backfill; the general account mappings remain intact.
+    """
+    history = existing.copy()
+    candidates = additions.copy()
+    for frame in (history, candidates):
+        frame["Account"] = frame["Account"].replace(
+            {"Starone Savings": "Starone Checking"}
+        )
+    matches = plaid_source.tolerant_overlap_matches(history, candidates)
+    return additions.drop(index=[new_index for _, new_index in matches])
+
+
 def _staged_toyota_frames(state: dict[str, Any]) -> list[pd.DataFrame]:
     """Return only Toyota debits staged by an intentionally unconnected Item."""
     frames: list[pd.DataFrame] = []
@@ -907,7 +927,7 @@ def _staged_toyota_frames(state: dict[str, Any]) -> list[pd.DataFrame]:
         staged_toyota = [
             transaction
             for transaction in item.get("pending_transactions", [])
-            if plaid_source._is_toyota_payment_debit(transaction)
+            if plaid_source._is_toyota_payment_debit(transaction, item)
         ]
         frame = plaid_source.transaction_frame(staged_toyota, item)
         if not frame.empty:

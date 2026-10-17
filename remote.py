@@ -404,6 +404,8 @@ def UpdateGoogleSheet(
     sheet: pygsheets.Spreadsheet,
     transactions: Optional[pd.DataFrame],
     accounts: Optional[pd.DataFrame],
+    *,
+    mark_scrape_success: bool = True,
 ) -> None:
     """Updates the Google Sheet with the latest transaction and account data.
 
@@ -415,6 +417,8 @@ def UpdateGoogleSheet(
       sheet: The Google Sheet object to update.
       transactions: The DataFrame of transactions to upload.
       accounts: The DataFrame of accounts to upload.
+      mark_scrape_success: Whether this update represents a complete scrape.
+        Partial and accounts-only Plaid updates preserve the freshness marker.
     """
     if transactions is not None:
         all_transactions_ws = sheet.worksheet_by_title(
@@ -427,6 +431,9 @@ def UpdateGoogleSheet(
             title=config.GLOBAL.RAW_ACCOUNTS_TITLE
         )
         all_accounts_ws.set_dataframe(accounts, "A1", fit=True)
+
+    if not mark_scrape_success:
+        return
 
     settings_ws = sheet.worksheet_by_title(title=config.GLOBAL.SETTINGS_SHEET_TITLE)
     # Update with current time.
